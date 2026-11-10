@@ -301,6 +301,25 @@
   const LS = 'tl_cfg_v1';
   let cfg = null;
   try { cfg = JSON.parse(localStorage.getItem(LS)); } catch (_) { cfg = null; }
+  // A secret key must never be used in a browser: refuse a JWT whose role is service_role.
+  function isServiceKey(key) {
+    if (/^sb_secret_/.test(key)) return true;
+    try { return JSON.parse(atob(key.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).role === 'service_role'; } catch (_) { return false; }
+  }
+  // Invite link: https://.../index.html#cfg=<base64url of {"url","key"}>
+  // It fills in the connection once, then the code is removed from the address bar.
+  (function applyInviteLink() {
+    const m = /^#cfg=([A-Za-z0-9_-]+)$/.exec(location.hash || ''); if (!m) return;
+    try {
+      const b64 = m[1].replace(/-/g, '+').replace(/_/g, '/');
+      const j = JSON.parse(atob(b64 + '==='.slice((b64.length + 3) % 4)));
+      if (/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(j.url) && /^eyJ|^sb_publishable_/.test(j.key) && !isServiceKey(j.key)) {
+        cfg = { url: j.url, key: j.key };
+        try { localStorage.setItem(LS, JSON.stringify(cfg)); } catch (_) { /* storage may be blocked */ }
+      }
+    } catch (_) { /* a damaged link is ignored; the setup form appears instead */ }
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (_) { /* ignore */ }
+  })();
   let sb = null, me = null, channel = null, pollT = null, renderTok = 0;
   const S = { tab: null, docId: null, qa: null, adminTab: 'users', confirm: null, names: {}, notifs: [], unread: 0, panel: false, pubText: {}, counts: {}, users: null, busy: '', star: null, printMin: null, cm: {}, cmOpen: {}, cmDoc: null };
 
@@ -323,6 +342,7 @@
     const key = $('#cfgKey').value.trim();
     if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url)) return viewSetup('آدرس باید مثل https://abcdxyz.supabase.co باشد (بدون / یا مسیر اضافه).');
     if (!/^eyJ|^sb_publishable_/.test(key)) return viewSetup('کلید anon معمولاً با eyJ شروع می‌شود. مطمئن شوید کلید درست را کپی کرده‌اید.');
+    if (isServiceKey(key)) return viewSetup('این کلید service_role (کلید مخفی) است و نباید در مرورگر استفاده شود. کلید anon (public) را بگذارید.');
     const btn = $('#cfgBtn'); btn.disabled = true; btn.textContent = 'در حال آزمایش…';
     try {
       const r = await fetch(url + '/auth/v1/settings', { headers: { apikey: key } });
@@ -887,16 +907,30 @@
   // view: admin
   // ===================================================================
   VIEWS.admin = async function () {
-    const tabs = [['users', 'کاربران و نقش‌ها'], ['prompt', 'پرامپت و مدل'], ['gemini', 'کلید Gemini'], ['pubset', 'تنظیمات انتشار'], ['files', 'همه فایل‌ها']];
+    const tabs = [['users', 'کاربران و نقش‌ها'], ['prompt', 'پرامپت و مدل'], ['gemini', 'کلید Gemini'], ['pubset', 'تنظیمات انتشار'], ['invite', 'لینک ورود اعضا'], ['files', 'همه فایل‌ها']];
     let body;
     if (S.adminTab === 'users') body = await adminUsers();
     else if (S.adminTab === 'prompt') body = await adminPrompt();
     else if (S.adminTab === 'gemini') body = await adminGemini();
     else if (S.adminTab === 'pubset') body = await adminPubset();
+    else if (S.adminTab === 'invite') body = await adminInvite();
     else body = await adminFiles();
     return head('مدیریت', 'کاربران، پرامپت ترجمه، کلید Gemini و وضعیت همه فایل‌ها.') +
       `<div class="sub-tabs" role="tablist">${tabs.map(([k, l]) => `<button type="button" role="tab" data-act="admintab" data-tab="${k}" aria-selected="${S.adminTab === k}">${l}</button>`).join('')}</div>${body}`;
   };
+  function inviteLink(base) {
+    const raw = JSON.stringify({ url: cfg.url, key: cfg.key });
+    return base.replace(/#.*$/, '') + '#cfg=' + btoa(raw).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  async function adminInvite() {
+    const base = location.href.replace(/#.*$/, '');
+    return `<section class="card"><h2>لینک ورود برای اعضا</h2>
+      <p class="meta">اعضا با این لینک مستقیم به صفحه ورود می‌روند و دیگر آدرس پروژه و کلید را وارد نمی‌کنند. در لینک آدرس پروژه و کلید anon هست. کلید anon عمومی است و بدون ورود به داده‌ها دسترسی نمی‌دهد، ولی لینک را فقط برای اعضا بفرستید و در جای عمومی نگذارید.</p>
+      ${location.protocol === 'file:' ? '<div class="callout">الان صفحه را از روی فایل روی کامپیوتر خودتان باز کرده‌اید. در کادر زیر آدرس جایی را بنویسید که برنامه را برای اعضا میزبانی کرده‌اید (مثلاً آدرس GitHub Pages).</div>' : ''}
+      <label class="f">آدرس صفحه برنامه (جایی که اعضا باز می‌کنند)<input class="ltr" type="url" id="invBase" value="${esc(base)}"></label>
+      <label class="f">لینک ورود<input class="ltr" type="text" id="invOut" readonly value="${esc(inviteLink(base))}"></label>
+      <div class="row"><button type="button" class="btn" data-act="mkinvite">به‌روزرسانی لینک</button><button type="button" class="btn primary" data-act="cpinvite">کپی لینک</button></div></section>`;
+  }
   async function adminPubset() {
     const pm = await loadPrintMin();
     return `<section class="card"><h2>تنظیمات انتشار</h2>
@@ -1042,6 +1076,16 @@
       $('#starHint').textContent = ratingHint(S.star, S.printMin || 4);
     },
     async setprio(el) { await rpc('set_priority', { p_doc: el.dataset.id, p_priority: Number(el.dataset.n) }); toast('رتبه ثبت شد.'); render(); },
+    mkinvite() {
+      const base = ($('#invBase').value || '').trim();
+      if (!/^https?:\/\//i.test(base) && !/^file:\/\//i.test(base)) { toast('آدرس باید با https:// شروع شود.'); return; }
+      $('#invOut').value = inviteLink(base);
+    },
+    async cpinvite() {
+      const out = $('#invOut');
+      try { await navigator.clipboard.writeText(out.value); toast('لینک کپی شد.'); }
+      catch (_) { out.focus(); out.select(); toast('کپی خودکار ممکن نشد. لینک انتخاب شد؛ کپی کنید.'); }
+    },
     async savepubset() {
       const n = Number($('#printMin').value);
       const { error } = await sb.from('app_config').upsert({ key: 'print_min_priority', value: String(n), updated_at: new Date().toISOString() });
