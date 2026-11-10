@@ -99,6 +99,16 @@
   .stars.sm .star { font-size: 22px; }
   .stars-ro { font-size: 18px; letter-spacing: 1px; white-space: nowrap; }
   .stars-ro .on { color: var(--gold); } .stars-ro .off { color: var(--line); }
+  .btn.cm-open { color: var(--gold); border-color: var(--gold); }
+  .cmbox { margin-top: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--sunk); display: flex; flex-direction: column; gap: 8px; }
+  .cmbox[hidden] { display: none; }
+  .cm { border-bottom: 1px dashed var(--line); padding-bottom: 6px; }
+  .cm:last-child { border-bottom: 0; padding-bottom: 0; }
+  .cm.done { opacity: .6; }
+  .cm-h { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+  .cm p { margin: 2px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .cmform { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+  .cmform textarea { flex: 1 1 220px; min-width: 0; }
   .notice { border: 1px solid var(--line); background: var(--sunk); border-radius: 10px; padding: 10px 14px; font-size: 14px; }
   .drop { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; border: 1px dashed var(--line); border-radius: 12px; padding: 14px 16px; background: var(--surface); position: relative; }
   .vh { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
@@ -292,7 +302,7 @@
   let cfg = null;
   try { cfg = JSON.parse(localStorage.getItem(LS)); } catch (_) { cfg = null; }
   let sb = null, me = null, channel = null, pollT = null, renderTok = 0;
-  const S = { tab: null, docId: null, qa: null, adminTab: 'users', confirm: null, names: {}, notifs: [], unread: 0, panel: false, pubText: {}, counts: {}, users: null, busy: '', star: null, printMin: null };
+  const S = { tab: null, docId: null, qa: null, adminTab: 'users', confirm: null, names: {}, notifs: [], unread: 0, panel: false, pubText: {}, counts: {}, users: null, busy: '', star: null, printMin: null, cm: {}, cmOpen: {}, cmDoc: null };
 
   // ===================================================================
   // setup + login
@@ -407,6 +417,7 @@
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: 'user_id=eq.' + me.id }, p => {
         const n = p.new; S.notifs.unshift(n); S.unread++; setBell();
         const text = notifText(n); toast(text); browserNotify(text); soft();
+        if (n.type === 'comment') cmRefreshFor(n.document_id);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'documents' }, () => soft())
       .subscribe();
@@ -420,6 +431,7 @@
       case 'awaiting_qa': return `${t} برای بررسی ناظر رسید.`;
       case 'changes_requested': return `${t} با یادداشت ناظر برگشت${p.note ? ': ' + p.note : ''}.`;
       case 'approved': return `ترجمه ${t} تایید شد.`;
+      case 'comment': return `${p.by || 'کسی'} روی ${t} نظر گذاشت${p.note ? ': ' + p.note : ''}`;
       case 'ai_failed': return `ترجمه ماشینی ${t} ناموفق بود${p.note ? ': ' + p.note : ''}.`;
       default: return n.type;
     }
@@ -563,15 +575,16 @@
       .in('status', ['content_review', 'review_rejected', 'translating', 'translation_failed']).order('created_at', { ascending: false });
     if (error) throw error;
     const rows = data.map(d => {
-      let act = '', info = '';
+      let act = '', info = '', extra = '';
       if (d.status === 'content_review' || d.status === 'review_rejected') act = `<button type="button" class="btn primary" data-act="opendoc" data-id="${d.id}">${d.status === 'review_rejected' ? 'اصلاح متن' : 'بازبینی'}</button>`;
       if (d.status === 'translating') {
         const stale = !d.ai_started_at || (Date.now() - new Date(d.ai_started_at).getTime() > 4 * 60000);
         info = `<span class="meta"><span class="spin" aria-hidden="true"></span> Gemini در حال ترجمه است…</span>`;
+        extra = `<button type="button" class="btn" data-act="cancelai" data-id="${d.id}">توقف ترجمه</button>`;
         if (stale) act = `<button type="button" class="btn" data-act="retry" data-id="${d.id}">شروع دوباره ترجمه ماشینی</button>`;
       }
-      if (d.status === 'translation_failed') { info = `<div class="callout"><b>خطا:</b> <span class="num" dir="ltr">${esc(d.ai_error || '')}</span></div>`; act = `<button type="button" class="btn primary" data-act="retry" data-id="${d.id}">تلاش دوباره</button>`; }
-      return `<article class="card"><div class="item"><div class="item-main"><div class="item-title">${esc(d.title)}</div><div class="meta">${fa(d.word_count)} کلمه · ${fmtT(d.created_at)}</div></div>${chip(d.status)}${act}</div>${info}${d.status === 'review_rejected' && d.review_note ? `<div class="callout"><b>یادداشت بازبین:</b> ${esc(d.review_note)}</div>` : ''}</article>`;
+      if (d.status === 'translation_failed') { info = `<div class="callout"><b>خطا:</b> <span class="num" dir="ltr">${esc(d.ai_error || '')}</span></div>`; act = `<button type="button" class="btn primary" data-act="retry" data-id="${d.id}">تلاش دوباره</button>`; extra = `<button type="button" class="btn" data-act="cancelai" data-id="${d.id}">بازگشت به بازبینی</button>`; }
+      return `<article class="card"><div class="item"><div class="item-main"><div class="item-title">${esc(d.title)}</div><div class="meta">${fa(d.word_count)} کلمه · ${fmtT(d.created_at)}</div></div>${chip(d.status)}<span class="row">${act}${extra}<button type="button" class="btn small danger" data-act="deldoc" data-id="${d.id}">حذف</button></span></div>${info}${d.status === 'review_rejected' && d.review_note ? `<div class="callout"><b>یادداشت بازبین:</b> ${esc(d.review_note)}</div>` : ''}</article>`;
     }).join('');
     return head('بازبینی محتوایی', 'متن فارسی را پیش از ترجمه ماشینی بخوانید و اصلاح کنید. بعد از تایید، فایل خودکار به Gemini داده می‌شود.') + `
       <div class="drop"><div class="item-main"><b>بارگذاری فایل فارسی</b><p class="meta">فایل DOCX را انتخاب کنید. متن آن در مرورگر به بند تقسیم می‌شود. تیترها و فهرست‌ها شناسایی می‌شوند.</p></div>
@@ -585,13 +598,14 @@
     if (s.error) throw s.error;
     const doc = d.data;
     if (!['content_review', 'review_rejected'].includes(doc.status)) { S.docId = null; return VIEWS.review(); }
+    await loadComments(id);
     const rej = doc.status === 'review_rejected';
     return `<div><button type="button" class="btn quiet" data-act="back">← فهرست</button></div>
       <section class="page-head"><h1>${esc(doc.title)}</h1><p class="sub">${fa(s.data.length)} بند · ${fa(doc.word_count)} کلمه · ${chip(doc.status)}</p></section>
       ${rej && doc.review_note ? `<div class="callout"><b>دلیل بازگشت:</b> ${esc(doc.review_note)}</div>` : ''}
       <div class="segs">${s.data.map((g, i) => `<div class="seg"><div class="seg-head"><span>بند ${fa(i + 1)} · ${g.kind === 'heading' ? 'تیتر' : g.kind === 'list_item' ? 'فهرست' : 'پاراگراف'}</span>
         <button type="button" class="btn quiet small danger" data-act="delseg" data-sid="${g.id}">حذف بند</button></div>
-        <textarea class="t fa-edit${g.kind === 'heading' ? ' head' : ''}" dir="rtl" lang="fa" rows="2" data-fa="${g.id}" aria-label="متن فارسی بند ${fa(i + 1)}">${esc(g.source_text)}</textarea></div>`).join('')}</div>
+        <textarea class="t fa-edit${g.kind === 'heading' ? ' head' : ''}" dir="rtl" lang="fa" rows="2" data-fa="${g.id}" aria-label="متن فارسی بند ${fa(i + 1)}">${esc(g.source_text)}</textarea><div class="seg-foot">${cmButton(g.id)}</div>${cmBox(g.id)}</div>`).join('')}</div>
       <div class="submitbar">${rej
         ? `<span class="meta">متن را اصلاح کنید و دوباره برای بازبینی بفرستید.</span><span class="row"><button type="button" class="btn primary" data-act="resubmit" data-id="${id}">ارسال مجدد برای بازبینی</button><button type="button" class="btn danger" data-act="deldoc" data-id="${id}">حذف فایل</button></span>`
         : S.confirm === 'approve'
@@ -632,6 +646,7 @@
     if (s.error) throw s.error;
     const doc = d.data, segs = s.data;
     segs.forEach(g => { segMap[g.id] = g; });
+    await loadComments(id);
     const editable = ['in_progress', 'changes_requested'].includes(doc.status) && doc.claimed_by === me.id;
     const notes = Array.isArray(doc.ai_notes) ? doc.ai_notes : [];
     const gl = Array.isArray(doc.glossary) ? doc.glossary : [];
@@ -648,9 +663,9 @@
         <p class="fa${g.kind === 'heading' ? ' head' : ''}" lang="fa" dir="rtl">${esc(g.source_text)}</p>
         ${notes.filter(n => n.paragraph_id === g.position).map(n => `<div class="mnote" lang="en">${esc(n.note)}</div>`).join('')}
         <textarea id="ta-${g.id}" class="t en${g.kind === 'heading' ? ' head' : ''}" dir="ltr" lang="en" rows="2" data-sid="${g.id}" ${editable ? '' : 'readonly'} aria-label="ترجمه انگلیسی بند ${fa(i + 1)}">${esc(g.current_text || '')}</textarea>
-        <div class="seg-foot"><button type="button" class="btn quiet small" data-act="hist" data-sid="${g.id}">تاریخچه</button>
+        <div class="seg-foot"><button type="button" class="btn quiet small" data-act="hist" data-sid="${g.id}">تاریخچه</button>${cmButton(g.id)}
           ${editable ? `<button type="button" class="btn quiet small" data-act="revert" data-sid="${g.id}">بازگردانی به ترجمه ماشینی</button><button type="button" class="btn quiet small" data-act="flag" data-sid="${g.id}">${g.flagged ? 'برداشتن پرچم' : 'پرچم‌گذاری'}</button>` : ''}</div>
-        <div data-histbox="${g.id}"></div></article>`).join('')}</div>
+        <div data-histbox="${g.id}"></div>${cmBox(g.id)}</article>`).join('')}</div>
       ${editable ? `<div class="submitbar" id="bar">${barHtml(id)}</div>` : ''}`;
   }
   function segChips(g) {
@@ -706,6 +721,45 @@
   }
 
   // ===================================================================
+  // comments on paragraphs
+  // ===================================================================
+  async function loadComments(docId) {
+    S.cmDoc = docId; S.cm = {};
+    try {
+      const { data, error } = await sb.from('segment_comments').select('id,segment_id,author_id,body,resolved,created_at').eq('document_id', docId).order('created_at');
+      if (error) throw error;
+      data.forEach(c => { (S.cm[c.segment_id] = S.cm[c.segment_id] || []).push(c); });
+    } catch (_) { /* comments are optional: the page still works without them */ }
+  }
+  function cmUnresolved(sid) { return (S.cm[sid] || []).filter(c => !c.resolved).length; }
+  function cmIsOpen(sid) { return S.cmOpen[sid] !== undefined ? S.cmOpen[sid] : cmUnresolved(sid) > 0; }
+  function cmBtnLabel(sid) {
+    const a = S.cm[sid] || [], u = cmUnresolved(sid);
+    return a.length ? `نظرها (${fa(a.length)}${u ? ' · ' + fa(u) + ' حل‌نشده' : ''})` : 'نظر';
+  }
+  function cmButton(sid) {
+    return `<button type="button" class="btn quiet small${cmUnresolved(sid) ? ' cm-open' : ''}" data-act="cmtoggle" data-sid="${sid}" data-cmbtn="${sid}">${cmBtnLabel(sid)}</button>`;
+  }
+  function cmListHtml(sid) {
+    const a = S.cm[sid] || [];
+    if (!a.length) return '<p class="meta">هنوز نظری نیست.</p>';
+    return a.map(c => `<div class="cm${c.resolved ? ' done' : ''}"><div class="cm-h"><b>${esc(nm(c.author_id))}</b><span class="meta">${fmtT(c.created_at)}</span>${c.resolved ? '<span class="chip ok">حل‌شد</span>' : ''}<button type="button" class="btn quiet small" data-act="cmresolve" data-id="${c.id}" data-sid="${sid}" data-v="${c.resolved ? 0 : 1}">${c.resolved ? 'بازکردن دوباره' : 'حل‌شد'}</button></div><p>${esc(c.body)}</p></div>`).join('');
+  }
+  function cmBox(sid) {
+    return `<div class="cmbox" data-cmbox="${sid}"${cmIsOpen(sid) ? '' : ' hidden'}><div data-cmlist="${sid}">${cmListHtml(sid)}</div><div class="cmform"><textarea class="plain" rows="2" id="cmin-${sid}" data-cmin="${sid}" aria-label="نظر جدید" placeholder="نظر بنویسید…"></textarea><button type="button" class="btn small primary" data-act="cmadd" data-sid="${sid}">ثبت نظر</button></div></div>`;
+  }
+  function cmRefresh(sid) {
+    const l = document.querySelector(`[data-cmlist="${sid}"]`); if (l) l.innerHTML = cmListHtml(sid);
+    const b = document.querySelector(`[data-cmbtn="${sid}"]`);
+    if (b) { b.textContent = cmBtnLabel(sid); b.classList.toggle('cm-open', cmUnresolved(sid) > 0); }
+  }
+  async function cmRefreshFor(docId) {
+    if (S.cmDoc !== docId || !(S.docId === docId || S.qa === docId)) return;
+    await loadComments(docId);
+    document.querySelectorAll('[data-cmlist]').forEach(el => cmRefresh(el.dataset.cmlist));
+  }
+
+  // ===================================================================
   // publication priority (1-5 stars)
   // ===================================================================
   const RATING_LABEL = ['', 'کم‌اهمیت', 'معمولی', 'مهم', 'بسیار مهم', 'خبر اصلی'];
@@ -752,6 +806,7 @@
     if (d.error) { S.qa = null; throw d.error; }
     if (d.data.status !== 'awaiting_qa') { S.qa = null; return VIEWS.qa(); }
     const doc = d.data, segs = s.data;
+    await loadComments(id);
     const pm = await loadPrintMin();
     const changed = segs.filter(g => g.current_text !== g.ai_text).length;
     const dist = segs.reduce((n, g) => n + wordDist(g.ai_text, g.current_text), 0);
@@ -763,7 +818,7 @@
         const same = g.current_text === g.ai_text;
         const body = same ? `<p class="diff">${esc(g.current_text)}</p>` : `<p class="diff">${diffOps(g.ai_text, g.current_text).map(o => o.t === 'eq' ? esc(o.w) : o.t === 'del' ? `<del>${esc(o.w)}</del>` : `<ins>${esc(o.w)}</ins>`).join(' ')}</p>`;
         return `<article class="seg${g.flagged ? ' flagged' : ''}"><div class="seg-head"><span>بند ${fa(i + 1)}</span><span>${same ? '<span class="chip ok">بدون تغییر</span>' : `<span class="chip gold">TER ${pct(terOf(g.ai_text, g.current_text))}</span>`}${g.flagged ? ' <span class="chip bad">پرچم‌دار</span>' : ''}</span></div>
-          <p class="fa${g.kind === 'heading' ? ' head' : ''}" lang="fa" dir="rtl">${esc(g.source_text)}</p>${body}</article>`;
+          <p class="fa${g.kind === 'heading' ? ' head' : ''}" lang="fa" dir="rtl">${esc(g.source_text)}</p>${body}<div class="seg-foot">${cmButton(g.id)}</div>${cmBox(g.id)}</article>`;
       }).join('')}</div>
       <section class="card"><div><b>اولویت نشر</b> <span class="meta">(برای تایید لازم است)</span></div>
         <div class="stars" id="starRow" role="group" aria-label="اولویت نشر از ۱ تا ۵">${[1, 2, 3, 4, 5].map(i => `<button type="button" class="star" data-act="star" data-n="${i}" aria-label="${fa(i)} ستاره" title="${RATING_LABEL[i]}">★</button>`).join('')}</div>
@@ -929,6 +984,27 @@
       S.confirm = null; S.docId = null; toast('برگردانده شد.'); render();
     },
     async resubmit(el) { await rpc('resubmit_for_review', { p_doc: el.dataset.id }); toast('برای بازبینی ارسال شد.'); render(); },
+    async cancelai(el) {
+      await rpc('cancel_translation', { p_doc: el.dataset.id });
+      toast('ترجمه ماشینی متوقف شد و فایل به بازبینی برگشت.'); render();
+    },
+    cmtoggle(el) {
+      const sid = el.dataset.sid; S.cmOpen[sid] = !cmIsOpen(sid);
+      const box = document.querySelector(`[data-cmbox="${sid}"]`);
+      if (box) { box.hidden = !S.cmOpen[sid]; if (S.cmOpen[sid]) { const t = box.querySelector('textarea'); if (t) t.focus(); } }
+    },
+    async cmadd(el) {
+      const sid = el.dataset.sid; const t = document.getElementById('cmin-' + sid); const body = (t.value || '').trim();
+      if (!body) { toast('متن نظر را بنویسید.'); t.focus(); return; }
+      const { data, error } = await sb.from('segment_comments').insert({ segment_id: sid, document_id: S.cmDoc, body }).select('id,segment_id,author_id,body,resolved,created_at').single();
+      if (error) throw error;
+      (S.cm[sid] = S.cm[sid] || []).push(data); t.value = ''; S.cmOpen[sid] = true; cmRefresh(sid); toast('نظر ثبت شد.');
+    },
+    async cmresolve(el) {
+      const sid = el.dataset.sid; const v = el.dataset.v === '1';
+      await rpc('resolve_comment', { p_comment: el.dataset.id, p_resolved: v });
+      const c = (S.cm[sid] || []).find(x => x.id === el.dataset.id); if (c) c.resolved = v; cmRefresh(sid);
+    },
     async retry(el) {
       const id = el.dataset.id;
       await rpc('retry_translation', { p_doc: id });
@@ -937,7 +1013,8 @@
     async delseg(el) { const { error } = await sb.from('segments').delete().eq('id', el.dataset.sid); if (error) throw error; render(); },
     async deldoc(el) {
       if (el.dataset.sure !== '1') { el.dataset.sure = '1'; el.textContent = 'مطمئنید؟ دوباره بزنید'; return; }
-      const { error } = await sb.from('documents').delete().eq('id', el.dataset.id); if (error) throw error;
+      const path = await rpc('delete_document', { p_doc: el.dataset.id });
+      if (path) { try { await sb.storage.from('source-files').remove([path]); } catch (_) { /* the original file may already be gone */ } }
       S.docId = null; toast('حذف شد.'); render();
     },
     async claim(el) {
