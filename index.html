@@ -347,7 +347,6 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   .req { color: var(--bad); }
   .brandline { display: flex; align-items: center; gap: 10px; }
 
-  .wpage { min-height: calc(100vh - 140px); display: grid; place-items: center; padding-block: 12px; }
   .wcard { width: min(560px, 100%); text-align: center; align-items: center; gap: 18px; padding: clamp(22px, 5vw, 40px); background: linear-gradient(160deg, var(--accent-soft), var(--surface) 62%); }
   .wcard h1 { font-size: clamp(24px, 4vw, 30px); }
   .wdrop { width: 100%; border: 2px dashed color-mix(in srgb, var(--accent) 45%, var(--line)); border-radius: 18px; padding: clamp(24px, 6vw, 44px) 16px; display: flex; flex-direction: column; align-items: center; gap: 14px; background: color-mix(in srgb, var(--surface) 70%, transparent); transition: border-color .2s, background .2s, transform .25s var(--ease); }
@@ -360,7 +359,23 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   .invrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; justify-content: space-between; padding-block: 10px; border-bottom: 1px dashed var(--line); }
   .invrow:last-child { border-bottom: 0; }
   @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-  @media (max-width: 760px) { .grid-2f { grid-template-columns: 1fr; } .theme.float { top: 10px; inset-inline-start: 10px; } .wpage { min-height: calc(100vh - 170px); } }
+
+  body.no-nav { --nav-h: 0px; }
+  .wpage { display: flex; flex-direction: column; align-items: center; gap: 18px; padding-block: 12px; }
+  .wpage.empty { min-height: calc(100vh - 140px); justify-content: center; }
+  .whist { width: min(560px, 100%); }
+  .hrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding-block: 10px; border-bottom: 1px dashed var(--line); }
+  .hrow:last-child { border-bottom: 0; }
+  .hrow .final-text { flex-basis: 100%; }
+  .final-text.fa { direction: rtl; text-align: right; font-family: var(--f-ui); font-size: 15px; line-height: 2; max-height: 360px; overflow: auto; }
+  .mail { color: var(--muted); font-size: 12px; }
+  details.gl[open] { box-shadow: var(--shadow-2); }
+  details.gl summary { flex-wrap: wrap; }
+  details.gl > :not(summary) { margin-top: 10px; }
+  .inv-mem { flex-basis: 100%; font-size: 14px; }
+  .inv-mem summary { cursor: pointer; color: var(--accent); }
+  .inv-mem ul { margin: 6px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+  @media (max-width: 760px) { .grid-2f { grid-template-columns: 1fr; } .theme.float { top: 10px; inset-inline-start: 10px; } .wpage.empty { min-height: calc(100vh - 170px); } }
 </style>
 </head>
 <body>
@@ -640,6 +655,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     if (error || !data) { await sb.auth.signOut(); return viewLogin('پروفایل کاربر پیدا نشد. اسکریپت schema.sql را اجرا کرده‌اید؟'); }
     me = data;
     if (data.role !== 'writer') await loadNames();
+    else { const c = await sb.from('profile_contacts').select('last_name').eq('id', user.id).maybeSingle(); me.last_name = (c.data && c.data.last_name) || ''; }
     S.tab = null; S.docId = null; S.qa = null;
     renderShell();
     if (me.role === 'none') return;
@@ -649,10 +665,23 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   }
   async function loadNames() {
     const { data } = await sb.from('profiles').select('id,full_name,role');
-    S.names = {};
-    (data || []).forEach(p => { S.names[p.id] = p.full_name || '—'; });
+    S.names = {}; S.roles = {}; S.dupNames = {};
+    const seen = {};
+    (data || []).forEach(p => { S.names[p.id] = p.full_name || '—'; S.roles[p.id] = p.role; seen[p.full_name] = (seen[p.full_name] || 0) + 1; });
+    Object.keys(seen).forEach(k => { if (seen[k] > 1) S.dupNames[k] = true; });
+    S.contacts = {};
+    if (me && ['admin', 'reviewer'].includes(me.role)) {
+      const c = await sb.from('profile_contacts').select('*');
+      (c.data || []).forEach(x => { S.contacts[x.id] = x; });
+    }
   }
   const nm = id => (id && S.names[id]) || '—';
+  // name, plus the email when two people share the same name (HTML-safe)
+  const whoH = id => {
+    if (!id || !S.names[id]) return '—';
+    const n = S.names[id], c = S.contacts && S.contacts[id];
+    return esc(n) + (S.dupNames && S.dupNames[n] && c && c.email ? ` <span class="num mail" dir="ltr">(${esc(c.email)})</span>` : '');
+  };
   function tabsFor(role) {
     const t = [];
     if (role === 'admin' || role === 'reviewer') t.push(['review', 'بازبین محتوا']);
@@ -674,12 +703,15 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   };
   const svgI = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k] || ''}</svg>`;
   function renderShell() {
-    const simple = me.role === 'writer';
-    const tabs = (me.role === 'none' || simple) ? [] : tabsFor(me.role);
+    const writer = me.role === 'writer';
+    const all = me.role === 'none' ? [] : tabsFor(me.role);
+    const simple = all.length <= 1;
+    const tabs = simple ? [] : all;
+    document.body.classList.toggle('no-nav', simple);
     $('#root').innerHTML = `<header class="top${simple ? ' simple' : ''}"><div class="wrap top-in">
         <div class="brand"><span class="mark">فا→EN</span><b>خط تأمین</b></div>
         <nav class="tabs" id="tabs" role="tablist">${tabs.map(([k, l]) => `<button type="button" class="tab" role="tab" data-act="tab" data-tab="${k}" aria-selected="${S.tab === k}">${svgI(k)}<span>${l}</span><span class="count" data-count="${k}" hidden></span></button>`).join('')}</nav>
-        ${simple ? '' : `<div class="bellwrap"><button class="bell" id="bell" type="button" data-act="bell" aria-haspopup="true" aria-expanded="false" aria-label="اعلان‌ها"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="bt">اعلان‌ها</span> <span class="dot" id="bellDot" hidden></span></button><div class="panel" id="panel" hidden></div></div>`}
+        ${writer ? '' : `<div class="bellwrap"><button class="bell" id="bell" type="button" data-act="bell" aria-haspopup="true" aria-expanded="false" aria-label="اعلان‌ها"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="bt">اعلان‌ها</span> <span class="dot" id="bellDot" hidden></span></button><div class="panel" id="panel" hidden></div></div>`}
         <div class="who">${themeBtn()}<span class="avatar" aria-hidden="true">${me.avatar_url ? `<img src="${esc(me.avatar_url)}" alt="">` : esc((me.full_name || '?').trim().charAt(0))}</span><span class="who-t"><b>${esc(me.full_name || '')}</b><small class="meta">${ROLE_FA[me.role]}</small></span><button class="btn quiet small" type="button" data-act="logout">خروج</button></div>
       </div></header>
       <div class="wrap"><main id="main">${me.role === 'none' ? `<div class="card"><h2>حساب شما هنوز نقشی ندارد</h2><p class="sub">مدیر باید نقش «مترجم»، «بازبین محتوا» یا «ناظر» را به حساب شما بدهد. بعد از آن صفحه را تازه کنید.</p><div class="row"><button class="btn" data-act="reload">تازه‌سازی</button></div></div>` : ''}</main></div>`;
@@ -772,17 +804,21 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     }, 500);
   }
   VIEWS.write = async function () {
-    const first = (me.full_name || '').trim().split(/\s+/)[0] || '';
+    const last = (me.last_name || (me.full_name || '').trim().split(/\s+/).slice(-1)[0] || '').trim();
     const w = S.wDone;
-    return `<section class="wpage"><div class="card wcard">
-      <h1>${first ? 'سلام ' + esc(first) : 'سلام'}</h1>
+    let hist = [];
+    try { hist = (await rpc('writer_my_documents')) || []; } catch (_) { hist = []; }
+    const WST = { content_review: ['در انتظار بازبینی', 'gold'], review_rejected: ['در انتظار بازبینی', 'gold'], approved: ['تأیید شد', 'ok'], published: ['منتشر شد', 'ok'] };
+    return `<section class="wpage${hist.length ? '' : ' empty'}"><div class="card wcard">
+      <h1>${last ? 'سلام جناب ' + esc(last) : 'سلام'}</h1>
       <p class="sub">فایل Word (DOCX) متن فارسی را انتخاب کنید تا برای بررسی فرستاده شود.</p>
       ${w ? `<div class="okcard" role="status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></svg><span>«${esc(w.title)}» فرستاده شد.</span></div>` : ''}
       <div class="wdrop" id="wDrop">
         <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg></span>
         ${S.busy === 'upload' ? '<span class="meta"><span class="spin"></span> در حال ارسال…</span>' : `<label class="btn primary bigbtn filebtn" for="wFile">بارگذاری فایل</label>`}
         <input type="file" class="vh" id="wFile" accept=".docx"><span class="meta">فایل را اینجا رها هم می‌توانید کنید</span>
-      </div></div></section>`;
+      </div></div>
+      ${hist.length ? `<div class="card whist"><h2>فایل‌هایی که فرستاده‌اید</h2>${hist.map(h => { const [t, k] = WST[h.status] || ['در حال ترجمه و بررسی', 'accent']; return `<div class="hrow"><div class="item-main"><div class="item-title">${esc(h.title)}</div><div class="meta">${fa(h.word_count)} کلمه · ${fmtT(h.created_at)}</div></div><span class="chip ${k}">${t}</span><button type="button" class="btn small" data-act="wtext" data-id="${h.id}">نمایش متن</button><div class="final-text fa" id="wt-${h.id}" dir="rtl" lang="fa" hidden></div></div>`; }).join('')}</div>` : ''}</section>`;
   };
   async function doWriterUpload(file) {
     if (!/\.docx$/i.test(file.name)) throw new Error('فقط فایل DOCX (Word) پذیرفته می‌شود.');
@@ -895,7 +931,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         if (stale) act = `<button type="button" class="btn" data-act="retry" data-id="${d.id}">شروع دوباره ترجمه ماشینی</button>`;
       }
       if (d.status === 'translation_failed') { info = `<div class="callout"><b>خطا:</b> <span class="num" dir="ltr">${esc(d.ai_error || '')}</span></div>`; act = `<button type="button" class="btn primary" data-act="retry" data-id="${d.id}">تلاش دوباره</button>`; extra = `<button type="button" class="btn" data-act="cancelai" data-id="${d.id}">بازگشت به بازبینی</button>`; }
-      return `<article class="card"><div class="item"><div class="item-main"><div class="item-title">${esc(d.title)}</div><div class="meta">${fa(d.word_count)} کلمه · ${fmtT(d.created_at)}${d.uploaded_by && S.names[d.uploaded_by] ? ' · ' + esc(nm(d.uploaded_by)) : ''}${d.source_kind === 'news' ? ' · خبر' : ''}</div></div>${chip(d.status)}<span class="row">${act}${extra}<button type="button" class="btn small danger" data-act="deldoc" data-id="${d.id}">حذف</button></span></div>${info}${d.status === 'review_rejected' && d.review_note ? `<div class="callout"><b>یادداشت بازبین:</b> ${esc(d.review_note)}</div>` : ''}</article>`;
+      return `<article class="card"><div class="item"><div class="item-main"><div class="item-title">${esc(d.title)}</div><div class="meta">${fa(d.word_count)} کلمه · ${fmtT(d.created_at)}${d.uploaded_by && S.names[d.uploaded_by] ? ' · فرستنده: ' + whoH(d.uploaded_by) : ''}${d.source_kind === 'news' ? ' · خبر' : ''}</div></div>${chip(d.status)}<span class="row">${act}${extra}<button type="button" class="btn small danger" data-act="deldoc" data-id="${d.id}">حذف</button></span></div>${info}${d.status === 'review_rejected' && d.review_note ? `<div class="callout"><b>یادداشت بازبین:</b> ${esc(d.review_note)}</div>` : ''}</article>`;
     }).join('');
     return head('بازبینی محتوایی', 'متن فارسی را پیش از ترجمه ماشینی بخوانید و اصلاح کنید. بعد از تایید، فایل خودکار به Gemini داده می‌شود.') + `
       <div class="drop"><div class="item-main"><b>بارگذاری فایل فارسی</b><p class="meta">فایل DOCX را انتخاب کنید. متن آن در مرورگر به بند تقسیم می‌شود. تیترها و فهرست‌ها شناسایی می‌شوند.</p></div>
@@ -912,7 +948,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     await loadComments(id);
     const rej = doc.status === 'review_rejected';
     return `<div><button type="button" class="btn quiet" data-act="back">← فهرست</button></div>
-      <section class="page-head"><h1>${esc(doc.title)}</h1><p class="sub">${fa(s.data.length)} بند · ${fa(doc.word_count)} کلمه · ${chip(doc.status)}</p></section>
+      <section class="page-head"><h1>${esc(doc.title)}</h1><p class="sub">${fa(s.data.length)} بند · ${fa(doc.word_count)} کلمه · ${chip(doc.status)}${doc.uploaded_by ? ' · فرستنده: ' + whoH(doc.uploaded_by) : ''}</p></section>
       ${rej && doc.review_note ? `<div class="callout"><b>دلیل بازگشت:</b> ${esc(doc.review_note)}</div>` : ''}
       <div class="segs">${s.data.map((g, i) => `<div class="seg"><div class="seg-head"><span>بند ${fa(i + 1)} · ${g.kind === 'heading' ? 'تیتر' : g.kind === 'list_item' ? 'فهرست' : 'پاراگراف'}</span>
         <button type="button" class="btn quiet small danger" data-act="delseg" data-sid="${g.id}">حذف بند</button></div>
@@ -1198,7 +1234,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   // view: admin
   // ===================================================================
   VIEWS.admin = async function () {
-    const tabs = [['users', 'کاربران و نقش‌ها'], ['prompt', 'پرامپت و مدل'], ['gemini', 'کلید Gemini'], ['pubset', 'تنظیمات انتشار'], ['invite', 'لینک ورود اعضا'], ['writers', 'دعوت نویسندگان'], ['files', 'همه فایل‌ها']];
+    const tabs = [['users', 'کاربران و نقش‌ها'], ['prompt', 'پرامپت و مدل'], ['gemini', 'کلید Gemini'], ['pubset', 'تنظیمات انتشار'], ['invite', 'لینک ورود اعضا'], ['writers', 'دعوت نویسندگان'], ['uploads', 'بارگذاری‌ها'], ['files', 'همه فایل‌ها']];
     let body;
     if (S.adminTab === 'users') body = await adminUsers();
     else if (S.adminTab === 'prompt') body = await adminPrompt();
@@ -1206,6 +1242,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     else if (S.adminTab === 'pubset') body = await adminPubset();
     else if (S.adminTab === 'invite') body = await adminInvite();
     else if (S.adminTab === 'writers') body = await adminWriters();
+    else if (S.adminTab === 'uploads') body = await adminUploads();
     else body = await adminFiles();
     return head('مدیریت', 'کاربران، پرامپت ترجمه، کلید Gemini و وضعیت همه فایل‌ها.') +
       `<div class="sub-tabs" role="tablist">${tabs.map(([k, l]) => `<button type="button" role="tab" data-act="admintab" data-tab="${k}" aria-selected="${S.adminTab === k}">${l}</button>`).join('')}</div>${body}`;
@@ -1224,11 +1261,14 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       <div class="row"><button type="button" class="btn" data-act="mkinvite">به‌روزرسانی لینک</button><button type="button" class="btn primary" data-act="cpinvite">کپی لینک</button></div></section>`;
   }
   async function adminWriters() {
+    await loadNames();
     const { data, error } = await sb.from('invites').select('*').order('created_at', { ascending: false });
     if (error) throw error;
     let saved = ''; try { saved = localStorage.getItem('tl_base') || ''; } catch (_) { /* ignore */ }
     const base = S.wBase || saved || location.href.replace(/#.*$/, '');
     const now = Date.now();
+    const mems = id => Object.values(S.contacts || {}).filter(c => c.invite_id === id);
+    const memList = id => { const m = mems(id); return `<details class="inv-mem"><summary>اعضای ثبت‌نام‌شده با این لینک: <b>${fa(m.length)}</b> نفر</summary>${m.length ? `<ul>${m.map(c => `<li><b>${esc(nm(c.id))}</b> <span class="num meta" dir="ltr">${esc(c.email || '')}</span> <span class="num meta" dir="ltr">${esc(c.phone || '')}</span></li>`).join('')}</ul>` : '<p class="meta">هنوز کسی با این لینک ثبت‌نام نکرده است.</p>'}</details>`; };
     const st = v => v.revoked ? ['باطل‌شده', 'bad'] : (v.expires_at && new Date(v.expires_at).getTime() < now) ? ['منقضی', 'bad'] : (v.max_uses && v.uses >= v.max_uses) ? ['پر', 'gold'] : ['فعال', 'ok'];
     return `<section class="card"><h2>دعوت نویسندگان</h2>
       <p class="meta">با این لینک نویسنده خودش حساب می‌سازد (نام، تلفن، عکس، ایمیل، رمز) و بعد فقط دکمهٔ بارگذاری فایل را می‌بیند. هر لینک را می‌توانید محدود به تعداد و مدت کنید و هر زمان باطل کنید.</p>
@@ -1240,7 +1280,21 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         <label class="f">حداکثر ثبت‌نام<select id="wvMax"><option value="0">نامحدود</option><option value="5">۵ نفر</option><option value="10">۱۰ نفر</option><option value="25">۲۵ نفر</option><option value="50">۵۰ نفر</option></select></label>
       </div>
       <div class="row"><button type="button" class="btn primary" data-act="mkwinvite">ساخت لینک دعوت</button></div></section>
-      <section class="card"><h2>لینک‌های ساخته‌شده</h2>${data.length ? data.map(v => { const [t, k] = st(v); return `<div class="invrow"><div class="item-main"><b>${esc(v.label || 'بدون نام')}</b><div class="meta">${fa(v.uses)}${v.max_uses ? ' از ' + fa(v.max_uses) : ''} ثبت‌نام · ${v.expires_at ? 'تا ' + fmtT(v.expires_at) : 'بدون انقضا'}</div></div><span class="chip ${k}">${t}</span><span class="row"><button type="button" class="btn small primary" data-act="cpwinvite" data-token="${esc(v.token)}">کپی لینک</button><button type="button" class="btn small ${v.revoked ? '' : 'danger'}" data-act="rvwinvite" data-id="${v.id}" data-on="${v.revoked ? '0' : '1'}">${v.revoked ? 'فعال‌سازی دوباره' : 'باطل کردن'}</button></span></div>`; }).join('') : '<p class="meta">هنوز لینکی نساخته‌اید.</p>'}</section>`;
+      <section class="card"><h2>لینک‌های ساخته‌شده</h2>${data.length ? data.map(v => { const [t, k] = st(v); return `<div class="invrow"><div class="item-main"><b>${esc(v.label || 'بدون نام')}</b><div class="meta">${fa(v.uses)}${v.max_uses ? ' از ' + fa(v.max_uses) : ''} ثبت‌نام · ${v.expires_at ? 'تا ' + fmtT(v.expires_at) : 'بدون انقضا'}</div></div><span class="chip ${k}">${t}</span><span class="row"><button type="button" class="btn small primary" data-act="cpwinvite" data-token="${esc(v.token)}">کپی لینک</button><button type="button" class="btn small ${v.revoked ? '' : 'danger'}" data-act="rvwinvite" data-id="${v.id}" data-on="${v.revoked ? '0' : '1'}">${v.revoked ? 'فعال‌سازی دوباره' : 'باطل کردن'}</button></span>${memList(v.id)}</div>`; }).join('') : '<p class="meta">هنوز لینکی نساخته‌اید.</p>'}</section>`;
+  }
+  async function adminUploads() {
+    await loadNames();
+    const { data, error } = await sb.from('documents').select('id,title,status,word_count,created_at,uploaded_by,source_kind').order('created_at', { ascending: false }).limit(2000);
+    if (error) throw error;
+    const by = {};
+    data.forEach(d => { (by[d.uploaded_by || '—'] = by[d.uploaded_by || '—'] || []).push(d); });
+    Object.keys(S.roles || {}).forEach(id => { if (S.roles[id] === 'writer' && !by[id]) by[id] = []; });
+    const ids = Object.keys(by).sort((a, b) => by[b].length - by[a].length || nm(a).localeCompare(nm(b), 'fa'));
+    return `<section class="card"><h2>فایل‌های بارگذاری‌شده به تفکیک کاربر</h2><p class="meta">${fa(data.length)} فایل از ${fa(ids.length)} کاربر. روی نام هر کاربر بزنید تا فایل‌هایش باز شود.</p>
+      ${ids.map(id => { const c = (S.contacts || {})[id] || {}, L = by[id]; return `<details class="gl"><summary><b>${esc(nm(id))}</b>
+        <span class="chip">${ROLE_FA[(S.roles || {})[id]] || '—'}</span><span class="num meta" dir="ltr">${esc(c.email || '')}</span><span class="chip accent">${fa(L.length)} فایل</span>${L[0] ? `<span class="meta">آخرین: ${fmtT(L[0].created_at)}</span>` : ''}</summary>
+        ${c.phone ? `<p class="meta">تلفن: <span class="num" dir="ltr">${esc(c.phone)}</span></p>` : ''}
+        ${L.length ? `<div class="table-wrap"><table><thead><tr><th>فایل</th><th>وضعیت</th><th>کلمه</th><th>تاریخ</th></tr></thead><tbody>${L.map(d => `<tr><td class="wrapok">${esc(d.title)}</td><td>${chip(d.status)}</td><td class="num">${fa(d.word_count)}</td><td class="meta">${fmtT(d.created_at)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="meta">هنوز فایلی نفرستاده است.</p>'}</details>`; }).join('')}</section>`;
   }
   async function adminPubset() {
     const pm = await loadPrintMin();
@@ -1295,9 +1349,9 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         <div class="row"><button type="button" class="btn" data-act="sampledoc">ساخت فایل آزمایشی</button></div></div>`;
   }
   async function adminFiles() {
-    const { data, error } = await sb.from('documents').select('id,title,status,claimed_by,word_count,created_at,ai_error').order('created_at', { ascending: false }).limit(100);
+    const { data, error } = await sb.from('documents').select('id,title,status,claimed_by,word_count,created_at,ai_error,uploaded_by').order('created_at', { ascending: false }).limit(100);
     if (error) throw error;
-    return `<div class="table-wrap"><table><thead><tr><th>فایل</th><th>وضعیت</th><th>مترجم</th><th>کلمه</th><th>تاریخ</th><th></th></tr></thead><tbody>${data.length ? data.map(d => `<tr><td class="wrapok">${esc(d.title)}${d.ai_error ? `<div class="meta num" dir="ltr">${esc(d.ai_error)}</div>` : ''}</td><td>${chip(d.status)}</td><td>${esc(nm(d.claimed_by))}</td><td class="num">${fa(d.word_count)}</td><td class="meta">${fmtT(d.created_at)}</td>
+    return `<div class="table-wrap"><table><thead><tr><th>فایل</th><th>فرستنده</th><th>وضعیت</th><th>مترجم</th><th>کلمه</th><th>تاریخ</th><th></th></tr></thead><tbody>${data.length ? data.map(d => `<tr><td class="wrapok">${esc(d.title)}${d.ai_error ? `<div class="meta num" dir="ltr">${esc(d.ai_error)}</div>` : ''}</td><td>${whoH(d.uploaded_by)}</td><td>${chip(d.status)}</td><td>${esc(nm(d.claimed_by))}</td><td class="num">${fa(d.word_count)}</td><td class="meta">${fmtT(d.created_at)}</td>
       <td><span class="row">${d.status === 'in_progress' ? `<button type="button" class="btn small" data-act="adminrelease" data-id="${d.id}">آزاد کردن به سبد</button>` : ''}${['translation_failed', 'translating'].includes(d.status) ? `<button type="button" class="btn small" data-act="retry" data-id="${d.id}">ترجمه دوباره</button>` : ''}<button type="button" class="btn small danger" data-act="deldoc" data-id="${d.id}">حذف</button></span></td></tr>`).join('') : '<tr><td colspan="6" class="meta">فایلی نیست.</td></tr>'}</tbody></table></div>`;
   }
 
@@ -1309,6 +1363,15 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     back() { S.docId = null; S.confirm = null; render(); },
     cancelc() { S.confirm = null; render(); },
     reload() { location.reload(); },
+    async wtext(el) {
+      const box = document.getElementById('wt-' + el.dataset.id); if (!box) return;
+      if (!box.hidden) { box.hidden = true; el.textContent = 'نمایش متن'; return; }
+      if (!box.dataset.ok) {
+        const rows = await rpc('writer_document_text', { p_doc: el.dataset.id });
+        box.textContent = (rows || []).map(r => r.source_text).join('\n\n'); box.dataset.ok = '1';
+      }
+      box.hidden = false; el.textContent = 'بستن متن';
+    },
     theme() {
       const h = document.documentElement, next = h.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
       h.classList.add('theme-anim'); h.setAttribute('data-theme', next);
