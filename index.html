@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>خط تأمین</title>
+<title>سکوی محتوا</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&family=Literata:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -240,7 +240,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   .stat .v { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .list > .card { transition: transform .25s var(--ease), box-shadow .25s var(--ease); }
   @media (hover: hover) { .list > .card:hover { transform: translateY(-2px); } }
-  .pool { background: linear-gradient(135deg, var(--accent-soft), var(--surface) 70%); }
+  .pool { background: linear-gradient(135deg, var(--accent-soft), var(--surface) 70%); padding: 14px 20px; border-radius: var(--r-sm); margin-bottom: 8px; }
   .pool-n { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
   /* controls */
@@ -569,7 +569,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   }
   function viewLogin(msg) {
     $('#root').innerHTML = `${themeBtn('float')}<div class="center"><form class="box card" id="loginForm">
-      <h1>ورود به خط تأمین</h1>
+      <h1>ورود به سکوی محتوا</h1>
       ${msg ? `<div class="callout">${esc(msg)}</div>` : ''}
       <label class="f">ایمیل<input class="ltr" type="email" id="lgEmail" autocomplete="username" required></label>
       <label class="f">رمز عبور<input class="ltr" type="password" id="lgPass" autocomplete="current-password" required></label>
@@ -586,7 +586,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     try { const r = await fnCall('writer-signup', { action: 'check', token: INVITE }); valid = !!(r && r.valid); } catch (e) { return viewLogin(errText(e)); }
     if (!valid) { clearInvite(); return viewLogin(ERR.invite_invalid); }
     $('#root').innerHTML = `${themeBtn('float')}<div class="center"><form class="box card wide" id="signupForm">
-      <div class="brandline"><span class="mark">فا→EN</span><b>خط تأمین</b></div>
+      <div class="brandline"><span class="mark">فا · EN</span><b>سکوی محتوا</b></div>
       <h1>ساخت حساب نویسنده</h1>
       <p class="sub">اطلاعات خود را وارد کنید. بعد از ثبت‌نام فقط یک دکمهٔ «بارگذاری فایل» خواهید داشت.</p>
       ${msg ? `<div class="callout">${esc(msg)}</div>` : ''}
@@ -709,7 +709,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     const tabs = simple ? [] : all;
     document.body.classList.toggle('no-nav', simple);
     $('#root').innerHTML = `<header class="top${simple ? ' simple' : ''}"><div class="wrap top-in">
-        <div class="brand"><span class="mark">فا→EN</span><b>خط تأمین</b></div>
+        <div class="brand"><span class="mark">فا · EN</span><b>سکوی محتوا</b></div>
         <nav class="tabs" id="tabs" role="tablist">${tabs.map(([k, l]) => `<button type="button" class="tab" role="tab" data-act="tab" data-tab="${k}" aria-selected="${S.tab === k}">${svgI(k)}<span>${l}</span><span class="count" data-count="${k}" hidden></span></button>`).join('')}</nav>
         ${writer ? '' : `<div class="bellwrap"><button class="bell" id="bell" type="button" data-act="bell" aria-haspopup="true" aria-expanded="false" aria-label="اعلان‌ها"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="bt">اعلان‌ها</span> <span class="dot" id="bellDot" hidden></span></button><div class="panel" id="panel" hidden></div></div>`}
         <div class="who">${themeBtn()}<span class="avatar" aria-hidden="true">${me.avatar_url ? `<img src="${esc(me.avatar_url)}" alt="">` : esc((me.full_name || '?').trim().charAt(0))}</span><span class="who-t"><b>${esc(me.full_name || '')}</b><small class="meta">${ROLE_FA[me.role]}</small></span><button class="btn quiet small" type="button" data-act="logout">خروج</button></div>
@@ -750,7 +750,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     }
   }
   function browserNotify(text) {
-    try { if (document.hidden && 'Notification' in window && Notification.permission === 'granted') new Notification('خط ترجمه', { body: text }); } catch (_) { /* ignore */ }
+    try { if (document.hidden && 'Notification' in window && Notification.permission === 'granted') new Notification('سکوی محتوا', { body: text }); } catch (_) { /* ignore */ }
   }
   async function loadNotifs() {
     const { data } = await sb.from('notifications').select('*').eq('user_id', me.id).order('created_at', { ascending: false }).limit(30);
@@ -947,7 +947,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     if (!['content_review', 'review_rejected'].includes(doc.status)) { S.docId = null; return VIEWS.review(); }
     await loadComments(id);
     const rej = doc.status === 'review_rejected';
-    return `<div><button type="button" class="btn quiet" data-act="back">← فهرست</button></div>
+    return `<div><button type="button" class="btn quiet" data-act="back">→ فهرست</button></div>
       <section class="page-head"><h1>${esc(doc.title)}</h1><p class="sub">${fa(s.data.length)} بند · ${fa(doc.word_count)} کلمه · ${chip(doc.status)}${doc.uploaded_by ? ' · فرستنده: ' + whoH(doc.uploaded_by) : ''}</p></section>
       ${rej && doc.review_note ? `<div class="callout"><b>دلیل بازگشت:</b> ${esc(doc.review_note)}</div>` : ''}
       <div class="segs">${s.data.map((g, i) => `<div class="seg"><div class="seg-head"><span>بند ${fa(i + 1)} · ${g.kind === 'heading' ? 'تیتر' : g.kind === 'list_item' ? 'فهرست' : 'پاراگراف'}</span>
@@ -998,7 +998,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     const notes = Array.isArray(doc.ai_notes) ? doc.ai_notes : [];
     const gl = Array.isArray(doc.glossary) ? doc.glossary : [];
     const edited = segs.filter(g => g.current_text !== g.ai_text).length;
-    return `<div><button type="button" class="btn quiet" data-act="back">← فایل‌های من</button></div>
+    return `<div><button type="button" class="btn quiet" data-act="back">→ فایل‌های من</button></div>
       <section class="page-head"><h1>${esc(doc.title)}</h1><p class="sub">${fa(segs.length)} بند · ${fa(doc.word_count)} کلمه فارسی · ${chip(doc.status)}</p></section>
       ${doc.status === 'changes_requested' && doc.qa_note ? `<div class="callout"><b>یادداشت ناظر:</b> ${esc(doc.qa_note)}</div>` : ''}
       ${gl.length || notes.length ? `<details class="gl"><summary>واژه‌نامه و یادداشت‌های ترجمه ماشینی (${fa(gl.length + notes.length)})</summary>
@@ -1158,7 +1158,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     const changed = segs.filter(g => g.current_text !== g.ai_text).length;
     const dist = segs.reduce((n, g) => n + wordDist(g.ai_text, g.current_text), 0);
     const fin = segs.reduce((n, g) => n + Math.max(1, words(g.current_text).length), 0);
-    return `<div><button type="button" class="btn quiet" data-act="qaback">← فهرست</button></div>
+    return `<div><button type="button" class="btn quiet" data-act="qaback">→ فهرست</button></div>
       <section class="page-head"><h1>${esc(doc.title)}</h1><p class="sub">مترجم: ${esc(nm(doc.claimed_by))} · ${fa(changed)} از ${fa(segs.length)} بند ویرایش شده · TER ${pct(dist / fin)} · ${fa(segs.reduce((n, g) => n + g.seconds_spent, 0) / 60 | 0)} دقیقه زمان ثبت‌شده</p></section>
       <div class="legend"><span>راهنما:</span><del>حذف‌شده از ترجمه ماشینی</del><ins>افزوده‌شده توسط مترجم</ins></div>
       <div class="segs">${segs.map((g, i) => {
