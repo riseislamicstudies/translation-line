@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>سکوی محتوا</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cdefs%3E%3ClinearGradient id='a' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%237c6cff'/%3E%3Cstop offset='1' stop-color='%233b82f6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M20 4 36 12 20 20 4 12Z' fill='url(%23a)'/%3E%3Cpath d='M4 19.5 20 27.5 36 19.5' fill='none' stroke='%237c6cff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round' opacity='.7'/%3E%3Cpath d='M4 27 20 35 36 27' fill='none' stroke='%237c6cff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round' opacity='.38'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&family=Literata:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -331,13 +332,39 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     .list { gap: 12px; }
   }
 
+
+  /* header v7: logo mark, tabs scroll instead of colliding with actions */
+  .logo { width: 34px; height: 34px; flex: none; filter: drop-shadow(0 4px 8px rgba(80,70,220,.28)); }
+  .wm { font-size: 17px; font-weight: 800; letter-spacing: -.01em; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; white-space: nowrap; }
+  .top .wrap { max-width: 1360px; }
+  .top-in { gap: 12px; }
+  .tabs { flex: 1 1 0; min-width: 0; overflow-x: auto; scrollbar-width: none; margin-inline: 4px; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%); padding-inline: 10px; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { flex: none; padding: 7px 11px; }
+  .actions { display: flex; align-items: center; gap: 10px; flex: none; margin-inline-start: auto; }
+  .actions .who { margin: 0; }
+  @media (max-width: 1280px) { .who-t { display: none; } }
+  @media (max-width: 1000px) { .tab { padding: 7px 9px; font-size: 13px; } }
+
+  /* glossary */
+  .ogline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 2px 0 4px; }
+  .ogc { display: inline-flex; align-items: center; gap: 4px; font: inherit; font-size: 12.5px; border-radius: 99px; padding: 2px 10px; border: 1px solid transparent; }
+  .ogc.ok { background: var(--ok-soft); color: var(--ok); }
+  .ogc.bad { background: var(--gold-soft); color: var(--gold); border-color: currentColor; }
+  button.ogc { cursor: pointer; } button.ogc:hover { filter: brightness(.95); }
+  .ogc .en, .og .en { direction: ltr; font-family: var(--f-en); unicode-bidi: isolate; }
+  .ogbad { color: var(--gold); }
+  .glgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px 14px; }
+  .glact { white-space: nowrap; text-align: end; }
+  #glTable tr.off td { opacity: .5; }
+
   /* phones: bottom navigation, compact header */
   @media (max-width: 760px) {
     body { font-size: 15px; }
     .top-in { gap: 10px; padding-block: 8px; }
     .brand b { font-size: 15px; }
     .who-t { display: none; }
-    .tabs { position: fixed; inset: auto 0 0 0; z-index: 30; margin: 0; gap: 0; justify-content: space-around; padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); background: var(--glass); -webkit-backdrop-filter: saturate(1.6) blur(16px); backdrop-filter: saturate(1.6) blur(16px); border-top: 1px solid var(--line); box-shadow: 0 -8px 24px -12px rgba(0,0,0,.25); }
+    .tabs { -webkit-mask-image: none; mask-image: none; overflow: visible; position: fixed; inset: auto 0 0 0; z-index: 30; margin: 0; gap: 0; justify-content: space-around; padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); background: var(--glass); -webkit-backdrop-filter: saturate(1.6) blur(16px); backdrop-filter: saturate(1.6) blur(16px); border-top: 1px solid var(--line); box-shadow: 0 -8px 24px -12px rgba(0,0,0,.25); }
     .tab { flex: 1 1 0; min-width: 0; flex-direction: column; gap: 2px; padding: 6px 2px; font-size: 11px; line-height: 1.3; border-radius: 12px; box-shadow: none !important; }
     .tab svg { display: block; width: 22px; height: 22px; transition: transform .25s var(--ease); }
     .tab[aria-selected="true"] svg { transform: translateY(-2px) scale(1.12); }
@@ -358,7 +385,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     .sub-tabs button { white-space: nowrap; }
     .center { padding: 16px 12px; } .box.card { padding: 20px; }
   }
-  @media (max-width: 380px) { .tab { font-size: 10px; } .mark { display: none; } }
+  @media (max-width: 380px) { .tab { font-size: 10px; } .wm { display: none; } }
 
   /* ===== writers, signup, theme toggle ===== */
   html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after { transition: background-color .35s, color .35s, border-color .35s, box-shadow .35s !important; }
@@ -623,7 +650,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     try { const r = await fnCall('writer-signup', { action: 'check', token: INVITE }); valid = !!(r && r.valid); } catch (e) { return viewLogin(errText(e)); }
     if (!valid) { clearInvite(); return viewLogin(ERR.invite_invalid); }
     $('#root').innerHTML = `${themeBtn('float')}<div class="center"><form class="box card wide" id="signupForm">
-      <div class="brandline"><span class="mark">فا · EN</span><b>سکوی محتوا</b></div>
+      <div class="brandline"><svg class="logo" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c6cff"/><stop offset="1" stop-color="#3b82f6"/></linearGradient></defs><path d="M20 4 36 12 20 20 4 12Z" fill="url(#lg1)"/><path d="M4 19.5 20 27.5 36 19.5" fill="none" stroke="#7c6cff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/><path d="M4 27 20 35 36 27" fill="none" stroke="#7c6cff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" opacity=".38"/><circle cx="20" cy="12" r="2.6" fill="#fff"/></svg><b class="wm">سکوی محتوا</b></div>
       <h1>ساخت حساب نویسنده</h1>
       <p class="sub">اطلاعات خود را وارد کنید. بعد از ثبت‌نام فقط یک دکمهٔ «بارگذاری فایل» خواهید داشت.</p>
       ${msg ? `<div class="callout">${esc(msg)}</div>` : ''}
@@ -746,10 +773,10 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     const tabs = simple ? [] : all;
     document.body.classList.toggle('no-nav', simple);
     $('#root').innerHTML = `<header class="top${simple ? ' simple' : ''}"><div class="wrap top-in">
-        <div class="brand"><span class="mark">فا · EN</span><b>سکوی محتوا</b></div>
+        <div class="brand"><svg class="logo" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c6cff"/><stop offset="1" stop-color="#3b82f6"/></linearGradient></defs><path d="M20 4 36 12 20 20 4 12Z" fill="url(#lg1)"/><path d="M4 19.5 20 27.5 36 19.5" fill="none" stroke="#7c6cff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/><path d="M4 27 20 35 36 27" fill="none" stroke="#7c6cff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" opacity=".38"/><circle cx="20" cy="12" r="2.6" fill="#fff"/></svg><b class="wm">سکوی محتوا</b></div>
         <nav class="tabs" id="tabs" role="tablist">${tabs.map(([k, l]) => `<button type="button" class="tab" role="tab" data-act="tab" data-tab="${k}" aria-selected="${S.tab === k}">${svgI(k)}<span>${l}</span><span class="count" data-count="${k}" hidden></span></button>`).join('')}</nav>
-        ${writer ? '' : `<div class="bellwrap"><button class="bell" id="bell" type="button" data-act="bell" aria-haspopup="true" aria-expanded="false" aria-label="اعلان‌ها"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="bt">اعلان‌ها</span> <span class="dot" id="bellDot" hidden></span></button><div class="panel" id="panel" hidden></div></div>`}
-        <div class="who">${themeBtn()}<span class="avatar" aria-hidden="true">${me.avatar_url ? `<img src="${esc(me.avatar_url)}" alt="">` : esc((me.full_name || '?').trim().charAt(0))}</span><span class="who-t"><b>${esc(me.full_name || '')}</b><small class="meta">${ROLE_FA[me.role]}</small></span><button class="btn quiet small" type="button" data-act="logout">خروج</button></div>
+        <div class="actions">${writer ? '' : `<div class="bellwrap"><button class="bell" id="bell" type="button" data-act="bell" aria-haspopup="true" aria-expanded="false" aria-label="اعلان‌ها"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="bt">اعلان‌ها</span> <span class="dot" id="bellDot" hidden></span></button><div class="panel" id="panel" hidden></div></div>`}
+        <div class="who">${themeBtn()}<span class="avatar" title="${esc(me.full_name || '')}" aria-hidden="true">${me.avatar_url ? `<img src="${esc(me.avatar_url)}" alt="">` : esc((me.full_name || '?').trim().charAt(0))}</span><span class="who-t"><b>${esc(me.full_name || '')}</b><small class="meta">${ROLE_FA[me.role]}</small></span><button class="btn quiet small" type="button" data-act="logout">خروج</button></div></div>
       </div></header>
       <div class="wrap"><main id="main">${me.role === 'none' ? `<div class="card"><h2>حساب شما هنوز نقشی ندارد</h2><p class="sub">مدیر باید نقش «مترجم»، «بازبین محتوا» یا «ناظر» را به حساب شما بدهد. بعد از آن صفحه را تازه کنید.</p><div class="row"><button class="btn" data-act="reload">تازه‌سازی</button></div></div>` : ''}</main></div>`;
     setBell();
@@ -1056,7 +1083,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     const doc = d.data, segs = s.data;
     curDoc = doc;
     segs.forEach(g => { segMap[g.id] = g; });
-    await loadComments(id);
+    await loadComments(id); await loadOG();
     const supEd = segs.filter(g => doc.supervisor_id && g.last_edited_by === doc.supervisor_id && doc.supervisor_id !== doc.claimed_by).length;
     const editable = ['in_progress', 'changes_requested'].includes(doc.status) && doc.claimed_by === me.id;
     const notes = Array.isArray(doc.ai_notes) ? doc.ai_notes : [];
@@ -1068,10 +1095,12 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       ${gl.length || notes.length ? `<details class="gl"><summary>واژه‌نامه و یادداشت‌های ترجمه ماشینی (${fa(gl.length + notes.length)})</summary>
         ${gl.length ? `<ul class="gl-list">${gl.map(g => `<li><span lang="fa">${esc(g.persian)}</span> ← <span class="en" lang="en">${esc(g.english)}</span></li>`).join('')}</ul>` : ''}
         ${notes.length ? `<ul class="gl-list">${notes.map(n => `<li>بند ${fa(n.paragraph_id)}: <span class="en" lang="en">${esc(n.note)}</span></li>`).join('')}</ul>` : ''}</details>` : ''}
+      ${ogPanel(segs, g => g.current_text)}
       <div class="toolbar"><span id="progress" data-total="${segs.length}">${fa(edited)} از ${fa(segs.length)} بند ویرایش شده</span><span class="saved" id="saved">${editable ? 'ذخیره خودکار فعال است' : 'فقط‌خواندنی'}</span></div>
       <div class="segs">${segs.map((g, i) => `<article class="seg${g.flagged ? ' flagged' : ''}" id="seg-${g.id}">
         <div class="seg-head"><span>بند ${fa(i + 1)} · ${g.kind === 'heading' ? 'تیتر' : g.kind === 'list_item' ? 'فهرست' : 'پاراگراف'}</span><span data-chips="${g.id}">${segChips(g)}</span></div>
         <p class="fa${g.kind === 'heading' ? ' head' : ''}" lang="fa" dir="rtl">${esc(g.source_text)}</p>
+        ${ogLine(g, g.current_text, editable)}
         ${notes.filter(n => n.paragraph_id === g.position).map(n => `<div class="mnote" lang="en">${esc(n.note)}</div>`).join('')}
         <textarea id="ta-${g.id}" class="t en${g.kind === 'heading' ? ' head' : ''}" dir="ltr" lang="en" rows="2" data-sid="${g.id}" ${editable ? '' : 'readonly'} aria-label="ترجمه انگلیسی بند ${fa(i + 1)}">${esc(g.current_text || '')}</textarea>
         <div class="seg-foot"><button type="button" class="btn quiet small" data-act="hist" data-sid="${g.id}">تاریخچه</button>${cmButton(g.id)}
@@ -1223,7 +1252,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     if (d.data.status !== 'awaiting_qa') { S.qa = null; return VIEWS.qa(); }
     const doc = d.data, segs = s.data;
     segs.forEach(g => { segMap[g.id] = g; });
-    await loadComments(id);
+    await loadComments(id); await loadOG();
     const pm = await loadPrintMin();
     const changed = segs.filter(g => g.current_text !== g.ai_text).length;
     const dist = segs.reduce((n, g) => n + wordDist(g.ai_text, g.current_text), 0);
@@ -1231,9 +1260,10 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     return `<div><button type="button" class="btn quiet" data-act="qaback">→ فهرست</button></div>
       <section class="page-head"><h1>${esc(doc.title)}</h1><p class="sub">مترجم: ${esc(nm(doc.claimed_by))} · ${fa(changed)} از ${fa(segs.length)} بند ویرایش شده · TER ${pct(dist / fin)} · ${fa(segs.reduce((n, g) => n + g.seconds_spent, 0) / 60 | 0)} دقیقه زمان ثبت‌شده</p></section>
       <section class="card"><div class="row"><b>اولویت نشر</b>${doc.priority ? `${starsStatic(doc.priority)}<span class="meta">${ratingHint(doc.priority, pm)} · تعیین‌شده توسط بازبین محتوا</span>` : '<span class="chip">بدون رتبه</span><span class="meta">این فایل پیش از انتقال رتبه‌دهی به بازبین آمده است. بعد از تایید، در «آماده انتشار» رتبه بدهید.</span>'}</div></section>
+      ${ogPanel(segs, g => g.current_text)}
       <div class="toolbar"><div class="legend"><span>راهنما:</span><del>حذف‌شده از ترجمه ماشینی</del><ins>افزوده‌شده توسط مترجم</ins></div><span class="saved" id="saved">برای اصلاح مستقیم هر بند، «ویرایش ترجمه» را بزنید. تغییرها هنگام خروج از کادر ذخیره می‌شوند.</span></div>
       <div class="segs">${segs.map((g, i) => `<article class="seg${g.flagged ? ' flagged' : ''}" id="seg-${g.id}"><div class="seg-head"><span>بند ${fa(i + 1)}</span><span data-chips="${g.id}">${qaChips(g)}</span></div>
-          <p class="fa${g.kind === 'heading' ? ' head' : ''}" lang="fa" dir="rtl">${esc(g.source_text)}</p><p class="diff" data-diff="${g.id}">${diffHtml(g)}</p>
+          <p class="fa${g.kind === 'heading' ? ' head' : ''}" lang="fa" dir="rtl">${esc(g.source_text)}</p>${ogLine(g, g.current_text, false)}<p class="diff" data-diff="${g.id}">${diffHtml(g)}</p>
           <div data-qaedit="${g.id}" hidden><textarea id="ta-${g.id}" class="t en${g.kind === 'heading' ? ' head' : ''}" dir="ltr" lang="en" rows="2" data-sid="${g.id}" aria-label="ویرایش ترجمه بند ${fa(i + 1)}">${esc(g.current_text || '')}</textarea><p class="meta">این ویرایش با نام شما در تاریخچه ثبت می‌شود و مترجم آن را در بند می‌بیند.</p></div>
           <div class="seg-foot"><button type="button" class="btn quiet small" data-act="qaedit" data-sid="${g.id}">ویرایش ترجمه</button><button type="button" class="btn quiet small" data-act="hist" data-sid="${g.id}">تاریخچه</button>${cmButton(g.id)}</div><div data-histbox="${g.id}"></div>${cmBox(g.id)}</article>`).join('')}</div>
       <section class="card"><label class="f"><b style="color:var(--fg)">یادداشت برای مترجم</b> (برای بازگرداندن لازم است)<textarea class="plain" id="qaNote" rows="3" dir="rtl" placeholder="مثلاً: اصطلاح بند دوم را با واژه‌نامه سازمان یکدست کنید."></textarea></label>
@@ -1298,16 +1328,108 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   };
 
   // ===================================================================
+  // organizational glossary (واژه‌نامه سازمان)
+  // ===================================================================
+  let OG = [];
+  function normFa(t) {
+    return String(t || '').replace(/ي/g, 'ی').replace(/ك/g, 'ک').replace(/ة/g, 'ه')
+      .replace(/[‌‏‎ـ]/g, ' ').replace(/[ً-ٰٟ]/g, '')
+      .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
+      .replace(/\s+/g, ' ').trim().toLowerCase();
+  }
+  async function loadOG() {
+    const r = await sb.from('glossary').select('*').eq('is_active', true).order('source_term');
+    OG = r.error ? [] : r.data;   // table missing (update 7 not run) simply means: no glossary
+  }
+  function ogHits(srcText) {
+    const t = ' ' + normFa(srcText) + ' ';
+    return OG.filter(e => { const k = normFa(e.source_term); return k && t.includes(k); });
+  }
+  const ogHas = (en, target) => String(en || '').toLowerCase().replace(/\s+/g, ' ').includes(String(target).toLowerCase().replace(/\s+/g, ' ').trim());
+  // chips under one source paragraph: green = target term present, amber = missing (click to insert, translator only)
+  function ogLine(g, en, canInsert) {
+    const hits = ogHits(g.source_text); if (!hits.length) return '';
+    return `<div class="ogline" data-og="${g.id}"><span class="meta">واژه‌نامه سازمان:</span>${ogChips(g, en, canInsert, hits)}</div>`;
+  }
+  function ogChips(g, en, canInsert, hits) {
+    hits = hits || ogHits(g.source_text);
+    return hits.map(e => {
+      const ok = ogHas(en, e.target_term);
+      const inner = `<span lang="fa">${esc(e.source_term)}</span> = <span class="en" lang="en">${esc(e.target_term)}</span>`;
+      const tip = esc(e.note || '');
+      return ok ? `<span class="ogc ok" title="${tip}">${inner}</span>`
+        : canInsert ? `<button type="button" class="ogc bad" data-act="oginsert" data-sid="${g.id}" data-term="${esc(e.target_term)}" title="${tip}">${inner} · درج</button>`
+        : `<span class="ogc bad" title="${tip}">${inner} · در ترجمه نیست</span>`;
+    }).join('');
+  }
+  function ogSummary(segs, textOf) {
+    const hits = new Map(); let bad = 0;
+    segs.forEach(g => {
+      const h = ogHits(g.source_text); let miss = false;
+      h.forEach(e => { if (!hits.has(e.id)) hits.set(e.id, { e, n: 0, miss: 0 }); const o = hits.get(e.id); o.n++; if (!ogHas(textOf(g), e.target_term)) { o.miss++; miss = true; } });
+      if (miss) bad++;
+    });
+    return { terms: [...hits.values()], bad };
+  }
+  function ogPanel(segs, textOf) {
+    const { terms, bad } = ogSummary(segs, textOf); if (!terms.length) return '';
+    return `<details class="gl og" id="ogPanel" ${bad ? 'open' : ''}><summary>واژه‌نامه سازمان: ${fa(terms.length)} اصطلاح در این فایل${bad ? ` · <b class="ogbad">${fa(bad)} بند مغایر</b>` : ' · همه رعایت شده'}</summary>
+      <ul class="gl-list">${terms.map(o => `<li class="${o.miss ? 'ogbad' : ''}"><span lang="fa">${esc(o.e.source_term)}</span> = <span class="en" lang="en">${esc(o.e.target_term)}</span> <span class="meta">(${fa(o.n)} بند${o.miss ? '، ' + fa(o.miss) + ' مغایر' : ''})</span></li>`).join('')}</ul></details>`;
+  }
+  function ogRefresh(sid, text, canInsert) {
+    const g = segMap[sid]; if (!g) return;
+    const box = document.querySelector(`[data-og="${sid}"]`); if (box) box.innerHTML = '<span class="meta">واژه‌نامه سازمان:</span>' + ogChips(g, text, canInsert);
+    const p = document.getElementById('ogPanel'); if (p) {
+      const segs = Object.values(segMap).filter(x => x.document_id === g.document_id).sort((a, b) => a.position - b.position);
+      const cur = id => { const ta = document.getElementById('ta-' + id); return ta ? ta.value : segMap[id].current_text; };
+      const { terms, bad } = ogSummary(segs, x => cur(x.id));
+      p.querySelector('summary').innerHTML = `واژه‌نامه سازمان: ${fa(terms.length)} اصطلاح در این فایل${bad ? ` · <b class="ogbad">${fa(bad)} بند مغایر</b>` : ' · همه رعایت شده'}`;
+      p.querySelector('ul').innerHTML = terms.map(o => `<li class="${o.miss ? 'ogbad' : ''}"><span lang="fa">${esc(o.e.source_term)}</span> = <span class="en" lang="en">${esc(o.e.target_term)}</span> <span class="meta">(${fa(o.n)} بند${o.miss ? '، ' + fa(o.miss) + ' مغایر' : ''})</span></li>`).join('');
+    }
+  }
+
+  // admin tab
+  async function adminGlossary() {
+    const { data, error } = await sb.from('glossary').select('*').order('source_term');
+    if (error) return `<div class="callout">جدول واژه‌نامه پیدا نشد. فایل schema_update_7.sql را اجرا کرده‌اید؟ ${esc(errText(error))}</div>`;
+    const ed = S.glEdit ? data.find(x => x.id === S.glEdit) : null;
+    const act = data.filter(x => x.is_active).length;
+    return `<form class="card" id="glForm"><h2>${ed ? 'ویرایش اصطلاح' : 'افزودن اصطلاح'}</h2>
+        <p class="sub">هر اصطلاحی که اینجا ثبت شود، هنگام ترجمهٔ ماشینی به‌صورت الزامی به Gemini داده می‌شود و در ویرایشگر مترجم و ناظر هم نشان داده می‌شود. فقط اصطلاح‌هایی که در متن همان فایل باشند ارسال می‌شوند.</p>
+        <div class="glgrid"><label class="f">اصطلاح فارسی<input type="text" id="glFa" dir="rtl" lang="fa" value="${esc(ed ? ed.source_term : '')}" required></label>
+        <label class="f">معادل ثابت انگلیسی<input class="ltr" type="text" id="glEn" lang="en" value="${esc(ed ? ed.target_term : '')}" required></label>
+        <label class="f">توضیح (اختیاری)<input type="text" id="glNote" value="${esc(ed && ed.note ? ed.note : '')}" placeholder="مثلاً: هرگز Persian Gulf را کوتاه نکنید"></label></div>
+        <div class="row"><button class="btn primary" type="submit">${ed ? 'ذخیره تغییر' : 'افزودن'}</button>${ed ? '<button class="btn" type="button" data-act="glcancel">انصراف</button>' : ''}</div></form>
+      <h2>اصطلاح‌های ثبت‌شده <span class="chip">${fa(data.length)}</span> <span class="meta">${fa(act)} فعال</span></h2>
+      ${data.length ? `<div class="row"><input type="search" id="glQ" class="grow" placeholder="جستجوی فارسی یا انگلیسی" aria-label="جستجو در واژه‌نامه"></div>
+      <div class="table-wrap"><table id="glTable"><thead><tr><th>فارسی</th><th>انگلیسی</th><th>توضیح</th><th></th></tr></thead><tbody>${data.map(x => `<tr data-q="${esc((normFa(x.source_term) + ' ' + x.target_term + ' ' + (x.note || '')).toLowerCase())}" class="${x.is_active ? '' : 'off'}"><td lang="fa">${esc(x.source_term)}</td><td class="en" lang="en" dir="ltr">${esc(x.target_term)}</td><td class="meta">${esc(x.note || '')}</td>
+        <td class="glact"><button type="button" class="btn quiet small" data-act="gledit" data-id="${x.id}">ویرایش</button><button type="button" class="btn quiet small" data-act="gltoggle" data-id="${x.id}" data-on="${x.is_active ? 0 : 1}">${x.is_active ? 'غیرفعال' : 'فعال'}</button>${S.glDel === x.id ? `<button type="button" class="btn danger small" data-act="gldel" data-id="${x.id}">حذف قطعی؟</button>` : `<button type="button" class="btn quiet small danger" data-act="glask" data-id="${x.id}">حذف</button>`}</td></tr>`).join('')}</tbody></table></div>` : '<div class="card"><p class="sub">هنوز اصطلاحی ثبت نشده است.</p></div>'}
+      <form class="card" id="glImport"><h2>افزودن گروهی</h2>
+        <p class="sub">هر خط یک اصطلاح: <span class="num" dir="ltr">فارسی = English</span> و در صورت نیاز <span class="num" dir="ltr">فارسی = English | توضیح</span>. اصطلاحی که از قبل ثبت شده باشد به‌روز می‌شود. جدا کننده می‌تواند Tab هم باشد (کپی از اکسل).</p>
+        <textarea class="plain" id="glBulk" rows="7" dir="rtl" placeholder="دریای خزر = the Caspian Sea&#10;پیمان‌نامه = Treaty | در متن‌های حقوقی"></textarea>
+        <div class="row"><button class="btn" type="submit">افزودن گروهی</button></div></form>`;
+  }
+  function parseBulk(txt) {
+    return String(txt || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => {
+      let a, b, note = '';
+      const bar = l.split('|'); const main = bar[0]; note = (bar[1] || '').trim();
+      if (main.includes('\t')) [a, b] = main.split('\t'); else if (main.includes('=')) { const i = main.indexOf('='); a = main.slice(0, i); b = main.slice(i + 1); } else return null;
+      return { source: (a || '').trim(), target: (b || '').trim(), note };
+    }).filter(Boolean);
+  }
+
+  // ===================================================================
   // view: admin
   // ===================================================================
   VIEWS.admin = async function () {
-    const tabs = [['users', 'کاربران و نقش‌ها'], ['prompt', 'پرامپت و مدل'], ['gemini', 'کلید Gemini'], ['pubset', 'تنظیمات انتشار'], ['invite', 'لینک ورود اعضا'], ['writers', 'دعوت نویسندگان'], ['uploads', 'بارگذاری‌ها'], ['files', 'همه فایل‌ها']];
+    const tabs = [['users', 'کاربران و نقش‌ها'], ['prompt', 'پرامپت و مدل'], ['gemini', 'کلید Gemini'], ['pubset', 'تنظیمات انتشار'], ['invite', 'لینک ورود اعضا'], ['writers', 'دعوت نویسندگان'], ['glossary', 'واژه‌نامه'], ['uploads', 'بارگذاری‌ها'], ['files', 'همه فایل‌ها']];
     let body;
     if (S.adminTab === 'users') body = await adminUsers();
     else if (S.adminTab === 'prompt') body = await adminPrompt();
     else if (S.adminTab === 'gemini') body = await adminGemini();
     else if (S.adminTab === 'pubset') body = await adminPubset();
     else if (S.adminTab === 'invite') body = await adminInvite();
+    else if (S.adminTab === 'glossary') body = await adminGlossary();
     else if (S.adminTab === 'writers') body = await adminWriters();
     else if (S.adminTab === 'uploads') body = await adminUploads();
     else body = await adminFiles();
@@ -1654,7 +1776,19 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
     },
     async publish(el) { await rpc('mark_published', { p_doc: el.dataset.id }); toast('علامت‌گذاری شد.'); render(); },
-    admintab(el) { S.adminTab = el.dataset.tab; render(); },
+    glask(el) { S.glDel = el.dataset.id; render(); },
+    async gldel(el) { const r = await sb.from('glossary').delete().eq('id', el.dataset.id); if (r.error) throw r.error; S.glDel = null; toast('اصطلاح حذف شد.'); render(); },
+    async gledit(el) { S.glEdit = el.dataset.id; await render(); setTimeout(() => { const f = $('#glFa'); if (f) { f.scrollIntoView({ block: 'center' }); f.focus(); } }, 150); },
+    glcancel() { S.glEdit = null; render(); },
+    async gltoggle(el) { const r = await sb.from('glossary').update({ is_active: el.dataset.on === '1' }).eq('id', el.dataset.id); if (r.error) throw r.error; render(); },
+    oginsert(el) {
+      const ta = document.getElementById('ta-' + el.dataset.sid); if (!ta || ta.readOnly) return;
+      const pos = ta.selectionStart != null && document.activeElement === ta ? ta.selectionStart : ta.value.length;
+      const t = el.dataset.term, before = ta.value.slice(0, pos), after = ta.value.slice(pos);
+      ta.value = before + (before && !/\s$/.test(before) ? ' ' : '') + t + (after && !/^[\s.,;:]/.test(after) ? ' ' : '') + after;
+      ta.dispatchEvent(new Event('input', { bubbles: true })); grow(ta); ta.focus();
+    },
+    admintab(el) { S.glEdit = null; S.glDel = null; S.adminTab = el.dataset.tab; render(); },
     async setpass(el) {
       const i = document.querySelector(`[data-ppass="${el.dataset.id}"]`);
       await fnCall('manage-users', { action: 'set_password', user_id: el.dataset.id, password: i.value });
@@ -1683,10 +1817,12 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       const cur = { ...g, current_text: ta.value };
       const c = document.querySelector(`[data-chips="${sid}"]`); if (c) c.innerHTML = qaChips(cur);
       const df = document.querySelector(`[data-diff="${sid}"]`); if (df) df.innerHTML = diffHtml(cur);
+      ogRefresh(sid, ta.value, false);
       return;
     }
     const chips = document.querySelector(`[data-chips="${sid}"]`);
     if (chips) chips.innerHTML = segChips({ ...g, current_text: ta.value });
+    ogRefresh(sid, ta.value, true);
     refreshEditedCount();
   }
 
@@ -1729,6 +1865,18 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         if (i.error) throw i.error;
         toast('نسخه ' + fa(ver) + ' ذخیره و فعال شد.'); return render();
       }
+      if (f.id === 'glForm') {
+        const row = { source_term: $('#glFa').value.trim(), target_term: $('#glEn').value.trim(), note: $('#glNote').value.trim() || null };
+        if (!row.source_term || !row.target_term) throw new Error('اصطلاح فارسی و معادل انگلیسی هر دو لازم است.');
+        const r = S.glEdit ? await sb.from('glossary').update(row).eq('id', S.glEdit) : await sb.from('glossary').insert({ ...row, created_by: me.id });
+        if (r.error) throw new Error(r.error.code === '23505' ? 'این اصطلاح فارسی قبلاً ثبت شده است. آن را ویرایش کنید.' : errText(r.error));
+        S.glEdit = null; toast('اصطلاح ذخیره شد.'); return render();
+      }
+      if (f.id === 'glImport') {
+        const rows = parseBulk($('#glBulk').value); if (!rows.length) throw new Error('هیچ خط معتبری پیدا نشد. قالب: فارسی = English');
+        const r = await rpc('glossary_import', { p_rows: rows });
+        toast(`${fa(r.added)} اصطلاح افزوده، ${fa(r.updated)} به‌روز شد${r.skipped ? '، ' + fa(r.skipped) + ' خط رد شد' : ''}.`); return render();
+      }
       if (f.id === 'keyForm') {
         const v = $('#gKey').value.trim(); if (!v) throw new Error('کلید را وارد کنید.');
         await rpc('set_secret', { p_name: 'GEMINI_API_KEY', p_value: v }); toast('کلید ذخیره شد.'); return render();
@@ -1740,6 +1888,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   document.addEventListener('input', e => {
     const t = e.target;
     if (t.id === 'wBase') { S.wBase = t.value.trim(); try { localStorage.setItem('tl_base', S.wBase); } catch (_) { /* ignore */ } }
+    if (t.id === 'glQ') { const q = normFa(t.value); document.querySelectorAll('#glTable tbody tr').forEach(r => { r.hidden = !!q && !r.dataset.q.includes(q); }); }
     if (t.matches('textarea.t')) grow(t);
     if (t.matches('textarea[data-sid]') && !t.readOnly) {
       const s = st(t.dataset.sid); s.dirty = true; segUpdate(t.dataset.sid); setSaved('در حال ویرایش…');
