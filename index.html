@@ -810,6 +810,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       case 'returned_to_writer': return `${t} برای اصلاح به نویسنده برگشت${p.note ? ': ' + p.note : ''}.`;
       case 'approved': return `ترجمه ${t} تایید شد.`;
       case 'comment': return `${p.by || 'کسی'} روی ${t} نظر گذاشت${p.note ? ': ' + p.note : ''}`;
+      case 'news_batch': return `${fa(p.count || 0)} خبر تازه در سبد بازبین قرار گرفت.`;
       case 'ai_failed': return `ترجمه ماشینی ${t} ناموفق بود${p.note ? ': ' + p.note : ''}.`;
       default: return n.type;
     }
@@ -989,7 +990,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   // ===================================================================
   VIEWS.review = async function () {
     if (S.docId) return vReviewDoc();
-    const { data, error } = await sb.from('documents').select('id,title,status,word_count,ai_error,ai_started_at,review_note,created_at,source_kind,uploaded_by')
+    const { data, error } = await sb.from('documents').select('id,title,status,word_count,ai_error,ai_started_at,review_note,created_at,source_kind,source_name,source_url,uploaded_by')
       .in('status', ['content_review', 'review_rejected', 'translating', 'translation_failed']).is('replaced_by', null).order('created_at', { ascending: false });
     if (error) throw error;
     const rows = data.map(d => {
@@ -1004,7 +1005,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         if (stale) act = `<button type="button" class="btn" data-act="retry" data-id="${d.id}">شروع دوباره ترجمه ماشینی</button>`;
       }
       if (d.status === 'translation_failed') { info = `<div class="callout"><b>خطا:</b> <span class="num" dir="ltr">${esc(d.ai_error || '')}</span></div>`; act = `<button type="button" class="btn primary" data-act="retry" data-id="${d.id}">تلاش دوباره</button>`; extra = `<button type="button" class="btn" data-act="cancelai" data-id="${d.id}">بازگشت به بازبینی</button>`; }
-      return `<article class="card"><div class="item"><div class="item-main"><div class="item-title">${esc(d.title)}</div><div class="meta">${fa(d.word_count)} کلمه · ${fmtT(d.created_at)}${d.uploaded_by && S.names[d.uploaded_by] ? ' · فرستنده: ' + whoH(d.uploaded_by) : ''}${d.source_kind === 'news' ? ' · خبر' : ''}</div></div>${d.status === 'review_rejected' && toW ? '<span class="chip bad">برگشته به نویسنده</span>' : chip(d.status)}<span class="row">${act}${extra}<button type="button" class="btn small danger" data-act="deldoc" data-id="${d.id}">حذف</button></span></div>${info}${d.status === 'review_rejected' && d.review_note ? `<div class="callout"><b>یادداشت بازبین:</b> ${esc(d.review_note)}</div>` : ''}</article>`;
+      return `<article class="card"><div class="item"><div class="item-main"><div class="item-title">${esc(d.title)}</div><div class="meta">${fa(d.word_count)} کلمه · ${fmtT(d.created_at)}${d.uploaded_by && S.names[d.uploaded_by] ? ' · فرستنده: ' + whoH(d.uploaded_by) : ''}${d.source_kind === 'news' ? ' · خبر' + (d.source_name ? ' از ' + esc(d.source_name) : '') + (d.source_url ? ' <a href="' + esc(d.source_url) + '" target="_blank" rel="noopener">منبع</a>' : '') : ''}</div></div>${d.status === 'review_rejected' && toW ? '<span class="chip bad">برگشته به نویسنده</span>' : chip(d.status)}<span class="row">${act}${extra}<button type="button" class="btn small danger" data-act="deldoc" data-id="${d.id}">حذف</button></span></div>${info}${d.status === 'review_rejected' && d.review_note ? `<div class="callout"><b>یادداشت بازبین:</b> ${esc(d.review_note)}</div>` : ''}</article>`;
     }).join('');
     return head('بازبینی محتوایی', 'متن فارسی را پیش از ترجمه ماشینی بخوانید و اولویت نشر را (۱ تا ۵ ستاره) تعیین کنید. بعد از تایید، فایل خودکار به Gemini داده می‌شود. اگر متن اصلاح لازم دارد، با نظرهای خود به نویسنده برگردانید.') + `
       <div class="drop"><div class="item-main"><b>بارگذاری فایل فارسی</b><p class="meta">فایل DOCX را انتخاب کنید. متن آن در مرورگر به بند تقسیم می‌شود. تیترها و فهرست‌ها شناسایی می‌شوند.</p></div>
@@ -1414,6 +1415,77 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         <textarea class="plain" id="glBulk" rows="7" dir="rtl" placeholder="دریای خزر = the Caspian Sea&#10;پیمان‌نامه = Treaty | در متن‌های حقوقی"></textarea>
         <div class="row"><button class="btn" type="submit">افزودن گروهی</button></div></form>`;
   }
+
+  // ===================================================================
+  // admin: news intake (sources, rules, test, recent items)
+  // ===================================================================
+  const NEWS_KIND = { rss: 'خوراک RSS', web: 'صفحهٔ وب', push: 'ورودی بیرونی' };
+  const NEWS_STATUS = { accepted: ['پذیرفته', 'ok'], rejected: ['ردشده', ''], error: ['خطا', 'bad'] };
+  function newsDecisions(r) {
+    if (!r) return '';
+    if (r.error && !(r.decisions || []).length) return `<div class="callout">${esc(r.error)}</div>`;
+    const ds = r.decisions || [];
+    return `<div class="table-wrap"><table><thead><tr><th>عنوان</th><th>نتیجه</th><th>کلمه</th><th>پیش‌نمایش</th></tr></thead><tbody>${ds.map(d => `<tr><td><a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.title || d.url)}</a></td>
+      <td><span class="chip ${d.decision === 'accept' || d.decision === 'accepted' ? 'ok' : (d.decision === 'error' ? 'bad' : '')}">${esc(d.decision)}</span> <span class="meta">${esc(d.reason || '')}</span></td>
+      <td class="num">${fa(d.words || 0)}</td><td class="meta">${esc((d.preview || '').slice(0, 140))}</td></tr>`).join('') || '<tr><td colspan="4" class="meta">موردی پیدا نشد.</td></tr>'}</tbody></table></div>${r.error ? `<div class="callout">${esc(r.error)}</div>` : ''}`;
+  }
+  async function adminNews() {
+    const [src, rul, itm, cf] = await Promise.all([
+      sb.from('news_sources').select('*').order('created_at'),
+      sb.from('news_rules').select('*').order('created_at'),
+      sb.from('news_items').select('id,source_id,url,title,status,reason,fetched_at').order('fetched_at', { ascending: false }).limit(40),
+      sb.from('app_config').select('key,value').in('key', ['news_min_words', 'news_max_words', 'news_max_per_run'])]);
+    if (src.error) return `<div class="callout">جدول منابع خبر پیدا نشد. فایل schema_update_9.sql را اجرا کرده‌اید؟ ${esc(errText(src.error))}</div>`;
+    const sources = src.data || [], rules = rul.data || [], items = itm.data || [];
+    const c = {}; (cf.data || []).forEach(x => { c[x.key] = x.value; });
+    const byId = Object.fromEntries(sources.map(x => [x.id, x]));
+    const ed = S.newsEdit ? sources.find(x => x.id === S.newsEdit) : null;
+    const kind = S.newsKind || (ed ? ed.kind : 'rss');
+    const test = S.newsTest;
+    return `<div class="card"><h2>دروازهٔ ورود خبر</h2>
+        <p class="sub">خبرها از منابع زیر خوانده می‌شوند، تکراری‌ها و موارد نامربوط (طبق قواعد) کنار می‌روند و بقیه مثل یک فایل عادی به سبد بازبین می‌روند. ابتدا هر منبع را با «آزمایش» بررسی کنید؛ آزمایش چیزی ذخیره نمی‌کند.</p>
+        <div class="row"><button class="btn primary" type="button" data-act="newspoll">بررسی همهٔ منابع اکنون</button>
+        <button class="btn" type="button" data-act="newsreset" title="خبرهای ردشده یا خطادار دوباره بررسی می‌شوند">بازبینی ردشده‌ها</button></div></div>
+      <h2>منابع <span class="chip">${fa(sources.length)}</span></h2>
+      ${sources.length ? sources.map(x => `<div class="card ${x.last_error ? 'err' : ''}"><div class="row"><strong class="grow">${esc(x.name)}</strong><span class="chip accent">${NEWS_KIND[x.kind] || x.kind}</span>${x.is_active ? '' : '<span class="chip">متوقف</span>'}</div>
+        ${x.feed_url ? `<div class="ltr meta" dir="ltr">${esc(x.feed_url)}</div>` : ''}
+        <div class="meta">هر ${fa(x.check_every_min)} دقیقه؛ آخرین بررسی: ${fmtT(x.last_checked_at)}${x.last_ok_at ? ('؛ آخرین موفق: ' + fmtT(x.last_ok_at)) : ''}</div>
+        ${x.last_error ? `<div class="meta">خطا: ${esc(x.last_error)}</div>` : ''}
+        <div class="row">${x.kind !== 'push' ? `<button type="button" class="btn small" data-act="newstest" data-id="${x.id}">آزمایش</button>` : ''}${x.kind !== 'push' ? `<button type="button" class="btn small" data-act="newspollone" data-id="${x.id}">بررسی اکنون</button>` : ''}
+        <button type="button" class="btn quiet small" data-act="newsedit" data-id="${x.id}">ویرایش</button>
+        <button type="button" class="btn quiet small" data-act="newstoggle" data-id="${x.id}" data-on="${x.is_active ? 0 : 1}">${x.is_active ? 'توقف' : 'فعال‌سازی'}</button>
+        ${S.newsDel === x.id ? `<button type="button" class="btn danger small" data-act="newsdel" data-id="${x.id}">حذف قطعی</button><button type="button" class="btn quiet small" data-act="newsdelno">انصراف</button>` : `<button type="button" class="btn quiet danger small" data-act="newsask" data-id="${x.id}">حذف</button>`}</div></div>`).join('') : '<div class="callout">هنوز منبعی ثبت نشده است. از فرم زیر شروع کنید.</div>'}
+      ${test ? `<div class="card"><h2>نتیجهٔ آزمایش <span class="meta">${esc(test.label || '')}</span></h2>${newsDecisions(test.result)}<div class="row"><button type="button" class="btn quiet small" data-act="newstestclose">بستن</button></div></div>` : ''}
+      <form class="card" id="newsForm"><h2>${ed ? 'ویرایش منبع' : 'افزودن منبع'}</h2>
+        <div class="glgrid"><label class="f">نام منبع<input type="text" id="nsName" value="${esc(ed ? ed.name : '')}" required></label>
+        <label class="f">نوع<select id="nsKind"><option value="rss"${kind === 'rss' ? ' selected' : ''}>خوراک RSS یا Atom (ساده‌ترین و پایدارترین)</option><option value="web"${kind === 'web' ? ' selected' : ''}>صفحهٔ فهرست خبر در وب</option><option value="push"${kind === 'push' ? ' selected' : ''}>ورودی بیرونی (n8n و مانند آن)</option></select></label>
+        ${kind !== 'push' ? `<label class="f">${kind === 'rss' ? 'نشانی خوراک' : 'نشانی صفحهٔ فهرست اخبار'}<input class="ltr" dir="ltr" type="url" id="nsUrl" value="${esc(ed && ed.feed_url ? ed.feed_url : '')}" placeholder="https://" required></label>` : ''}
+        ${kind === 'web' ? `<label class="f">الگوی نشانی مقاله (عبارت منظم)<input class="ltr" dir="ltr" type="text" id="nsPat" value="${esc(ed && ed.link_pattern ? ed.link_pattern : '')}" placeholder="/news/\\d+"></label>
+        <label class="f">انتخاب‌گر متن خبر (اختیاری)<input class="ltr" dir="ltr" type="text" id="nsSel" value="${esc(ed && ed.body_selector ? ed.body_selector : '')}" placeholder="div.news-body"></label>` : ''}
+        <label class="f">هر چند دقیقه بررسی شود<select id="nsEvery">${[15, 30, 60, 180, 360].map(m => `<option value="${m}"${(ed ? ed.check_every_min : 60) === m ? ' selected' : ''}>${fa(m)}</option>`).join('')}</select></label></div>
+        ${kind === 'push' ? '<p class="sub">این نوع منبع خودش چیزی نمی‌خواند؛ ابزار بیرونی خبرها را به نشانی بخش «راهنمای اتصال» می‌فرستد و نام این منبع را مشخص می‌کند.</p>' : ''}
+        <div class="row"><button class="btn primary" type="submit">${ed ? 'ذخیره تغییر' : 'افزودن منبع'}</button>${kind !== 'push' ? '<button class="btn" type="button" data-act="newstestform">آزمایش با همین مقادیر</button>' : ''}${ed ? '<button class="btn" type="button" data-act="newscancel">انصراف</button>' : ''}</div></form>
+      <h2>قواعد فیلتر <span class="chip">${fa(rules.length)}</span></h2>
+      <form class="card" id="ruleForm"><p class="sub">«شامل» یعنی خبر باید دست‌کم یکی از این کلمه‌ها را داشته باشد. «حذف» یعنی خبری که یکی از این کلمه‌ها را دارد رد شود. اگر هیچ قاعدهٔ «شامل» نباشد، همهٔ خبرها بررسی می‌شوند.</p>
+        <div class="glgrid"><label class="f">کلمه یا عبارت<input type="text" id="ruKw" required></label>
+        <label class="f">نوع<select id="ruKind"><option value="include">شامل</option><option value="exclude">حذف</option></select></label>
+        <label class="f">دامنه<select id="ruSrc"><option value="">همهٔ منابع</option>${sources.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select></label></div>
+        <div class="row"><button class="btn primary" type="submit">افزودن قاعده</button></div></form>
+      ${rules.length ? `<div class="table-wrap"><table><thead><tr><th>کلمه</th><th>نوع</th><th>دامنه</th><th></th></tr></thead><tbody>${rules.map(r => `<tr><td>${esc(r.keyword)}</td><td><span class="chip ${r.kind === 'include' ? 'ok' : 'bad'}">${r.kind === 'include' ? 'شامل' : 'حذف'}</span>${r.is_active ? '' : ' <span class="chip">غیرفعال</span>'}</td><td>${r.source_id && byId[r.source_id] ? esc(byId[r.source_id].name) : 'همه'}</td>
+        <td class="glact"><button type="button" class="btn quiet small" data-act="ruletoggle" data-id="${r.id}" data-on="${r.is_active ? 0 : 1}">${r.is_active ? 'غیرفعال' : 'فعال'}</button><button type="button" class="btn quiet danger small" data-act="ruledel" data-id="${r.id}">حذف</button></td></tr>`).join('')}</tbody></table></div>` : ''}
+      <form class="card" id="newsCfg"><h2>محدودیت‌ها</h2>
+        <div class="glgrid"><label class="f">حداقل کلمه<input class="ltr" dir="ltr" type="number" id="ncMin" min="0" value="${esc(c.news_min_words || 60)}"></label>
+        <label class="f">حداکثر کلمه<input class="ltr" dir="ltr" type="number" id="ncMax" min="50" value="${esc(c.news_max_words || 3000)}"></label>
+        <label class="f">حداکثر خبر پذیرفته در هر بار بررسی<input class="ltr" dir="ltr" type="number" id="ncRun" min="1" max="100" value="${esc(c.news_max_per_run || 20)}"></label></div>
+        <div class="row"><button class="btn" type="submit">ذخیره محدودیت‌ها</button></div></form>
+      <h2>آخرین خبرهای دیده‌شده <span class="chip">${fa(items.length)}</span></h2>
+      ${items.length ? `<div class="table-wrap"><table><thead><tr><th>عنوان</th><th>منبع</th><th>وضعیت</th><th>زمان</th></tr></thead><tbody>${items.map(i => { const st = NEWS_STATUS[i.status] || [i.status, '']; return `<tr><td><a href="${esc(i.url)}" target="_blank" rel="noopener">${esc(i.title || i.url)}</a></td><td>${i.source_id && byId[i.source_id] ? esc(byId[i.source_id].name) : '—'}</td><td><span class="chip ${st[1]}">${st[0]}</span> <span class="meta">${esc(i.reason || '')}</span></td><td class="meta">${fmtT(i.fetched_at)}</td></tr>`; }).join('')}</tbody></table></div>` : '<div class="meta">هنوز خبری دیده نشده است.</div>'}
+      <details class="gl"><summary>راهنمای اتصال ابزار بیرونی (n8n)</summary>
+        <p class="sub">برای ورودی بیرونی، یک درخواست POST با این مشخصات بفرستید:</p>
+        <div class="ltr" dir="ltr"><code>POST ${esc(cfg.url)}/functions/v1/news-ingest</code><br><code>x-ingest-key: (کلید INGEST_KEY که خودتان تعیین کرده‌اید)</code></div>
+        <pre class="ltr" dir="ltr">{"action":"push","source_name":"نام منبع","items":[{"url":"https://...","title":"...","text":"متن کامل خبر"}]}</pre>
+        <p class="sub">کلید در این صفحه نمایش داده نمی‌شود و فقط در تنظیمات Supabase نگه‌داری می‌شود.</p></details>`;
+  }
   function parseBulk(txt) {
     return String(txt || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => {
       let a, b, note = '';
@@ -1427,7 +1499,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   // view: admin
   // ===================================================================
   VIEWS.admin = async function () {
-    const tabs = [['users', 'کاربران و نقش‌ها'], ['prompt', 'پرامپت و مدل'], ['gemini', 'کلید Gemini'], ['pubset', 'تنظیمات انتشار'], ['invite', 'لینک ورود اعضا'], ['writers', 'دعوت نویسندگان'], ['glossary', 'واژه‌نامه'], ['uploads', 'بارگذاری‌ها'], ['files', 'همه فایل‌ها']];
+    const tabs = [['users', 'کاربران و نقش‌ها'], ['prompt', 'پرامپت و مدل'], ['gemini', 'کلید Gemini'], ['pubset', 'تنظیمات انتشار'], ['invite', 'لینک ورود اعضا'], ['writers', 'دعوت نویسندگان'], ['glossary', 'واژه‌نامه'], ['news', 'منابع خبر'], ['uploads', 'بارگذاری‌ها'], ['files', 'همه فایل‌ها']];
     let body;
     if (S.adminTab === 'users') body = await adminUsers();
     else if (S.adminTab === 'prompt') body = await adminPrompt();
@@ -1435,6 +1507,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     else if (S.adminTab === 'pubset') body = await adminPubset();
     else if (S.adminTab === 'invite') body = await adminInvite();
     else if (S.adminTab === 'glossary') body = await adminGlossary();
+    else if (S.adminTab === 'news') body = await adminNews();
     else if (S.adminTab === 'writers') body = await adminWriters();
     else if (S.adminTab === 'uploads') body = await adminUploads();
     else body = await adminFiles();
@@ -1793,6 +1866,40 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     async gldel(el) { const r = await sb.from('glossary').delete().eq('id', el.dataset.id); if (r.error) throw r.error; S.glDel = null; toast('اصطلاح حذف شد.'); render(); },
     async gledit(el) { S.glEdit = el.dataset.id; await render(); setTimeout(() => { const f = $('#glFa'); if (f) { f.scrollIntoView({ block: 'center' }); f.focus(); } }, 150); },
     glcancel() { S.glEdit = null; render(); },
+    newsedit(el) { S.newsEdit = el.dataset.id; S.newsKind = null; render(); },
+    newscancel() { S.newsEdit = null; S.newsKind = null; render(); },
+    newsask(el) { S.newsDel = el.dataset.id; render(); },
+    newsdelno() { S.newsDel = null; render(); },
+    async newsdel(el) { const r = await sb.from('news_sources').delete().eq('id', el.dataset.id); if (r.error) throw r.error; S.newsDel = null; S.newsEdit = null; toast('منبع حذف شد.'); render(); },
+    async newstoggle(el) { const r = await sb.from('news_sources').update({ is_active: el.dataset.on === '1' }).eq('id', el.dataset.id); if (r.error) throw r.error; render(); },
+    newstestclose() { S.newsTest = null; render(); },
+    async newstest(el) {
+      toast('در حال آزمایش…');
+      try { S.newsTest = { label: '', result: await fnCall('news-ingest', { action: 'test', source_id: el.dataset.id }) }; }
+      catch (e) { S.newsTest = { result: { error: errText(e), decisions: [] } }; }
+      await render(); const t = $('#newsForm'); if (t && t.previousElementSibling) t.previousElementSibling.scrollIntoView({ block: 'center' });
+    },
+    async newstestform() {
+      const kind = $('#nsKind').value; const u = $('#nsUrl'); if (!u || !u.value.trim()) throw new Error('نشانی را وارد کنید.');
+      toast('در حال آزمایش…');
+      const source = { kind, feed_url: u.value.trim(), link_pattern: ($('#nsPat') || {}).value || null, body_selector: ($('#nsSel') || {}).value || null };
+      try { S.newsTest = { label: u.value.trim(), result: await fnCall('news-ingest', { action: 'test', source }) }; }
+      catch (e) { S.newsTest = { result: { error: errText(e), decisions: [] } }; }
+      render();
+    },
+    async newspoll() {
+      toast('در حال بررسی منابع…');
+      const r = await fnCall('news-ingest', { action: 'poll', force: true });
+      toast(`${fa(r.accepted || 0)} خبر تازه پذیرفته شد (${fa(r.checked || 0)} مورد بررسی).`); render();
+    },
+    async newspollone(el) {
+      toast('در حال بررسی…');
+      const r = await fnCall('news-ingest', { action: 'poll', source_id: el.dataset.id, force: true });
+      toast(`${fa(r.accepted || 0)} خبر تازه پذیرفته شد (${fa(r.checked || 0)} مورد بررسی).`); render();
+    },
+    async newsreset() { const n = await rpc('news_reset_rejected', {}); toast(`${fa(n || 0)} مورد برای بررسی دوباره آزاد شد.`); render(); },
+    async ruletoggle(el) { const r = await sb.from('news_rules').update({ is_active: el.dataset.on === '1' }).eq('id', el.dataset.id); if (r.error) throw r.error; render(); },
+    async ruledel(el) { const r = await sb.from('news_rules').delete().eq('id', el.dataset.id); if (r.error) throw r.error; render(); },
     async gltoggle(el) { const r = await sb.from('glossary').update({ is_active: el.dataset.on === '1' }).eq('id', el.dataset.id); if (r.error) throw r.error; render(); },
     oginsert(el) {
       const ta = document.getElementById('ta-' + el.dataset.sid); if (!ta || ta.readOnly) return;
@@ -1801,7 +1908,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       ta.value = before + (before && !/\s$/.test(before) ? ' ' : '') + t + (after && !/^[\s.,;:]/.test(after) ? ' ' : '') + after;
       ta.dispatchEvent(new Event('input', { bubbles: true })); grow(ta); ta.focus();
     },
-    admintab(el) { S.glEdit = null; S.glDel = null; S.adminTab = el.dataset.tab; render(); },
+    admintab(el) { S.newsEdit = null; S.newsKind = null; S.newsDel = null; S.glEdit = null; S.glDel = null; S.adminTab = el.dataset.tab; render(); },
     async setpass(el) {
       const i = document.querySelector(`[data-ppass="${el.dataset.id}"]`);
       await fnCall('manage-users', { action: 'set_password', user_id: el.dataset.id, password: i.value });
@@ -1856,6 +1963,9 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
     try { if (f) await doWriterUpload(f); } catch (err) { toast(errText(err)); }
   });
+  document.addEventListener('change', e => {
+    if (e.target && e.target.id === 'nsKind') { const nm = $('#nsName').value; S.newsKind = e.target.value; render().then(() => { const n = $('#nsName'); if (n) n.value = nm; }); }
+  });
   document.addEventListener('submit', async e => {
     e.preventDefault();
     const f = e.target; const btn = f.querySelector('button[type=submit]'); if (btn) btn.disabled = true;
@@ -1889,6 +1999,25 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         const rows = parseBulk($('#glBulk').value); if (!rows.length) throw new Error('هیچ خط معتبری پیدا نشد. قالب: فارسی = English');
         const r = await rpc('glossary_import', { p_rows: rows });
         toast(`${fa(r.added)} اصطلاح افزوده، ${fa(r.updated)} به‌روز شد${r.skipped ? '، ' + fa(r.skipped) + ' خط رد شد' : ''}.`); return render();
+      }
+      if (f.id === 'newsForm') {
+        const kind = $('#nsKind').value, name = $('#nsName').value.trim(); if (!name) throw new Error('نام منبع را بنویسید.');
+        const row = { name, kind, check_every_min: Number($('#nsEvery').value) || 60, feed_url: kind === 'push' ? null : ($('#nsUrl').value.trim() || null), link_pattern: kind === 'web' ? ($('#nsPat').value.trim() || null) : null, body_selector: kind === 'web' ? ($('#nsSel').value.trim() || null) : null };
+        if (kind !== 'push' && !/^https?:\/\//i.test(row.feed_url || '')) throw new Error('نشانی باید با http یا https شروع شود.');
+        if (row.link_pattern) { try { new RegExp(row.link_pattern); } catch (_) { throw new Error('الگوی نشانی مقاله عبارت منظم معتبری نیست.'); } }
+        const r = S.newsEdit ? await sb.from('news_sources').update(row).eq('id', S.newsEdit) : await sb.from('news_sources').insert(row);
+        if (r.error) throw r.error;
+        S.newsEdit = null; S.newsKind = null; toast('منبع ذخیره شد. حالا «آزمایش» را بزنید.'); return render();
+      }
+      if (f.id === 'ruleForm') {
+        const kw = $('#ruKw').value.trim(); if (!kw) throw new Error('کلمه را بنویسید.');
+        const r = await sb.from('news_rules').insert({ keyword: kw, kind: $('#ruKind').value, source_id: $('#ruSrc').value || null });
+        if (r.error) throw r.error; toast('قاعده افزوده شد.'); return render();
+      }
+      if (f.id === 'newsCfg') {
+        const vals = { news_min_words: $('#ncMin').value, news_max_words: $('#ncMax').value, news_max_per_run: $('#ncRun').value };
+        for (const [k, v] of Object.entries(vals)) { if (!(Number(v) >= 0)) throw new Error('مقدارها باید عدد باشند.'); const r = await sb.from('app_config').upsert({ key: k, value: String(Number(v)), updated_at: new Date().toISOString() }); if (r.error) throw r.error; }
+        toast('محدودیت‌ها ذخیره شد.'); return render();
       }
       if (f.id === 'keyForm') {
         const v = $('#gKey').value.trim(); if (!v) throw new Error('کلید را وارد کنید.');
