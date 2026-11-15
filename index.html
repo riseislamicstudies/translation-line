@@ -530,7 +530,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     cannot_decide: 'این فایل دیگر در انتظار ناظر نیست.',
     priority_required: 'برای تایید، اولویت نشر (۱ تا ۵ ستاره) را انتخاب کنید.',
     priority_invalid: 'رتبه باید بین ۱ و ۵ باشد.',
-    cannot_set_priority: 'رتبه فقط برای فایل تاییدشده‌ای که هنوز منتشر نشده قابل تغییر است.',
+    cannot_set_priority: 'رتبه فقط تا پیش از انتشار فایل قابل تغییر است.',
     cannot_review: 'این فایل دیگر در بازبینی نیست.',
     cannot_resubmit: 'ارسال مجدد ممکن نیست.',
     cannot_retry: 'تلاش دوباره ممکن نیست.',
@@ -1221,6 +1221,11 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   function starsEdit(id, n) {
     return `<span class="stars sm" role="group" aria-label="رتبه">${[1, 2, 3, 4, 5].map(i => `<button type="button" class="star${n >= i ? ' on' : ''}" data-act="setprio" data-id="${id}" data-n="${i}" aria-label="${fa(i)} ستاره" title="${RATING_LABEL[i]}">★</button>`).join('')}</span>`;
   }
+  function qaPrioInner(doc, pm, mine) {
+    const hint = doc.priority ? `<span class="meta">${ratingHint(doc.priority, pm)} · ${mine ? 'تغییر داده‌شده توسط شما' : 'تعیین‌شده توسط بازبین محتوا'}</span>` : '<span class="chip">بدون رتبه</span><span class="meta">این فایل رتبه ندارد. با ستاره، اولویت نشر را تعیین کنید.</span>';
+    return `<div class="row"><b>اولویت نشر</b>${starsEdit(doc.id, doc.priority || 0).replace(/data-act="setprio"/g, 'data-act="qaprio"')}${hint}</div>
+      <p class="meta" style="margin-top:6px">ناظر می‌تواند رتبهٔ بازبین را تغییر دهد. تغییر بلافاصله ثبت می‌شود و در تاریخچهٔ رتبه می‌ماند.</p>`;
+  }
   function ratingHint(n, pm) {
     return `رتبه ${fa(n)}: ${RATING_LABEL[n]} · ${n >= pm ? 'در نشریه و سایت منتشر می‌شود' : 'فقط در سایت منتشر می‌شود'}`;
   }
@@ -1259,7 +1264,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     const fin = segs.reduce((n, g) => n + Math.max(1, words(g.current_text).length), 0);
     return `<div><button type="button" class="btn quiet" data-act="qaback">→ فهرست</button></div>
       <section class="page-head"><h1>${esc(doc.title)}</h1><p class="sub">مترجم: ${esc(nm(doc.claimed_by))} · ${fa(changed)} از ${fa(segs.length)} بند ویرایش شده · TER ${pct(dist / fin)} · ${fa(segs.reduce((n, g) => n + g.seconds_spent, 0) / 60 | 0)} دقیقه زمان ثبت‌شده</p></section>
-      <section class="card"><div class="row"><b>اولویت نشر</b>${doc.priority ? `${starsStatic(doc.priority)}<span class="meta">${ratingHint(doc.priority, pm)} · تعیین‌شده توسط بازبین محتوا</span>` : '<span class="chip">بدون رتبه</span><span class="meta">این فایل پیش از انتقال رتبه‌دهی به بازبین آمده است. بعد از تایید، در «آماده انتشار» رتبه بدهید.</span>'}</div></section>
+      <section class="card" id="qaPrio">${qaPrioInner(doc, pm)}</section>
       ${ogPanel(segs, g => g.current_text)}
       <div class="toolbar"><div class="legend"><span>راهنما:</span><del>حذف‌شده از ترجمه ماشینی</del><ins>افزوده‌شده توسط مترجم</ins></div><span class="saved" id="saved">برای اصلاح مستقیم هر بند، «ویرایش ترجمه» را بزنید. تغییرها هنگام خروج از کادر ذخیره می‌شوند.</span></div>
       <div class="segs">${segs.map((g, i) => `<article class="seg${g.flagged ? ' flagged' : ''}" id="seg-${g.id}"><div class="seg-head"><span>بند ${fa(i + 1)}</span><span data-chips="${g.id}">${qaChips(g)}</span></div>
@@ -1720,6 +1725,14 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       S.star = Number(el.dataset.n);
       document.querySelectorAll('#starRow .star').forEach(b => b.classList.toggle('on', Number(b.dataset.n) <= S.star));
       $('#starHint').textContent = ratingHint(S.star, S.printMin || 4);
+    },
+    async qaprio(el) {
+      const n = Number(el.dataset.n), id = el.dataset.id;
+      await rpc('set_priority', { p_doc: id, p_priority: n });
+      if (curDoc && curDoc.id === id) curDoc.priority = n;
+      const box = document.getElementById('qaPrio'), pm = await loadPrintMin();
+      if (box) box.innerHTML = qaPrioInner({ id, priority: n }, pm, true);
+      toast('رتبه ثبت شد.');
     },
     async setprio(el) { await rpc('set_priority', { p_doc: el.dataset.id, p_priority: Number(el.dataset.n) }); toast('رتبه ثبت شد.'); render(); },
     async mkwinvite() {
