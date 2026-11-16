@@ -264,6 +264,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   /* surfaces */
   main { padding-block: 26px 110px; gap: 20px; }
   main > * { animation: rise .45s var(--ease) both; }
+  main.still > * { animation: none !important; }
   main > *:nth-child(2) { animation-delay: .05s; } main > *:nth-child(3) { animation-delay: .1s; }
   main > *:nth-child(4) { animation-delay: .15s; } main > *:nth-child(n+5) { animation-delay: .2s; }
   h1 { font-size: clamp(21px, 2.6vw, 27px); letter-spacing: -.01em; }
@@ -518,9 +519,9 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     content_review: ['در بازبینی محتوا', 'accent'], review_rejected: ['بازگشت برای اصلاح', 'bad'],
     translating: ['در حال ترجمه ماشینی', 'accent'], translation_failed: ['خطا در ترجمه ماشینی', 'bad'],
     in_pool: ['در سبد ترجمه', 'accent'], in_progress: ['در حال ترجمه', 'gold'], awaiting_qa: ['در انتظار ناظر', 'gold'],
-    changes_requested: ['نیازمند اصلاح', 'bad'], approved: ['آماده انتشار', 'ok'], published: ['منتشر شد', 'ok']
+    changes_requested: ['نیازمند اصلاح', 'bad'], news_edit: ['در سبد ویراستار خبر', 'gold'], approved: ['آماده انتشار', 'ok'], published: ['منتشر شد', 'ok']
   };
-  const ROLE_FA = { none: 'بدون نقش', admin: 'مدیر', reviewer: 'بازبین محتوا', translator: 'مترجم', supervisor: 'ناظر', writer: 'نویسنده' };
+  const ROLE_FA = { none: 'بدون نقش', admin: 'مدیر', reviewer: 'بازبین محتوا', translator: 'مترجم', supervisor: 'ناظر', writer: 'نویسنده', news_editor: 'ویراستار خبر' };
   const chip = st => { const [t, k] = STATUS[st] || [st, '']; return `<span class="chip ${k}">${t}</span>`; };
 
   const ERR = {
@@ -537,6 +538,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     priority_invalid: 'رتبه باید بین ۱ و ۵ باشد.',
     cannot_set_priority: 'رتبه فقط تا پیش از انتشار فایل قابل تغییر است.',
     cannot_review: 'این فایل دیگر در بازبینی نیست.',
+    empty_document: 'خبر بدون متن را نمی‌توان فرستاد.',
     cannot_resubmit: 'ارسال مجدد ممکن نیست.',
     cannot_retry: 'تلاش دوباره ممکن نیست.',
     cannot_publish: 'فقط فایل تاییدشده را می‌توان منتشر کرد.',
@@ -753,6 +755,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   };
   function tabsFor(role) {
     const t = [];
+    if (role === 'admin' || role === 'news_editor') t.push(['newsed', 'ویراستار خبر']);
     if (role === 'admin' || role === 'reviewer') t.push(['review', 'بازبین محتوا']);
     if (role === 'admin' || role === 'translator') t.push(['trans', 'مترجم']);
     if (role === 'admin' || role === 'supervisor') t.push(['qa', 'ناظر']);
@@ -766,6 +769,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     review: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>',
     trans: '<path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/>',
     qa: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
+    newsed: '<path d="M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v4"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M2 15h10"/><path d="m9 18 3-3-3-3"/>',
     pub: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
     quality: '<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
     admin: '<path d="M4 6h10"/><path d="M18 6h2"/><circle cx="16" cy="6" r="2"/><path d="M4 12h2"/><path d="M10 12h10"/><circle cx="8" cy="12" r="2"/><path d="M4 18h10"/><path d="M18 18h2"/><circle cx="16" cy="18" r="2"/>'
@@ -815,7 +819,8 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       case 'returned_to_writer': return `${t} برای اصلاح به نویسنده برگشت${p.note ? ': ' + p.note : ''}.`;
       case 'approved': return `ترجمه ${t} تایید شد.`;
       case 'comment': return `${p.by || 'کسی'} روی ${t} نظر گذاشت${p.note ? ': ' + p.note : ''}`;
-      case 'news_batch': return `${fa(p.count || 0)} خبر تازه در سبد بازبین قرار گرفت.`;
+      case 'news_batch': return `${fa(p.count || 0)} خبر تازه در سبد ویراستار خبر قرار گرفت.`;
+      case 'returned_to_editor': return `بازبین ${t} را برای اصلاح برگرداند${p.note ? ': ' + p.note : ''}.`;
       case 'ai_failed': return `ترجمه ماشینی ${t} ناموفق بود${p.note ? ': ' + p.note : ''}.`;
       default: return n.type;
     }
@@ -851,13 +856,17 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   // render loop
   // ===================================================================
   const VIEWS = {};
-  async function render() {
+  let lastHtml = '';
+  async function render(still) {
     if (!me || me.role === 'none') return;
     const tok = ++renderTok;
     setTabs();
     let html;
     try { html = await VIEWS[S.tab](); } catch (e) { html = `<div class="card err"><b>خطا</b><p>${esc(errText(e))}</p></div>`; }
     if (tok !== renderTok) return;
+    if (still === true && html === lastHtml) { refreshCounts(); return; }
+    lastHtml = html;
+    $('#main').classList.toggle('still', still === true);
     $('#main').innerHTML = html;
     growAll();
     refreshCounts();
@@ -871,7 +880,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       const typing = a && a.closest && a.closest('#main') && /INPUT|TEXTAREA|SELECT/.test(a.tagName);
       const editing = S.docId || S.qa || (S.tab === 'admin' && S.adminTab !== 'files') || S.busy;
       refreshCounts();
-      if (!typing && !editing) render();
+      if (!typing && !editing) render(true);
     }, 500);
   }
   VIEWS.write = async function () {
@@ -917,9 +926,10 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     if (me && me.role === 'writer') return;
     const { data } = await sb.from('documents').select('status,claimed_by,uploaded_by,replaced_by');
     if (!data) return;
-    const c = { review: 0, trans: 0, qa: 0, pub: 0 };
+    const c = { newsed: 0, review: 0, trans: 0, qa: 0, pub: 0 };
     data.forEach(d => {
       if (['content_review', 'translating', 'translation_failed'].includes(d.status) || (d.status === 'review_rejected' && !d.replaced_by && (S.roles || {})[d.uploaded_by] !== 'writer')) c.review++;
+      if (d.status === 'news_edit') c.newsed++;
       if (d.status === 'in_pool') c.trans++;
       if (d.status === 'awaiting_qa') c.qa++;
       if (d.status === 'approved') c.pub++;
@@ -1017,6 +1027,22 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         <label class="btn primary filebtn" for="fileIn">انتخاب فایل DOCX</label><input type="file" class="vh" id="fileIn" accept=".docx"></div>
       ${rows ? `<div class="list">${rows}</div>` : emptyCard('فایلی در انتظار بازبینی نیست.')}`;
   };
+  VIEWS.newsed = async function () {
+    if (S.docId) return vReviewDoc();
+    const sel = 'id,title,status,word_count,review_note,created_at,source_name,source_url,editor_note,news_edited_by,news_edited_at';
+    const [a, b] = await Promise.all([
+      sb.from('documents').select(sel).eq('status', 'news_edit').eq('source_kind', 'news').order('created_at', { ascending: false }),
+      sb.from('documents').select(sel).eq('status', 'content_review').eq('source_kind', 'news').order('news_edited_at', { ascending: false }).limit(20)]);
+    if (a.error) throw a.error;
+    const rows = (a.data || []).map(d => `<article class="card"><div class="item"><div class="item-main"><div class="item-title">${esc(d.title)}</div>
+        <div class="meta">${fa(d.word_count)} کلمه؛ ${fmtT(d.created_at)}${d.source_name ? '؛ منبع: ' + esc(d.source_name) : ''}${d.source_url ? ' <a href="' + esc(d.source_url) + '" target="_blank" rel="noopener">خبر اصلی</a>' : ''}</div>
+        ${d.review_note ? `<div class="callout"><b>بازبین برگرداند:</b> ${esc(d.review_note)}</div>` : ''}</div>
+        <div class="row"><button type="button" class="btn primary" data-act="opendoc" data-id="${d.id}">${d.review_note ? 'اصلاح' : 'بررسی و ویرایش'}</button></div></div></article>`).join('');
+    const sent = (b.data || []).filter(d => me.role === 'admin' || d.news_edited_by === me.id);
+    return head('سبد ویراستار خبر', 'خبرهای گردآوری‌شده از منابع اینجا جمع می‌شوند. متن را بخوانید و ویرایش کنید، سپس برای تایید نهایی و تعیین اولویت به بازبین محتوا بفرستید. خبر نامناسب را رد کنید.')
+      + (rows ? `<div class="list">${rows}</div>` : emptyCard('خبری در سبد نیست. خبرهای تازه که از منابع برسند اینجا می‌آیند.'))
+      + (sent.length ? `<h2>ارسال‌شده برای بازبین <span class="chip">${fa(sent.length)}</span></h2><div class="list">${sent.map(d => `<article class="card"><div class="item"><div class="item-main"><div class="item-title">${esc(d.title)}</div><div class="meta">${fmtT(d.news_edited_at)}${d.source_name ? '؛ منبع: ' + esc(d.source_name) : ''}</div></div>${chip('content_review')}</div></article>`).join('')}</div>` : '');
+  };
   const KIND_FA = k => k === 'heading' ? 'تیتر' : k === 'list_item' ? 'فهرست' : 'پاراگراف';
   async function vReviewDoc() {
     const id = S.docId;
@@ -1024,7 +1050,9 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     if (d.error) { S.docId = null; throw d.error; }
     if (s.error) throw s.error;
     const doc = d.data;
-    if (!['content_review', 'review_rejected'].includes(doc.status)) { S.docId = null; return VIEWS.review(); }
+    if (!['content_review', 'review_rejected', 'news_edit'].includes(doc.status)) { S.docId = null; return VIEWS[S.tab](); }
+    const ned = doc.status === 'news_edit', isNews = doc.source_kind === 'news';
+    const canEd = ['news_editor', 'admin'].includes(me.role);
     await loadComments(id);
     const pm = await loadPrintMin();
     const rej = doc.status === 'review_rejected';
@@ -1034,7 +1062,9 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     const sel = S.sel || (S.sel = new Set());
     const have = new Set(s.data.map(g => g.id)); [...sel].forEach(x => { if (!have.has(x)) sel.delete(x); });
     return `<div><button type="button" class="btn quiet" data-act="back">→ فهرست</button></div>
-      <section class="page-head"><h1>${esc(doc.title)}</h1><p class="sub">${fa(s.data.length)} بند · ${fa(doc.word_count)} کلمه · ${chip(doc.status)}${doc.uploaded_by ? ' · فرستنده: ' + whoH(doc.uploaded_by) : ''}</p></section>
+      <section class="page-head"><h1>${esc(doc.title)}</h1><p class="sub">${fa(s.data.length)} بند · ${fa(doc.word_count)} کلمه · ${chip(doc.status)}${doc.uploaded_by ? ' · فرستنده: ' + whoH(doc.uploaded_by) : ''}${isNews && doc.source_name ? ' · منبع: ' + esc(doc.source_name) + (doc.source_url ? ' <a href="' + esc(doc.source_url) + '" target="_blank" rel="noopener">باز کردن خبر اصلی</a>' : '') : ''}</p></section>
+      ${ned && doc.review_note ? `<div class="callout"><b>بازبین این خبر را برگرداند:</b> ${esc(doc.review_note)}</div>` : ''}
+      ${!ned && isNews && doc.editor_note ? `<div class="callout"><b>یادداشت ویراستار خبر:</b> ${esc(doc.editor_note)}</div>` : ''}
       ${rej && doc.review_note ? `<div class="callout"><b>دلیل بازگشت:</b> ${esc(doc.review_note)}</div>` : ''}
       ${ro ? '<div class="callout"><b>منتظر نویسنده:</b> این فایل با نظرهای شما برای نویسنده برگشته است. نسخهٔ اصلاح‌شده به‌صورت فایل تازه در همین فهرست می‌آید.</div>' : ''}
       <div class="selzone${sel.size ? ' on' : ''}" id="selZone"><div class="selhint"><span>انتخاب چند بند: روی شمارهٔ بند کلیک کنید، با Shift بازه بگیرید یا روی شماره‌ها بکشید.</span>${ro ? '' : '<button type="button" class="btn quiet small" data-act="selall">انتخاب همه</button>'}</div>
@@ -1048,13 +1078,17 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       ${doc.status === 'content_review' ? `<section class="card"><div><b>اولویت نشر</b> <span class="meta">(برای تایید لازم است)</span></div>
         <div class="stars" id="starRow" role="group" aria-label="اولویت نشر از ۱ تا ۵">${[1, 2, 3, 4, 5].map(i => `<button type="button" class="star${(S.star || 0) >= i ? ' on' : ''}" data-act="star" data-n="${i}" aria-label="${fa(i)} ستاره" title="${RATING_LABEL[i]}">★</button>`).join('')}</div>
         <p class="meta" id="starHint" aria-live="polite">${S.star ? ratingHint(S.star, pm) : `رتبه ۱ (کم‌اهمیت) تا ۵ (خبر اصلی). رتبه ${fa(pm)} و بالاتر در نشریه و سایت، پایین‌تر فقط در سایت.`}</p></section>` : ''}
-      ${ro ? `<div class="submitbar"><span class="meta">در انتظار نسخهٔ اصلاح‌شده</span><span class="row"><button type="button" class="btn danger" data-act="deldoc" data-id="${id}">حذف فایل</button></span></div>` : `<div class="submitbar">${rej
+      ${ned ? (!canEd ? '<div class="submitbar"><span class="meta">این خبر در سبد ویراستار خبر است.</span></div>' : `<div class="submitbar">${S.confirm === 'nsend'
+        ? `<span class="row" style="flex:1 1 320px"><input type="text" id="edNote" class="plain" placeholder="یادداشت برای بازبین محتوا (اختیاری)" style="flex:1 1 220px"><button type="button" class="btn primary" data-act="nsend" data-id="${id}">ارسال برای بازبین محتوا</button><button type="button" class="btn quiet" data-act="cancelc">انصراف</button></span>`
+        : S.confirm === 'ndiscard'
+          ? `<span class="row" style="flex:1 1 320px"><input type="text" id="ndNote" class="plain" placeholder="دلیل رد خبر (لازم است)" style="flex:1 1 220px"><button type="button" class="btn danger" data-act="ndiscard" data-id="${id}">رد و حذف خبر</button><button type="button" class="btn quiet" data-act="cancelc">انصراف</button></span>`
+          : `<span class="meta">متن را ویرایش کنید؛ هر بند هنگام خروج از کادر ذخیره می‌شود. نظر روی بندها هم برای بازبین دیده می‌شود.</span><span class="row"><button type="button" class="btn danger" data-act="askndiscard">رد خبر</button><button type="button" class="btn primary" data-act="asknsend">ارسال برای بازبین محتوا</button></span>`}</div>`) : ro ? `<div class="submitbar"><span class="meta">در انتظار نسخهٔ اصلاح‌شده</span><span class="row"><button type="button" class="btn danger" data-act="deldoc" data-id="${id}">حذف فایل</button></span></div>` : `<div class="submitbar">${rej
         ? `<span class="meta">متن را اصلاح کنید و دوباره برای بازبینی بفرستید.</span><span class="row"><button type="button" class="btn primary" data-act="resubmit" data-id="${id}">ارسال مجدد برای بازبینی</button><button type="button" class="btn danger" data-act="deldoc" data-id="${id}">حذف فایل</button></span>`
         : S.confirm === 'approve'
           ? `<span>متن فارسی تایید و به Gemini داده شود؟ ${starsStatic(S.star || 0)}</span><span class="row"><button type="button" class="btn primary" data-act="approve" data-id="${id}">بله، تایید و ترجمه</button><button type="button" class="btn" data-act="cancelc">انصراف</button></span>`
           : S.confirm === 'reject'
             ? `<span class="row" style="flex:1 1 320px"><input type="text" id="rejNote" class="plain" placeholder="${toW ? 'یادداشت برای نویسنده (لازم است)' : 'دلیل بازگشت (لازم است)'}" style="flex:1 1 220px"><button type="button" class="btn" data-act="reject" data-id="${id}" data-w="${toW ? 1 : 0}">${toW ? 'بازگرداندن به نویسنده' : 'بازگرداندن'}</button><button type="button" class="btn quiet" data-act="cancelc">انصراف</button></span>${toW ? `<span class="meta" style="flex-basis:100%">${nCm ? fa(nCm) + ' نظر روی بندها هم برای نویسنده فرستاده می‌شود.' : 'می‌توانید روی بندها هم نظر بگذارید؛ نویسنده همه را می‌بیند.'}</span>` : ''}`
-            : `<span class="meta">ویرایش هر بند هنگام خروج از کادر ذخیره می‌شود.</span><span class="row"><button type="button" class="btn danger" data-act="deldoc" data-id="${id}">حذف فایل</button><button type="button" class="btn" data-act="askreject">${toW ? 'بازگرداندن به نویسنده' : 'بازگرداندن برای اصلاح'}</button><button type="button" class="btn primary" data-act="askapprove">تایید و ارسال برای ترجمه ماشینی</button></span>`}</div>`}`;
+            : `<span class="meta">ویرایش هر بند هنگام خروج از کادر ذخیره می‌شود.</span><span class="row"><button type="button" class="btn danger" data-act="deldoc" data-id="${id}">حذف فایل</button><button type="button" class="btn" data-act="askreject">${toW ? 'بازگرداندن به نویسنده' : isNews ? 'بازگرداندن به ویراستار خبر' : 'بازگرداندن برای اصلاح'}</button><button type="button" class="btn primary" data-act="askapprove">تایید و ارسال برای ترجمه ماشینی</button></span>`}</div>`}`;
   }
   async function startTranslation(id) {
     try { await fnCall('translate-document', { document_id: id }); }
@@ -1491,7 +1525,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     };
     const draft = S.newsDraft || { kind: 'auto' };
     return `<div class="card"><h2>دروازهٔ ورود خبر</h2>
-        <p class="sub">خبرها از منابع زیر خوانده می‌شوند، تکراری‌ها و موارد نامربوط (طبق قواعد) کنار می‌روند و بقیه مثل یک فایل عادی به سبد بازبین می‌روند. ابتدا هر منبع را با «آزمایش» بررسی کنید؛ آزمایش چیزی ذخیره نمی‌کند.</p>
+        <p class="sub">خبرها از منابع زیر خوانده می‌شوند، تکراری‌ها و موارد نامربوط (طبق قواعد) کنار می‌روند و بقیه به سبد ویراستار خبر می‌روند و پس از ویرایش او، برای بازبین محتوا فرستاده می‌شوند. ابتدا هر منبع را با «آزمایش» بررسی کنید؛ آزمایش چیزی ذخیره نمی‌کند.</p>
         <div class="row"><button class="btn primary" type="button" data-act="newspoll">بررسی همهٔ منابع اکنون</button>
         <button class="btn" type="button" data-act="newsreset" title="خبرهای ردشده یا خطادار دوباره بررسی می‌شوند">بازبینی ردشده‌ها</button></div></div>
       <div class="card nslist"><h2>منابع <span class="chip">${fa(sources.length)}</span></h2>
@@ -1732,6 +1766,19 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       if (!S.star) { toast('ابتدا اولویت نشر را (۱ تا ۵ ستاره) انتخاب کنید.'); const b = document.querySelector('#starRow .star'); if (b) { b.scrollIntoView({ block: 'center' }); b.focus(); } return; }
       S.confirm = 'approve'; render();
     },
+    asknsend() { S.confirm = 'nsend'; render(); },
+    askndiscard() { S.confirm = 'ndiscard'; render(); },
+    async nsend(el) {
+      const note = ($('#edNote') || {}).value || '';
+      await rpc('news_submit_to_review', { p_doc: el.dataset.id, p_note: note.trim() || null });
+      S.confirm = null; S.docId = null; toast('برای بازبین محتوا ارسال شد.'); render();
+    },
+    async ndiscard(el) {
+      const why = ($('#ndNote') || {}).value || '';
+      if (!why.trim()) { toast('دلیل رد خبر را بنویسید.'); return; }
+      await rpc('news_discard', { p_doc: el.dataset.id, p_reason: why.trim() });
+      S.confirm = null; S.docId = null; toast('خبر رد شد.'); render();
+    },
     askreject() { S.confirm = 'reject'; render(); },
     asksubmit() { S.confirm = 'submit'; const b = $('#bar'); if (b) b.innerHTML = barHtml(S.docId); },
     async approve(el) {
@@ -1743,7 +1790,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       const note = ($('#rejNote') || {}).value || '';
       if (!note.trim()) { toast('دلیل بازگشت را بنویسید.'); return; }
       await rpc('review_decision', { p_doc: el.dataset.id, p_approve: false, p_note: note.trim() });
-      S.confirm = null; S.docId = null; toast(el.dataset.w === '1' ? 'با نظرها برای نویسنده برگردانده شد.' : 'برگردانده شد.'); render();
+      S.confirm = null; S.docId = null; toast(el.dataset.w === '1' ? 'با نظرها برای نویسنده برگردانده شد.' : 'برای اصلاح به ویراستار خبر برگردانده شد.'); render();
     },
     async resubmit(el) { await rpc('resubmit_for_review', { p_doc: el.dataset.id }); toast('برای بازبینی ارسال شد.'); render(); },
     async cancelai(el) {
