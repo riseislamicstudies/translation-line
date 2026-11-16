@@ -355,6 +355,11 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   .ogc .en, .og .en { direction: ltr; font-family: var(--f-en); unicode-bidi: isolate; }
   .ogbad { color: var(--gold); }
   .glgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px 14px; }
+  .nsrc { padding: 14px 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+  .nsrc:first-of-type { border-top: 0; }
+  .nsrc.err strong { color: var(--bad); }
+  .nsrc.editing { background: var(--sunk); margin-inline: -12px; padding-inline: 12px; border-radius: 10px; }
+  .nsTest { margin-top: 8px; }
   .glact { white-space: nowrap; text-align: end; }
   #glTable tr.off td { opacity: .5; }
 
@@ -1429,6 +1434,38 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       <td><span class="chip ${d.decision === 'accept' || d.decision === 'accepted' ? 'ok' : (d.decision === 'error' ? 'bad' : '')}">${esc(d.decision)}</span> <span class="meta">${esc(d.reason || '')}</span></td>
       <td class="num">${fa(d.words || 0)}</td><td class="meta">${esc((d.preview || '').slice(0, 140))}</td></tr>`).join('') || '<tr><td colspan="4" class="meta">موردی پیدا نشد.</td></tr>'}</tbody></table></div>${r.error ? `<div class="callout">${esc(r.error)}</div>` : ''}`;
   }
+  const NEWS_KIND_OPT = [['auto', 'تشخیص خودکار (پیشنهادی)'], ['rss', 'خوراک RSS یا Atom'], ['web', 'صفحهٔ فهرست خبر در وب'], ['push', 'ورودی بیرونی (n8n و مانند آن)']];
+  function newsRead() {
+    const g = id => { const el = document.getElementById(id); return el ? el.value : undefined; };
+    const d = Object.assign({}, S.newsDraft || {});
+    const v = { name: g('nsName'), kind: g('nsKind'), url: g('nsUrl'), pat: g('nsPat'), sel: g('nsSel'), every: g('nsEvery') };
+    for (const k of Object.keys(v)) if (v[k] !== undefined) d[k] = v[k];
+    S.newsDraft = d; return d;
+  }
+  function newsSrcBody(d) { return { kind: d.kind, feed_url: (d.url || '').trim(), link_pattern: (d.pat || '').trim() || null, body_selector: (d.sel || '').trim() || null }; }
+  async function newsDetect(d) {
+    const url = (d.url || '').trim(); if (!/^https?:\/\//i.test(url)) throw new Error('نشانی باید با http یا https شروع شود.');
+    toast('در حال تشخیص نوع منبع…');
+    const r = await fnCall('news-ingest', { action: 'detect', url });
+    if (!r.ok) { S.newsNote = r.error || 'تشخیص ممکن نشد.'; throw new Error(S.newsNote); }
+    d.kind = r.kind; d.url = r.feed_url; d.pat = r.link_pattern || ''; d.sel = r.body_selector || '';
+    S.newsNote = r.note + ((r.samples || []).length ? ' نمونه‌ها: ' + r.samples.map(x => '«' + x + '»').join('، ') : '');
+    return d;
+  }
+  function newsFormHtml(d, editing) {
+    const kind = d.kind || 'auto';
+    return `<form id="newsForm">${editing ? '' : '<h2>افزودن منبع</h2>'}
+      <div class="glgrid"><label class="f">نام منبع<input type="text" id="nsName" value="${esc(d.name || '')}" required></label>
+      <label class="f">نوع<select id="nsKind">${NEWS_KIND_OPT.filter(o => o[0] !== 'auto' || !editing || true).map(o => `<option value="${o[0]}"${kind === o[0] ? ' selected' : ''}>${o[1]}</option>`).join('')}</select></label>
+      ${kind !== 'push' ? `<label class="f">${kind === 'web' ? 'نشانی صفحهٔ فهرست اخبار' : 'نشانی سایت یا خوراک'}<input class="ltr" dir="ltr" type="url" id="nsUrl" value="${esc(d.url || '')}" placeholder="https://" required></label>` : ''}
+      ${kind === 'web' ? `<label class="f">الگوی نشانی مقاله (عبارت منظم)<input class="ltr" dir="ltr" type="text" id="nsPat" value="${esc(d.pat || '')}" placeholder="/news/\\d+"></label>
+      <label class="f">انتخاب‌گر متن خبر (اختیاری)<input class="ltr" dir="ltr" type="text" id="nsSel" value="${esc(d.sel || '')}" placeholder="div.news-body"></label>` : ''}
+      <label class="f">هر چند دقیقه بررسی شود<select id="nsEvery">${[15, 30, 60, 180, 360].map(m => `<option value="${m}"${Number(d.every || 60) === m ? ' selected' : ''}>${fa(m)}</option>`).join('')}</select></label></div>
+      ${kind === 'auto' ? '<p class="sub">فقط نشانی سایت یا صفحهٔ اخبار را بدهید. سامانه خودش تشخیص می‌دهد که RSS است یا فهرست خبر، الگوی نشانی خبرها و محل متن را حدس می‌زند و نتیجه را آزمایش می‌کند.</p>' : ''}
+      ${kind === 'push' ? '<p class="sub">این نوع منبع خودش چیزی نمی‌خواند؛ ابزار بیرونی خبرها را به نشانی بخش «راهنمای اتصال» می‌فرستد و نام این منبع را مشخص می‌کند.</p>' : ''}
+      ${S.newsNote ? `<div class="callout">${esc(S.newsNote)}</div>` : ''}
+      <div class="row"><button class="btn primary" type="submit">${editing ? 'ذخیره تغییر' : 'افزودن منبع'}</button>${kind !== 'push' ? `<button class="btn" type="button" data-act="newstestform">${kind === 'auto' ? 'تشخیص خودکار و آزمایش' : 'آزمایش با همین مقادیر'}</button>` : ''}${editing ? '<button class="btn" type="button" data-act="newscancel">انصراف</button>' : ''}</div></form>`;
+  }
   async function adminNews() {
     const [src, rul, itm, cf] = await Promise.all([
       sb.from('news_sources').select('*').order('created_at'),
@@ -1439,39 +1476,34 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     const sources = src.data || [], rules = rul.data || [], items = itm.data || [];
     const c = {}; (cf.data || []).forEach(x => { c[x.key] = x.value; });
     const byId = Object.fromEntries(sources.map(x => [x.id, x]));
-    const ed = S.newsEdit ? sources.find(x => x.id === S.newsEdit) : null;
-    const kind = S.newsKind || (ed ? ed.kind : 'rss');
     const test = S.newsTest;
+    const testBox = where => test && test.where === where ? `<div class="nsTest"><h3>نتیجهٔ آزمایش <span class="meta">${esc(test.label || '')}</span></h3>${newsDecisions(test.result)}<div class="row"><button type="button" class="btn quiet small" data-act="newstestclose">بستن</button></div></div>` : '';
+    const row = x => {
+      if (S.newsEdit === x.id) return `<div class="nsrc editing"><h3>ویرایش «${esc(x.name)}»</h3>${newsFormHtml(S.newsDraft || {}, true)}${testBox(x.id)}</div>`;
+      return `<div class="nsrc ${x.last_error ? 'err' : ''}"><div class="row"><strong class="grow">${esc(x.name)}</strong><span class="chip accent">${NEWS_KIND[x.kind] || x.kind}</span>${x.is_active ? '' : '<span class="chip">متوقف</span>'}</div>
+        ${x.feed_url ? `<div class="ltr meta" dir="ltr">${esc(x.feed_url)}</div>` : ''}
+        <div class="meta">هر ${fa(x.check_every_min)} دقیقه؛ آخرین بررسی: ${fmtT(x.last_checked_at)}${x.last_ok_at ? ('؛ آخرین موفق: ' + fmtT(x.last_ok_at)) : ''}</div>
+        ${x.last_error ? `<div class="meta">خطا: ${esc(x.last_error)}</div>` : ''}
+        <div class="row">${x.kind !== 'push' ? `<button type="button" class="btn small" data-act="newstest" data-id="${x.id}">آزمایش</button><button type="button" class="btn small" data-act="newspollone" data-id="${x.id}">بررسی اکنون</button>` : ''}
+        <button type="button" class="btn quiet small" data-act="newsedit" data-id="${x.id}">ویرایش</button>
+        <button type="button" class="btn quiet small" data-act="newstoggle" data-id="${x.id}" data-on="${x.is_active ? 0 : 1}">${x.is_active ? 'توقف' : 'فعال‌سازی'}</button>
+        ${S.newsDel === x.id ? `<button type="button" class="btn danger small" data-act="newsdel" data-id="${x.id}">حذف قطعی</button><button type="button" class="btn quiet small" data-act="newsdelno">انصراف</button>` : `<button type="button" class="btn quiet danger small" data-act="newsask" data-id="${x.id}">حذف</button>`}</div>${testBox(x.id)}</div>`;
+    };
+    const draft = S.newsDraft || { kind: 'auto' };
     return `<div class="card"><h2>دروازهٔ ورود خبر</h2>
         <p class="sub">خبرها از منابع زیر خوانده می‌شوند، تکراری‌ها و موارد نامربوط (طبق قواعد) کنار می‌روند و بقیه مثل یک فایل عادی به سبد بازبین می‌روند. ابتدا هر منبع را با «آزمایش» بررسی کنید؛ آزمایش چیزی ذخیره نمی‌کند.</p>
         <div class="row"><button class="btn primary" type="button" data-act="newspoll">بررسی همهٔ منابع اکنون</button>
         <button class="btn" type="button" data-act="newsreset" title="خبرهای ردشده یا خطادار دوباره بررسی می‌شوند">بازبینی ردشده‌ها</button></div></div>
-      <h2>منابع <span class="chip">${fa(sources.length)}</span></h2>
-      ${sources.length ? sources.map(x => `<div class="card ${x.last_error ? 'err' : ''}"><div class="row"><strong class="grow">${esc(x.name)}</strong><span class="chip accent">${NEWS_KIND[x.kind] || x.kind}</span>${x.is_active ? '' : '<span class="chip">متوقف</span>'}</div>
-        ${x.feed_url ? `<div class="ltr meta" dir="ltr">${esc(x.feed_url)}</div>` : ''}
-        <div class="meta">هر ${fa(x.check_every_min)} دقیقه؛ آخرین بررسی: ${fmtT(x.last_checked_at)}${x.last_ok_at ? ('؛ آخرین موفق: ' + fmtT(x.last_ok_at)) : ''}</div>
-        ${x.last_error ? `<div class="meta">خطا: ${esc(x.last_error)}</div>` : ''}
-        <div class="row">${x.kind !== 'push' ? `<button type="button" class="btn small" data-act="newstest" data-id="${x.id}">آزمایش</button>` : ''}${x.kind !== 'push' ? `<button type="button" class="btn small" data-act="newspollone" data-id="${x.id}">بررسی اکنون</button>` : ''}
-        <button type="button" class="btn quiet small" data-act="newsedit" data-id="${x.id}">ویرایش</button>
-        <button type="button" class="btn quiet small" data-act="newstoggle" data-id="${x.id}" data-on="${x.is_active ? 0 : 1}">${x.is_active ? 'توقف' : 'فعال‌سازی'}</button>
-        ${S.newsDel === x.id ? `<button type="button" class="btn danger small" data-act="newsdel" data-id="${x.id}">حذف قطعی</button><button type="button" class="btn quiet small" data-act="newsdelno">انصراف</button>` : `<button type="button" class="btn quiet danger small" data-act="newsask" data-id="${x.id}">حذف</button>`}</div></div>`).join('') : '<div class="callout">هنوز منبعی ثبت نشده است. از فرم زیر شروع کنید.</div>'}
-      ${test ? `<div class="card"><h2>نتیجهٔ آزمایش <span class="meta">${esc(test.label || '')}</span></h2>${newsDecisions(test.result)}<div class="row"><button type="button" class="btn quiet small" data-act="newstestclose">بستن</button></div></div>` : ''}
-      <form class="card" id="newsForm"><h2>${ed ? 'ویرایش منبع' : 'افزودن منبع'}</h2>
-        <div class="glgrid"><label class="f">نام منبع<input type="text" id="nsName" value="${esc(ed ? ed.name : '')}" required></label>
-        <label class="f">نوع<select id="nsKind"><option value="rss"${kind === 'rss' ? ' selected' : ''}>خوراک RSS یا Atom (ساده‌ترین و پایدارترین)</option><option value="web"${kind === 'web' ? ' selected' : ''}>صفحهٔ فهرست خبر در وب</option><option value="push"${kind === 'push' ? ' selected' : ''}>ورودی بیرونی (n8n و مانند آن)</option></select></label>
-        ${kind !== 'push' ? `<label class="f">${kind === 'rss' ? 'نشانی خوراک' : 'نشانی صفحهٔ فهرست اخبار'}<input class="ltr" dir="ltr" type="url" id="nsUrl" value="${esc(ed && ed.feed_url ? ed.feed_url : '')}" placeholder="https://" required></label>` : ''}
-        ${kind === 'web' ? `<label class="f">الگوی نشانی مقاله (عبارت منظم)<input class="ltr" dir="ltr" type="text" id="nsPat" value="${esc(ed && ed.link_pattern ? ed.link_pattern : '')}" placeholder="/news/\\d+"></label>
-        <label class="f">انتخاب‌گر متن خبر (اختیاری)<input class="ltr" dir="ltr" type="text" id="nsSel" value="${esc(ed && ed.body_selector ? ed.body_selector : '')}" placeholder="div.news-body"></label>` : ''}
-        <label class="f">هر چند دقیقه بررسی شود<select id="nsEvery">${[15, 30, 60, 180, 360].map(m => `<option value="${m}"${(ed ? ed.check_every_min : 60) === m ? ' selected' : ''}>${fa(m)}</option>`).join('')}</select></label></div>
-        ${kind === 'push' ? '<p class="sub">این نوع منبع خودش چیزی نمی‌خواند؛ ابزار بیرونی خبرها را به نشانی بخش «راهنمای اتصال» می‌فرستد و نام این منبع را مشخص می‌کند.</p>' : ''}
-        <div class="row"><button class="btn primary" type="submit">${ed ? 'ذخیره تغییر' : 'افزودن منبع'}</button>${kind !== 'push' ? '<button class="btn" type="button" data-act="newstestform">آزمایش با همین مقادیر</button>' : ''}${ed ? '<button class="btn" type="button" data-act="newscancel">انصراف</button>' : ''}</div></form>
+      <div class="card nslist"><h2>منابع <span class="chip">${fa(sources.length)}</span></h2>
+        ${sources.length ? sources.map(row).join('') : '<div class="meta">هنوز منبعی ثبت نشده است. از فرم زیر شروع کنید.</div>'}</div>
+      ${S.newsEdit ? '' : `<div class="card">${newsFormHtml(draft, false)}${testBox('form')}</div>`}
       <h2>قواعد فیلتر <span class="chip">${fa(rules.length)}</span></h2>
-      <form class="card" id="ruleForm"><p class="sub">«شامل» یعنی خبر باید دست‌کم یکی از این کلمه‌ها را داشته باشد. «حذف» یعنی خبری که یکی از این کلمه‌ها را دارد رد شود. اگر هیچ قاعدهٔ «شامل» نباشد، همهٔ خبرها بررسی می‌شوند.</p>
-        <div class="glgrid"><label class="f">کلمه یا عبارت<input type="text" id="ruKw" required></label>
-        <label class="f">نوع<select id="ruKind"><option value="include">شامل</option><option value="exclude">حذف</option></select></label>
+      <form class="card" id="ruleForm"><p class="sub">قاعدهٔ «شاملِ» یعنی خبر باید دست‌کم یکی از این کلمه‌ها را داشته باشد. قاعدهٔ «بدونِ» یعنی خبری که یکی از این کلمه‌ها را دارد رد شود. اگر هیچ قاعدهٔ «شاملِ» نباشد، همهٔ خبرها بررسی می‌شوند.</p>
+        <div class="glgrid"><label class="f">نوع<select id="ruKind"><option value="include">شاملِ</option><option value="exclude">بدونِ</option></select></label>
+        <label class="f">کلمه یا عبارت<input type="text" id="ruKw" required></label>
         <label class="f">دامنه<select id="ruSrc"><option value="">همهٔ منابع</option>${sources.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select></label></div>
         <div class="row"><button class="btn primary" type="submit">افزودن قاعده</button></div></form>
-      ${rules.length ? `<div class="table-wrap"><table><thead><tr><th>کلمه</th><th>نوع</th><th>دامنه</th><th></th></tr></thead><tbody>${rules.map(r => `<tr><td>${esc(r.keyword)}</td><td><span class="chip ${r.kind === 'include' ? 'ok' : 'bad'}">${r.kind === 'include' ? 'شامل' : 'حذف'}</span>${r.is_active ? '' : ' <span class="chip">غیرفعال</span>'}</td><td>${r.source_id && byId[r.source_id] ? esc(byId[r.source_id].name) : 'همه'}</td>
+      ${rules.length ? `<div class="table-wrap"><table><thead><tr><th>نوع</th><th>کلمه یا عبارت</th><th>دامنه</th><th></th></tr></thead><tbody>${rules.map(r => `<tr><td><span class="chip ${r.kind === 'include' ? 'ok' : 'bad'}">${r.kind === 'include' ? 'شاملِ' : 'بدونِ'}</span>${r.is_active ? '' : ' <span class="chip">غیرفعال</span>'}</td><td>${esc(r.keyword)}</td><td>${r.source_id && byId[r.source_id] ? esc(byId[r.source_id].name) : 'همه'}</td>
         <td class="glact"><button type="button" class="btn quiet small" data-act="ruletoggle" data-id="${r.id}" data-on="${r.is_active ? 0 : 1}">${r.is_active ? 'غیرفعال' : 'فعال'}</button><button type="button" class="btn quiet danger small" data-act="ruledel" data-id="${r.id}">حذف</button></td></tr>`).join('')}</tbody></table></div>` : ''}
       <form class="card" id="newsCfg"><h2>محدودیت‌ها</h2>
         <div class="glgrid"><label class="f">حداقل کلمه<input class="ltr" dir="ltr" type="number" id="ncMin" min="0" value="${esc(c.news_min_words || 60)}"></label>
@@ -1866,25 +1898,32 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     async gldel(el) { const r = await sb.from('glossary').delete().eq('id', el.dataset.id); if (r.error) throw r.error; S.glDel = null; toast('اصطلاح حذف شد.'); render(); },
     async gledit(el) { S.glEdit = el.dataset.id; await render(); setTimeout(() => { const f = $('#glFa'); if (f) { f.scrollIntoView({ block: 'center' }); f.focus(); } }, 150); },
     glcancel() { S.glEdit = null; render(); },
-    newsedit(el) { S.newsEdit = el.dataset.id; S.newsKind = null; render(); },
-    newscancel() { S.newsEdit = null; S.newsKind = null; render(); },
+    newsedit(el) {
+      S.newsDraft = null; S.newsNote = null; S.newsTest = null; S.newsEdit = el.dataset.id;
+      sb.from('news_sources').select('*').eq('id', el.dataset.id).single().then(r => {
+        const x = r.data || {}; S.newsDraft = { name: x.name, kind: x.kind, url: x.feed_url || '', pat: x.link_pattern || '', sel: x.body_selector || '', every: x.check_every_min }; render();
+      });
+    },
+    newscancel() { S.newsEdit = null; S.newsDraft = null; S.newsNote = null; S.newsTest = null; render(); },
     newsask(el) { S.newsDel = el.dataset.id; render(); },
     newsdelno() { S.newsDel = null; render(); },
-    async newsdel(el) { const r = await sb.from('news_sources').delete().eq('id', el.dataset.id); if (r.error) throw r.error; S.newsDel = null; S.newsEdit = null; toast('منبع حذف شد.'); render(); },
+    async newsdel(el) { const r = await sb.from('news_sources').delete().eq('id', el.dataset.id); if (r.error) throw r.error; S.newsDel = null; S.newsEdit = null; S.newsDraft = null; toast('منبع حذف شد.'); render(); },
     async newstoggle(el) { const r = await sb.from('news_sources').update({ is_active: el.dataset.on === '1' }).eq('id', el.dataset.id); if (r.error) throw r.error; render(); },
     newstestclose() { S.newsTest = null; render(); },
     async newstest(el) {
       toast('در حال آزمایش…');
-      try { S.newsTest = { label: '', result: await fnCall('news-ingest', { action: 'test', source_id: el.dataset.id }) }; }
-      catch (e) { S.newsTest = { result: { error: errText(e), decisions: [] } }; }
-      await render(); const t = $('#newsForm'); if (t && t.previousElementSibling) t.previousElementSibling.scrollIntoView({ block: 'center' });
+      try { S.newsTest = { where: el.dataset.id, result: await fnCall('news-ingest', { action: 'test', source_id: el.dataset.id }) }; }
+      catch (e) { S.newsTest = { where: el.dataset.id, result: { error: errText(e), decisions: [] } }; }
+      render();
     },
     async newstestform() {
-      const kind = $('#nsKind').value; const u = $('#nsUrl'); if (!u || !u.value.trim()) throw new Error('نشانی را وارد کنید.');
-      toast('در حال آزمایش…');
-      const source = { kind, feed_url: u.value.trim(), link_pattern: ($('#nsPat') || {}).value || null, body_selector: ($('#nsSel') || {}).value || null };
-      try { S.newsTest = { label: u.value.trim(), result: await fnCall('news-ingest', { action: 'test', source }) }; }
-      catch (e) { S.newsTest = { result: { error: errText(e), decisions: [] } }; }
+      const d = newsRead(); const where = S.newsEdit || 'form';
+      try {
+        if (d.kind === 'auto') await newsDetect(d);
+        const url = (d.url || '').trim(); if (!/^https?:\/\//i.test(url)) throw new Error('نشانی را وارد کنید.');
+        toast('در حال آزمایش…');
+        S.newsTest = { where, label: url, result: await fnCall('news-ingest', { action: 'test', source: newsSrcBody(d) }) };
+      } catch (e) { S.newsTest = { where, result: { error: errText(e), decisions: [] } }; }
       render();
     },
     async newspoll() {
@@ -1908,7 +1947,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       ta.value = before + (before && !/\s$/.test(before) ? ' ' : '') + t + (after && !/^[\s.,;:]/.test(after) ? ' ' : '') + after;
       ta.dispatchEvent(new Event('input', { bubbles: true })); grow(ta); ta.focus();
     },
-    admintab(el) { S.newsEdit = null; S.newsKind = null; S.newsDel = null; S.glEdit = null; S.glDel = null; S.adminTab = el.dataset.tab; render(); },
+    admintab(el) { S.newsEdit = null; S.newsDraft = null; S.newsNote = null; S.newsTest = null; S.newsDel = null; S.glEdit = null; S.glDel = null; S.adminTab = el.dataset.tab; render(); },
     async setpass(el) {
       const i = document.querySelector(`[data-ppass="${el.dataset.id}"]`);
       await fnCall('manage-users', { action: 'set_password', user_id: el.dataset.id, password: i.value });
@@ -1964,7 +2003,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     try { if (f) await doWriterUpload(f); } catch (err) { toast(errText(err)); }
   });
   document.addEventListener('change', e => {
-    if (e.target && e.target.id === 'nsKind') { const nm = $('#nsName').value; S.newsKind = e.target.value; render().then(() => { const n = $('#nsName'); if (n) n.value = nm; }); }
+    if (e.target && e.target.id === 'nsKind') { newsRead(); S.newsNote = null; render(); }
   });
   document.addEventListener('submit', async e => {
     e.preventDefault();
@@ -2001,13 +2040,16 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         toast(`${fa(r.added)} اصطلاح افزوده، ${fa(r.updated)} به‌روز شد${r.skipped ? '، ' + fa(r.skipped) + ' خط رد شد' : ''}.`); return render();
       }
       if (f.id === 'newsForm') {
-        const kind = $('#nsKind').value, name = $('#nsName').value.trim(); if (!name) throw new Error('نام منبع را بنویسید.');
-        const row = { name, kind, check_every_min: Number($('#nsEvery').value) || 60, feed_url: kind === 'push' ? null : ($('#nsUrl').value.trim() || null), link_pattern: kind === 'web' ? ($('#nsPat').value.trim() || null) : null, body_selector: kind === 'web' ? ($('#nsSel').value.trim() || null) : null };
+        const d = newsRead(); const name = (d.name || '').trim(); if (!name) throw new Error('نام منبع را بنویسید.');
+        if (d.kind === 'auto') await newsDetect(d);
+        const kind = d.kind;
+        const row = { name, kind, check_every_min: Number(d.every) || 60, feed_url: kind === 'push' ? null : ((d.url || '').trim() || null), link_pattern: kind === 'web' ? ((d.pat || '').trim() || null) : null, body_selector: kind === 'web' ? ((d.sel || '').trim() || null) : null };
         if (kind !== 'push' && !/^https?:\/\//i.test(row.feed_url || '')) throw new Error('نشانی باید با http یا https شروع شود.');
         if (row.link_pattern) { try { new RegExp(row.link_pattern); } catch (_) { throw new Error('الگوی نشانی مقاله عبارت منظم معتبری نیست.'); } }
         const r = S.newsEdit ? await sb.from('news_sources').update(row).eq('id', S.newsEdit) : await sb.from('news_sources').insert(row);
         if (r.error) throw r.error;
-        S.newsEdit = null; S.newsKind = null; toast('منبع ذخیره شد. حالا «آزمایش» را بزنید.'); return render();
+        const wasEdit = S.newsEdit; S.newsEdit = null; S.newsDraft = null; S.newsTest = null;
+        toast(S.newsNote ? 'منبع ذخیره شد. ' + S.newsNote.split(' نمونه‌ها')[0] : 'منبع ذخیره شد.'); S.newsNote = null; return render();
       }
       if (f.id === 'ruleForm') {
         const kw = $('#ruKw').value.trim(); if (!kw) throw new Error('کلمه را بنویسید.');
