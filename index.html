@@ -76,7 +76,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   .btn[disabled] { opacity: .5; cursor: not-allowed; }
   .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   label.f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
-  input[type=text], input[type=email], input[type=password], input[type=url], select, textarea.plain {
+  input[type=text], input[type=email], input[type=password], input[type=url], input[type=number], select, textarea.plain {
     width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; min-height: 40px; color: var(--fg);
   }
   input.ltr, textarea.ltr { direction: ltr; text-align: left; font-family: var(--f-mono); font-size: 13px; }
@@ -289,7 +289,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   .btn.danger:hover { background: var(--bad-soft); border-color: var(--bad); }
   .btn.quiet:hover { box-shadow: none; }
   .btn.small { min-height: 32px; }
-  input[type=text], input[type=email], input[type=password], input[type=url], select, textarea.plain, textarea.t { border-radius: var(--r-sm); transition: border-color .2s, box-shadow .2s, background .2s; }
+  input[type=text], input[type=email], input[type=password], input[type=url], input[type=number], select, textarea.plain, textarea.t { border-radius: var(--r-sm); transition: border-color .2s, box-shadow .2s, background .2s; }
   input:focus, select:focus, textarea.plain:focus, textarea.t:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent); }
   textarea.t:focus { outline: none; }
   .chip { padding: 1px 11px; font-weight: 500; }
@@ -356,11 +356,44 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   .ogc .en, .og .en { direction: ltr; font-family: var(--f-en); unicode-bidi: isolate; }
   .ogbad { color: var(--gold); }
   .glgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px 14px; }
-  .nsrc { padding: 14px 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+  .nshead { flex-direction: row !important; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px; }
+  .nshead > div:first-child { flex: 1 1 320px; min-width: 0; }
+  .nshead .sub { margin: 4px 0 0; }
+  .nstitle { flex-direction: row !important; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+  .nstitle h2 { margin: 0; }
+  .nsrc { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(0, 2.4fr) auto; align-items: center; gap: 6px 16px; padding: 12px 0; border-top: 1px solid var(--line); }
   .nsrc:first-of-type { border-top: 0; }
-  .nsrc.err strong { color: var(--bad); }
-  .nsrc.editing { background: var(--sunk); margin-inline: -12px; padding-inline: 12px; border-radius: 10px; }
-  .nsTest { margin-top: 8px; }
+  .nsname { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0; }
+  .nsname .sdot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--line); }
+  .nsname .sdot.ok { background: var(--ok); } .nsname .sdot.bad { background: var(--bad); }
+  .nsinfo { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .nsurl { font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nserr { color: var(--bad); }
+  .nsact { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+  .nsfull { grid-column: 1 / -1; min-width: 0; }
+  .nsfull h3 { margin: 0 0 8px; font-size: 15px; }
+  .nsrc.editing, .nsrc.nsnew { background: var(--sunk); margin-inline: -12px; padding-inline: 12px; border-radius: 10px; border-top: 0; margin-block: 6px; }
+  .nsTest { margin-top: 10px; }
+  .nsTest h3 { margin: 0 0 6px; font-size: 14px; }
+  .nsform .glgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+  .nsform .sub, .nsform .callout { margin: 8px 0 0; }
+  .nsform .row { margin-top: 12px; }
+  .nsgrid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 16px; align-items: start; margin-bottom: 16px; }
+  .nsgrid > .card { margin: 0; }
+  .nsgrid .sub { margin: 4px 0 10px; }
+  .nsrule { display: grid; grid-template-columns: 90px minmax(0, 1fr) minmax(0, 150px) auto; gap: 8px; }
+  .nsrule select, .nsrule input { min-width: 0; }
+  .rl { display: flex; flex-direction: column; margin-top: 8px; }
+  .rli { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+  .rli.off { opacity: .55; }
+  .nslim { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 12px; }
+  @media (max-width: 860px) {
+    .nsrc { grid-template-columns: 1fr; }
+    .nsact { justify-content: flex-start; }
+    .nsgrid { grid-template-columns: 1fr; }
+    .nsrule { grid-template-columns: 90px minmax(0, 1fr); }
+    .nsrule .btn { grid-column: 1 / -1; }
+  }
   .glact { white-space: nowrap; text-align: end; }
   #glTable tr.off td { opacity: .5; }
 
@@ -756,6 +789,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   function tabsFor(role) {
     const t = [];
     if (role === 'admin' || role === 'news_editor') t.push(['newsed', 'ویراستار خبر']);
+    if (role === 'news_editor') t.push(['newssrc', 'منابع خبر']);
     if (role === 'admin' || role === 'reviewer') t.push(['review', 'بازبین محتوا']);
     if (role === 'admin' || role === 'translator') t.push(['trans', 'مترجم']);
     if (role === 'admin' || role === 'supervisor') t.push(['qa', 'ناظر']);
@@ -769,6 +803,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     review: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>',
     trans: '<path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/>',
     qa: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
+    newssrc: '<path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/>',
     newsed: '<path d="M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v4"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M2 15h10"/><path d="m9 18 3-3-3-3"/>',
     pub: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
     quality: '<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
@@ -1027,6 +1062,9 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         <label class="btn primary filebtn" for="fileIn">انتخاب فایل DOCX</label><input type="file" class="vh" id="fileIn" accept=".docx"></div>
       ${rows ? `<div class="list">${rows}</div>` : emptyCard('فایلی در انتظار بازبینی نیست.')}`;
   };
+  VIEWS.newssrc = async function () {
+    return head('منابع خبر', 'سایت‌ها و خوراک‌هایی که خبر از آن‌ها گردآوری می‌شود، قواعد فیلتر و محدودیت‌ها.') + await adminNews();
+  };
   VIEWS.newsed = async function () {
     if (S.docId) return vReviewDoc();
     const sel = 'id,title,status,word_count,review_note,created_at,source_name,source_url,editor_note,news_edited_by,news_edited_at';
@@ -1070,7 +1108,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       <div class="selzone${sel.size ? ' on' : ''}" id="selZone"><div class="selhint"><span>انتخاب چند بند: روی شمارهٔ بند کلیک کنید، با Shift بازه بگیرید یا روی شماره‌ها بکشید.</span>${ro ? '' : '<button type="button" class="btn quiet small" data-act="selall">انتخاب همه</button>'}</div>
       <div class="selbar" id="selBar" role="region" aria-label="کار روی بندهای انتخاب‌شده"><b id="selN">${fa(sel.size)} بند انتخاب شده</b>
         <input type="text" id="bulkNote" placeholder="یک نظر برای همهٔ بندهای انتخاب‌شده" aria-label="نظر گروهی"><button type="button" class="btn small" data-act="bulkcm">ثبت نظر</button>
-        ${ro ? '' : '<button type="button" class="btn small danger" data-act="bulkdel">حذف بندها</button>'}<button type="button" class="btn small" data-act="selall">انتخاب همه</button><button type="button" class="btn small" data-act="selnone">لغو انتخاب</button></div></div>
+        ${ro ? '' : '<button type="button" class="btn small danger" data-act="bulkdel">حذف بندها</button>'}<button type="button" class="btn small" data-act="selcopy">کپی بندها</button><button type="button" class="btn small" data-act="selall">انتخاب همه</button><button type="button" class="btn small" data-act="selnone">لغو انتخاب</button></div></div>
       <div class="sheet" id="sheet">${s.data.map((g, i) => `<div class="para${sel.has(g.id) ? ' sel' : ''}" data-sid="${g.id}">
         <button type="button" class="gut" aria-pressed="${sel.has(g.id)}" aria-label="انتخاب بند ${fa(i + 1)}"><span class="pc">✓</span><span class="pn">${fa(i + 1)}</span></button>
         <div class="pbody"><textarea class="t pt fa-edit${g.kind === 'heading' ? ' head' : ''}" dir="rtl" lang="fa" rows="1" data-fa="${g.id}" ${ro ? 'readonly' : ''} aria-label="متن فارسی بند ${fa(i + 1)}">${esc(g.source_text)}</textarea>
@@ -1488,7 +1526,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   }
   function newsFormHtml(d, editing) {
     const kind = d.kind || 'auto';
-    return `<form id="newsForm">${editing ? '' : '<h2>افزودن منبع</h2>'}
+    return `<form id="newsForm" class="nsform">
       <div class="glgrid"><label class="f">نام منبع<input type="text" id="nsName" value="${esc(d.name || '')}" required></label>
       <label class="f">نوع<select id="nsKind">${NEWS_KIND_OPT.filter(o => o[0] !== 'auto' || !editing || true).map(o => `<option value="${o[0]}"${kind === o[0] ? ' selected' : ''}>${o[1]}</option>`).join('')}</select></label>
       ${kind !== 'push' ? `<label class="f">${kind === 'web' ? 'نشانی صفحهٔ فهرست اخبار' : 'نشانی سایت یا خوراک'}<input class="ltr" dir="ltr" type="url" id="nsUrl" value="${esc(d.url || '')}" placeholder="https://" required></label>` : ''}
@@ -1498,7 +1536,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       ${kind === 'auto' ? '<p class="sub">فقط نشانی سایت یا صفحهٔ اخبار را بدهید. سامانه خودش تشخیص می‌دهد که RSS است یا فهرست خبر، الگوی نشانی خبرها و محل متن را حدس می‌زند و نتیجه را آزمایش می‌کند.</p>' : ''}
       ${kind === 'push' ? '<p class="sub">این نوع منبع خودش چیزی نمی‌خواند؛ ابزار بیرونی خبرها را به نشانی بخش «راهنمای اتصال» می‌فرستد و نام این منبع را مشخص می‌کند.</p>' : ''}
       ${S.newsNote ? `<div class="callout">${esc(S.newsNote)}</div>` : ''}
-      <div class="row"><button class="btn primary" type="submit">${editing ? 'ذخیره تغییر' : 'افزودن منبع'}</button>${kind !== 'push' ? `<button class="btn" type="button" data-act="newstestform">${kind === 'auto' ? 'تشخیص خودکار و آزمایش' : 'آزمایش با همین مقادیر'}</button>` : ''}${editing ? '<button class="btn" type="button" data-act="newscancel">انصراف</button>' : ''}</div></form>`;
+      <div class="row"><button class="btn primary" type="submit">${editing ? 'ذخیره تغییر' : 'افزودن منبع'}</button>${kind !== 'push' ? `<button class="btn" type="button" data-act="newstestform">${kind === 'auto' ? 'تشخیص خودکار و آزمایش' : 'آزمایش با همین مقادیر'}</button>` : ''}<button class="btn quiet" type="button" data-act="${editing ? 'newscancel' : 'newsaddclose'}">انصراف</button></div></form>`;
   }
   async function adminNews() {
     const [src, rul, itm, cf] = await Promise.all([
@@ -1513,39 +1551,44 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     const test = S.newsTest;
     const testBox = where => test && test.where === where ? `<div class="nsTest"><h3>نتیجهٔ آزمایش <span class="meta">${esc(test.label || '')}</span></h3>${newsDecisions(test.result)}<div class="row"><button type="button" class="btn quiet small" data-act="newstestclose">بستن</button></div></div>` : '';
     const row = x => {
-      if (S.newsEdit === x.id) return `<div class="nsrc editing"><h3>ویرایش «${esc(x.name)}»</h3>${newsFormHtml(S.newsDraft || {}, true)}${testBox(x.id)}</div>`;
-      return `<div class="nsrc ${x.last_error ? 'err' : ''}"><div class="row"><strong class="grow">${esc(x.name)}</strong><span class="chip accent">${NEWS_KIND[x.kind] || x.kind}</span>${x.is_active ? '' : '<span class="chip">متوقف</span>'}</div>
-        ${x.feed_url ? `<div class="ltr meta" dir="ltr">${esc(x.feed_url)}</div>` : ''}
-        <div class="meta">هر ${fa(x.check_every_min)} دقیقه؛ آخرین بررسی: ${fmtT(x.last_checked_at)}${x.last_ok_at ? ('؛ آخرین موفق: ' + fmtT(x.last_ok_at)) : ''}</div>
-        ${x.last_error ? `<div class="meta">خطا: ${esc(x.last_error)}</div>` : ''}
-        <div class="row">${x.kind !== 'push' ? `<button type="button" class="btn small" data-act="newstest" data-id="${x.id}">آزمایش</button><button type="button" class="btn small" data-act="newspollone" data-id="${x.id}">بررسی اکنون</button>` : ''}
-        <button type="button" class="btn quiet small" data-act="newsedit" data-id="${x.id}">ویرایش</button>
-        <button type="button" class="btn quiet small" data-act="newstoggle" data-id="${x.id}" data-on="${x.is_active ? 0 : 1}">${x.is_active ? 'توقف' : 'فعال‌سازی'}</button>
-        ${S.newsDel === x.id ? `<button type="button" class="btn danger small" data-act="newsdel" data-id="${x.id}">حذف قطعی</button><button type="button" class="btn quiet small" data-act="newsdelno">انصراف</button>` : `<button type="button" class="btn quiet danger small" data-act="newsask" data-id="${x.id}">حذف</button>`}</div>${testBox(x.id)}</div>`;
+      if (S.newsEdit === x.id) return `<div class="nsrc editing"><div class="nsfull"><h3>ویرایش «${esc(x.name)}»</h3>${newsFormHtml(S.newsDraft || {}, true)}${testBox(x.id)}</div></div>`;
+      const dot = !x.is_active ? '' : x.last_error ? 'bad' : x.last_ok_at ? 'ok' : '';
+      return `<div class="nsrc ${x.last_error ? 'err' : ''}">
+        <div class="nsname"><span class="sdot ${dot}" aria-hidden="true"></span><strong>${esc(x.name)}</strong><span class="chip accent">${NEWS_KIND[x.kind] || x.kind}</span>${x.is_active ? '' : '<span class="chip">متوقف</span>'}</div>
+        <div class="nsinfo">${x.feed_url ? `<div class="ltr nsurl" dir="ltr" title="${esc(x.feed_url)}">${esc(x.feed_url)}</div>` : ''}
+          <div class="meta">هر ${fa(x.check_every_min)} دقیقه؛ آخرین بررسی: ${fmtT(x.last_checked_at)}${x.last_ok_at ? ('؛ آخرین موفق: ' + fmtT(x.last_ok_at)) : ''}</div>
+          ${x.last_error ? `<div class="meta nserr">خطا: ${esc(x.last_error)}</div>` : ''}</div>
+        <div class="nsact">${x.kind !== 'push' ? `<button type="button" class="btn small" data-act="newstest" data-id="${x.id}">آزمایش</button><button type="button" class="btn small" data-act="newspollone" data-id="${x.id}">بررسی اکنون</button>` : ''}
+          <button type="button" class="btn quiet small" data-act="newsedit" data-id="${x.id}">ویرایش</button>
+          <button type="button" class="btn quiet small" data-act="newstoggle" data-id="${x.id}" data-on="${x.is_active ? 0 : 1}">${x.is_active ? 'توقف' : 'فعال‌سازی'}</button>
+          ${S.newsDel === x.id ? `<button type="button" class="btn danger small" data-act="newsdel" data-id="${x.id}">حذف قطعی</button><button type="button" class="btn quiet small" data-act="newsdelno">انصراف</button>` : `<button type="button" class="btn quiet danger small" data-act="newsask" data-id="${x.id}">حذف</button>`}</div>
+        ${testBox(x.id) ? `<div class="nsfull">${testBox(x.id)}</div>` : ''}</div>`;
     };
+    const showAdd = !S.newsEdit && (S.newsAdd || !sources.length);
     const draft = S.newsDraft || { kind: 'auto' };
-    return `<div class="card"><h2>دروازهٔ ورود خبر</h2>
-        <p class="sub">خبرها از منابع زیر خوانده می‌شوند، تکراری‌ها و موارد نامربوط (طبق قواعد) کنار می‌روند و بقیه به سبد ویراستار خبر می‌روند و پس از ویرایش او، برای بازبین محتوا فرستاده می‌شوند. ابتدا هر منبع را با «آزمایش» بررسی کنید؛ آزمایش چیزی ذخیره نمی‌کند.</p>
+    return `<div class="card nshead"><div><h2>دروازهٔ ورود خبر</h2><p class="sub">خبر از منابع گرفته می‌شود، تکراری‌ها و موارد نامربوط کنار می‌روند و بقیه به سبد ویراستار خبر می‌روند. هر منبع را با «آزمایش» بررسی کنید؛ آزمایش چیزی ذخیره نمی‌کند.</p></div>
         <div class="row"><button class="btn primary" type="button" data-act="newspoll">بررسی همهٔ منابع اکنون</button>
         <button class="btn" type="button" data-act="newsreset" title="خبرهای ردشده یا خطادار دوباره بررسی می‌شوند">بازبینی ردشده‌ها</button></div></div>
-      <div class="card nslist"><h2>منابع <span class="chip">${fa(sources.length)}</span></h2>
-        ${sources.length ? sources.map(row).join('') : '<div class="meta">هنوز منبعی ثبت نشده است. از فرم زیر شروع کنید.</div>'}</div>
-      ${S.newsEdit ? '' : `<div class="card">${newsFormHtml(draft, false)}${testBox('form')}</div>`}
-      <h2>قواعد فیلتر <span class="chip">${fa(rules.length)}</span></h2>
-      <form class="card" id="ruleForm"><p class="sub">قاعدهٔ «شاملِ» یعنی خبر باید دست‌کم یکی از این کلمه‌ها را داشته باشد. قاعدهٔ «بدونِ» یعنی خبری که یکی از این کلمه‌ها را دارد رد شود. اگر هیچ قاعدهٔ «شاملِ» نباشد، همهٔ خبرها بررسی می‌شوند.</p>
-        <div class="glgrid"><label class="f">نوع<select id="ruKind"><option value="include">شاملِ</option><option value="exclude">بدونِ</option></select></label>
-        <label class="f">کلمه یا عبارت<input type="text" id="ruKw" required></label>
-        <label class="f">دامنه<select id="ruSrc"><option value="">همهٔ منابع</option>${sources.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select></label></div>
-        <div class="row"><button class="btn primary" type="submit">افزودن قاعده</button></div></form>
-      ${rules.length ? `<div class="table-wrap"><table><thead><tr><th>نوع</th><th>کلمه یا عبارت</th><th>دامنه</th><th></th></tr></thead><tbody>${rules.map(r => `<tr><td><span class="chip ${r.kind === 'include' ? 'ok' : 'bad'}">${r.kind === 'include' ? 'شاملِ' : 'بدونِ'}</span>${r.is_active ? '' : ' <span class="chip">غیرفعال</span>'}</td><td>${esc(r.keyword)}</td><td>${r.source_id && byId[r.source_id] ? esc(byId[r.source_id].name) : 'همه'}</td>
-        <td class="glact"><button type="button" class="btn quiet small" data-act="ruletoggle" data-id="${r.id}" data-on="${r.is_active ? 0 : 1}">${r.is_active ? 'غیرفعال' : 'فعال'}</button><button type="button" class="btn quiet danger small" data-act="ruledel" data-id="${r.id}">حذف</button></td></tr>`).join('')}</tbody></table></div>` : ''}
-      <form class="card" id="newsCfg"><h2>محدودیت‌ها</h2>
-        <div class="glgrid"><label class="f">حداقل کلمه<input class="ltr" dir="ltr" type="number" id="ncMin" min="0" value="${esc(c.news_min_words || 60)}"></label>
-        <label class="f">حداکثر کلمه<input class="ltr" dir="ltr" type="number" id="ncMax" min="50" value="${esc(c.news_max_words || 3000)}"></label>
-        <label class="f">حداکثر خبر پذیرفته در هر بار بررسی<input class="ltr" dir="ltr" type="number" id="ncRun" min="1" max="100" value="${esc(c.news_max_per_run || 20)}"></label></div>
-        <div class="row"><button class="btn" type="submit">ذخیره محدودیت‌ها</button></div></form>
-      <h2>آخرین خبرهای دیده‌شده <span class="chip">${fa(items.length)}</span></h2>
-      ${items.length ? `<div class="table-wrap"><table><thead><tr><th>عنوان</th><th>منبع</th><th>وضعیت</th><th>زمان</th></tr></thead><tbody>${items.map(i => { const st = NEWS_STATUS[i.status] || [i.status, '']; return `<tr><td><a href="${esc(i.url)}" target="_blank" rel="noopener">${esc(i.title || i.url)}</a></td><td>${i.source_id && byId[i.source_id] ? esc(byId[i.source_id].name) : '—'}</td><td><span class="chip ${st[1]}">${st[0]}</span> <span class="meta">${esc(i.reason || '')}</span></td><td class="meta">${fmtT(i.fetched_at)}</td></tr>`; }).join('')}</tbody></table></div>` : '<div class="meta">هنوز خبری دیده نشده است.</div>'}
+      <div class="card nslist"><div class="nstitle"><h2>منابع <span class="chip">${fa(sources.length)}</span></h2>${showAdd || S.newsEdit ? '' : '<button type="button" class="btn primary small" data-act="newsadd">+ افزودن منبع</button>'}</div>
+        ${sources.map(row).join('')}
+        ${showAdd ? `<div class="nsrc nsnew"><div class="nsfull"><h3>منبع تازه</h3>${newsFormHtml(draft, false)}${testBox('form')}</div></div>` : ''}</div>
+      <div class="nsgrid">
+        <div class="card"><h2>قواعد فیلتر <span class="chip">${fa(rules.length)}</span></h2>
+          <p class="sub">«شاملِ»: خبر باید دست‌کم یکی از این کلمه‌ها را داشته باشد. «بدونِ»: خبری که یکی از آن‌ها را دارد رد می‌شود.</p>
+          <form id="ruleForm" class="nsrule"><select id="ruKind" aria-label="نوع"><option value="include">شاملِ</option><option value="exclude">بدونِ</option></select>
+            <input type="text" id="ruKw" placeholder="کلمه یا عبارت" aria-label="کلمه یا عبارت" required>
+            <select id="ruSrc" aria-label="دامنه"><option value="">همهٔ منابع</option>${sources.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select>
+            <button class="btn primary" type="submit">افزودن</button></form>
+          ${rules.length ? `<div class="rl">${rules.map(r => `<div class="rli${r.is_active ? '' : ' off'}"><span class="chip ${r.kind === 'include' ? 'ok' : 'bad'}">${r.kind === 'include' ? 'شاملِ' : 'بدونِ'}</span><b>${esc(r.keyword)}</b><span class="meta">${r.source_id && byId[r.source_id] ? esc(byId[r.source_id].name) : 'همهٔ منابع'}</span>
+            <span class="grow"></span><button type="button" class="btn quiet small" data-act="ruletoggle" data-id="${r.id}" data-on="${r.is_active ? 0 : 1}">${r.is_active ? 'غیرفعال' : 'فعال'}</button><button type="button" class="btn quiet danger small" data-act="ruledel" data-id="${r.id}">حذف</button></div>`).join('')}</div>` : '<p class="meta">قاعده‌ای نیست؛ همهٔ خبرها بررسی می‌شوند.</p>'}</div>
+        <form class="card" id="newsCfg"><h2>محدودیت‌ها</h2>
+          <div class="nslim"><label class="f">حداقل کلمه<input class="ltr" dir="ltr" type="number" id="ncMin" min="0" value="${esc(c.news_min_words || 60)}"></label>
+          <label class="f">حداکثر کلمه<input class="ltr" dir="ltr" type="number" id="ncMax" min="50" value="${esc(c.news_max_words || 3000)}"></label>
+          <label class="f">حداکثر خبر در هر بار بررسی<input class="ltr" dir="ltr" type="number" id="ncRun" min="1" max="100" value="${esc(c.news_max_per_run || 20)}"></label></div>
+          <div class="row"><button class="btn" type="submit">ذخیره محدودیت‌ها</button></div></form>
+      </div>
+      <div class="card"><h2>آخرین خبرهای دیده‌شده <span class="chip">${fa(items.length)}</span></h2>
+      ${items.length ? `<div class="table-wrap"><table><thead><tr><th>عنوان</th><th>منبع</th><th>وضعیت</th><th>زمان</th></tr></thead><tbody>${items.map(i => { const st = NEWS_STATUS[i.status] || [i.status, '']; return `<tr><td><a href="${esc(i.url)}" target="_blank" rel="noopener">${esc(i.title || i.url)}</a></td><td>${i.source_id && byId[i.source_id] ? esc(byId[i.source_id].name) : '—'}</td><td><span class="chip ${st[1]}">${st[0]}</span> <span class="meta">${esc(i.reason || '')}</span></td><td class="meta">${fmtT(i.fetched_at)}</td></tr>`; }).join('')}</tbody></table></div>` : '<p class="meta">هنوز خبری دیده نشده است.</p>'}</div>
       <details class="gl"><summary>راهنمای اتصال ابزار بیرونی (n8n)</summary>
         <p class="sub">برای ورودی بیرونی، یک درخواست POST با این مشخصات بفرستید:</p>
         <div class="ltr" dir="ltr"><code>POST ${esc(cfg.url)}/functions/v1/news-ingest</code><br><code>x-ingest-key: (کلید INGEST_KEY که خودتان تعیین کرده‌اید)</code></div>
@@ -1725,7 +1768,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   });
 
   const ACT = {
-    tab(el) { S.tab = el.dataset.tab; S.docId = null; S.qa = null; S.confirm = null; S.panel = false; setBell(); render(); },
+    tab(el) { S.newsEdit = null; S.newsDraft = null; S.newsNote = null; S.newsTest = null; S.newsDel = null; S.newsAdd = false; S.tab = el.dataset.tab; S.docId = null; S.qa = null; S.confirm = null; S.panel = false; setBell(); render(); },
     back() { S.docId = null; S.confirm = null; S.sel = new Set(); render(); },
     cancelc() { S.confirm = null; render(); },
     reload() { location.reload(); },
@@ -1822,6 +1865,14 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     selall() {
       const all = [...document.querySelectorAll('.para')]; const every = all.every(p => S.sel.has(p.dataset.sid));
       all.forEach(p => setSel(p, !every)); selRefresh();
+    },
+    async selcopy() {
+      const ids = [...document.querySelectorAll('.para.sel')].map(p => p.dataset.sid);
+      if (!ids.length) { toast('ابتدا چند بند را انتخاب کنید.'); return; }
+      const text = ids.map(id => { const t = document.querySelector(`[data-fa="${id}"]`); return t ? t.value.trim() : ''; }).filter(Boolean).join('\n\n');
+      try { await navigator.clipboard.writeText(text); }
+      catch (_) { const ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (e) { /* ignore */ } ta.remove(); }
+      toast(`${fa(ids.length)} بند کپی شد.`);
     },
     selnone() { document.querySelectorAll('.para').forEach(p => setSel(p, false)); selRefresh(); },
     async bulkcm() {
@@ -1951,6 +2002,8 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         const x = r.data || {}; S.newsDraft = { name: x.name, kind: x.kind, url: x.feed_url || '', pat: x.link_pattern || '', sel: x.body_selector || '', every: x.check_every_min }; render();
       });
     },
+    newsadd() { S.newsAdd = true; S.newsDraft = { kind: 'auto' }; S.newsNote = null; S.newsTest = null; render(); },
+    newsaddclose() { S.newsAdd = false; S.newsDraft = null; S.newsNote = null; S.newsTest = null; render(); },
     newscancel() { S.newsEdit = null; S.newsDraft = null; S.newsNote = null; S.newsTest = null; render(); },
     newsask(el) { S.newsDel = el.dataset.id; render(); },
     newsdelno() { S.newsDel = null; render(); },
@@ -1994,7 +2047,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       ta.value = before + (before && !/\s$/.test(before) ? ' ' : '') + t + (after && !/^[\s.,;:]/.test(after) ? ' ' : '') + after;
       ta.dispatchEvent(new Event('input', { bubbles: true })); grow(ta); ta.focus();
     },
-    admintab(el) { S.newsEdit = null; S.newsDraft = null; S.newsNote = null; S.newsTest = null; S.newsDel = null; S.glEdit = null; S.glDel = null; S.adminTab = el.dataset.tab; render(); },
+    admintab(el) { S.newsEdit = null; S.newsDraft = null; S.newsNote = null; S.newsTest = null; S.newsDel = null; S.newsAdd = false; S.glEdit = null; S.glDel = null; S.adminTab = el.dataset.tab; render(); },
     async setpass(el) {
       const i = document.querySelector(`[data-ppass="${el.dataset.id}"]`);
       await fnCall('manage-users', { action: 'set_password', user_id: el.dataset.id, password: i.value });
@@ -2095,7 +2148,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         if (row.link_pattern) { try { new RegExp(row.link_pattern); } catch (_) { throw new Error('الگوی نشانی مقاله عبارت منظم معتبری نیست.'); } }
         const r = S.newsEdit ? await sb.from('news_sources').update(row).eq('id', S.newsEdit) : await sb.from('news_sources').insert(row);
         if (r.error) throw r.error;
-        const wasEdit = S.newsEdit; S.newsEdit = null; S.newsDraft = null; S.newsTest = null;
+        const wasEdit = S.newsEdit; S.newsAdd = false; S.newsEdit = null; S.newsDraft = null; S.newsTest = null;
         toast(S.newsNote ? 'منبع ذخیره شد. ' + S.newsNote.split(' نمونه‌ها')[0] : 'منبع ذخیره شد.'); S.newsNote = null; return render();
       }
       if (f.id === 'ruleForm') {
