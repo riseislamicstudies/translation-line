@@ -494,6 +494,91 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   .inv-mem summary { cursor: pointer; color: var(--accent); }
   .inv-mem ul { margin: 6px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
   @media (max-width: 760px) { .para { grid-template-columns: 40px minmax(0, 1fr); } .selzone.on { top: calc(var(--hdr, 56px) + 6px); } .grid-2f { grid-template-columns: 1fr; } .theme.float { top: 10px; inset-inline-start: 10px; } .wpage.empty { min-height: calc(100vh - 170px); } }
+
+  /* ===== v13: reading-first inbox and review page ===== */
+  .inbox-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .inbox-tools input { flex: 1 1 220px; min-width: 0; }
+  .ilist { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: clip; }
+  .irow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .irow:last-child { border-bottom: 0; }
+  .irow:hover { background: var(--sunk); }
+  .irow[hidden] { display: none; }
+  .irow-main { all: unset; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px; min-width: 0; cursor: pointer; text-align: start; }
+  div.irow-main { cursor: default; }
+  button.irow-main:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 6px; }
+  .irow-t { font-weight: 700; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .irow-x { color: var(--muted); font-size: 14px; line-height: 1.9; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .irow-m { color: var(--muted); font-size: 12.5px; }
+  .irow-side { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; }
+  .irow > .callout, .irow > .irow-info { grid-column: 1 / -1; }
+  .irow-info { font-size: 13px; color: var(--muted); }
+  .compactdrop { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; border: 1px dashed var(--line); border-radius: 12px; padding: 10px 14px; background: var(--surface); position: relative; }
+  .compactdrop:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .compactdrop .meta { flex: 1 1 200px; }
+
+  .dview { max-width: 900px; width: 100%; margin-inline: auto; display: flex; flex-direction: column; gap: 14px; --pfs: 18px; }
+  .dview[data-fs="0"] { --pfs: 16px; } .dview[data-fs="2"] { --pfs: 21px; } .dview[data-fs="3"] { --pfs: 24px; }
+  .dtop { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+  .dtop .sp { flex: 1 1 0; }
+  .dnav, .fsz { display: inline-flex; align-items: center; gap: 6px; }
+  .dhead { display: flex; flex-direction: column; gap: 6px; }
+  .dhead h1 { font-size: clamp(20px, 3.4vw, 26px); }
+  .dmeta { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; color: var(--muted); font-size: 13px; }
+  .dview .para { grid-template-columns: 44px minmax(0, 1fr) auto; }
+  .ptxt { font-size: var(--pfs); line-height: 2.1; white-space: pre-wrap; overflow-wrap: anywhere; padding: 8px 10px; border-radius: 8px; cursor: text; direction: rtl; text-align: right; min-height: 2.4em; }
+  .ptxt:hover { background: color-mix(in srgb, var(--sunk) 70%, transparent); }
+  .ptxt:focus-visible { outline: 2px solid var(--accent); }
+  .ptxt.head { font-weight: 700; font-size: calc(var(--pfs) * 1.12); }
+  .ptxt.li::before { content: '• '; color: var(--accent); }
+  .ptxt.emp { color: var(--muted); }
+  .para.ro .ptxt { cursor: default; }
+  .dview textarea.fa-edit { font-size: var(--pfs); line-height: 2.1; display: none; border-color: var(--accent); background: var(--surface); }
+  .dview .para.editing textarea.fa-edit { display: block; }
+  .dview .para.editing .ptxt { display: none; }
+  .pact { display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 8px 8px 8px 6px; opacity: 0; transition: opacity .15s; }
+  .para:hover .pact, .para:focus-within .pact, .para.editing .pact, .para.hascm .pact { opacity: 1; }
+  @media (hover: none) { .pact { opacity: 1; } }
+  details.rwbar { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; background: var(--bar); }
+  details.rwbar > summary { cursor: pointer; font-weight: 700; list-style: none; display: flex; align-items: center; gap: 8px; }
+  details.rwbar > summary::-webkit-details-marker { display: none; }
+  details.rwbar > summary::after { content: '▾'; color: var(--muted); margin-inline-start: auto; }
+  details.rwbar[open] > summary::after { content: '▴'; }
+  .rwin { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+  .rwin input[type=text] { flex: 1 1 200px; min-width: 0; }
+  .rwin select { width: auto; }
+  .dbar { gap: 8px 14px; }
+  .dstars { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .dact { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-inline-start: auto; }
+  details.moremenu { position: relative; }
+  details.moremenu > summary { list-style: none; cursor: pointer; }
+  details.moremenu > summary::-webkit-details-marker { display: none; }
+  details.moremenu .menu { position: absolute; bottom: calc(100% + 6px); inset-inline-end: 0; z-index: 20; display: flex; flex-direction: column; gap: 4px; min-width: 160px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 6px; box-shadow: var(--shadow-2); }
+  @media (max-width: 760px) {
+    .dview { gap: 10px; }
+    .dview .sheet { margin-inline: calc(-1 * clamp(14px, 3vw, 28px)); border-radius: 0; border-inline: 0; }
+    .dview .para { grid-template-columns: 34px minmax(0, 1fr); }
+    .dview .gut { padding-top: 12px; font-size: 12px; }
+    .dview .gut .pc { width: 16px; height: 16px; }
+    .ptxt { padding: 8px 6px; line-height: 2; }
+    .dview .pact { display: none; grid-column: 2; flex-direction: row; padding: 0 6px 8px; opacity: 1; }
+    .dview .para.editing .pact, .dview .para.hascm .pact { display: flex; }
+    .dbar { padding: 8px 10px; }
+    .dstars { width: 100%; justify-content: space-between; }
+    .dstars .stl { display: none; }
+    .dact { width: 100%; margin-inline-start: 0; flex-wrap: nowrap; }
+    .dact > .btn { flex: 1 1 0; min-width: 0; padding-inline: 8px; }
+    .dact > details.moremenu { flex: 0 0 auto; }
+    .selbar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+    .selbar > * { flex: none; }
+    .selbar input[type=text] { min-width: 170px; flex: none; }
+    .selhint span { display: none; }
+    .selzone:not(.on) .selbar { display: none; }
+    .dview .selhint { justify-content: flex-end; }
+    .dtop .fsz { display: none; }
+    .irow { grid-template-columns: 1fr; padding: 12px; }
+    .irow-side { justify-content: flex-start; }
+    .ilist { margin-inline: calc(-1 * clamp(14px, 3vw, 28px)); border-radius: 0; border-inline: 0; }
+  }
 </style>
 </head>
 <body>
@@ -923,6 +1008,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     growAll();
     refreshCounts();
     aiWatch();
+    applyQf();
   }
   let softT = null;
   function soft() {
@@ -1056,29 +1142,62 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   // ===================================================================
   // view: reviewer
   // ===================================================================
+  // ---- reading-first inbox helpers -------------------------------------------
+  const ago = ts => {
+    if (!ts) return '';
+    const m = Math.max(0, Math.round((Date.now() - new Date(ts).getTime()) / 60000));
+    if (m < 1) return 'همین الان'; if (m < 60) return fa(m) + ' دقیقه پیش';
+    const h = Math.round(m / 60); if (h < 24) return fa(h) + ' ساعت پیش';
+    return fa(Math.round(h / 24)) + ' روز پیش';
+  };
+  async function excerptsFor(ids) {
+    const out = {}; if (!ids.length) return out;
+    try {
+      const { data } = await sb.from('segments').select('document_id,position,kind,source_text').in('document_id', ids).lte('position', 3).order('position');
+      (data || []).forEach(g => { const t = (g.source_text || '').trim(); if (!t) return; if (!out[g.document_id] || (out[g.document_id].h && g.kind !== 'heading')) out[g.document_id] = { t: t.slice(0, 260), h: g.kind === 'heading' }; });
+    } catch (_) { /* excerpts are optional */ }
+    return Object.fromEntries(Object.entries(out).map(([k, v]) => [k, v.t]));
+  }
+  function irow(d, o) {
+    const body = `<span class="irow-t">${esc(d.title)}</span>${o.ex ? `<span class="irow-x" dir="rtl">${esc(o.ex)}</span>` : ''}<span class="irow-m">${o.meta || ''}</span>`;
+    return `<article class="irow" data-q="${esc(normFa([d.title, o.ex, d.source_name].join(' ')))}">${o.open ? `<button type="button" class="irow-main" data-act="opendoc" data-id="${d.id}">${body}</button>` : `<div class="irow-main">${body}</div>`}<div class="irow-side">${o.side || ''}</div>${o.info ? `<div class="irow-info">${o.info}</div>` : ''}${o.callout || ''}</article>`;
+  }
+  const inboxTools = n => n > 6 ? `<div class="inbox-tools"><input type="search" class="plain" id="qFilter" value="${esc(S.qf || '')}" placeholder="جستجو در عنوان، متن و منبع…" aria-label="جستجو در فهرست"></div>` : '';
+  function applyQf() {
+    const i = $('#qFilter'); if (!i) return; const q = normFa(i.value || '');
+    document.querySelectorAll('.irow[data-q]').forEach(r => { r.hidden = !!q && !r.dataset.q.includes(q); });
+  }
+  const pdel = id => `<button type="button" class="btn small quiet danger" data-act="deldoc" data-id="${id}">حذف</button>`;
+  const srcLink = d => d.source_url ? `<a class="btn small quiet" href="${esc(d.source_url)}" target="_blank" rel="noopener">منبع ↗</a>` : '';
+
   VIEWS.review = async function () {
     if (S.docId) return vReviewDoc();
     const { data, error } = await sb.from('documents').select('id,title,status,word_count,ai_error,ai_started_at,review_note,created_at,source_kind,source_name,source_url,uploaded_by')
       .in('status', ['content_review', 'review_rejected', 'translating', 'translation_failed']).is('replaced_by', null).order('created_at', { ascending: false });
     if (error) throw error;
-    const rows = data.map(d => {
-      let act = '', info = '', extra = '';
+    const ex = await excerptsFor(data.filter(d => ['content_review', 'review_rejected'].includes(d.status)).map(d => d.id));
+    const todo = [], rest = [];
+    data.forEach(d => {
       const toW = (S.roles || {})[d.uploaded_by] === 'writer';
-      if (d.status === 'content_review') act = `<button type="button" class="btn primary" data-act="opendoc" data-id="${d.id}">بازبینی</button>`;
-      if (d.status === 'review_rejected') { act = toW ? `<button type="button" class="btn" data-act="opendoc" data-id="${d.id}">مشاهده</button>` : `<button type="button" class="btn primary" data-act="opendoc" data-id="${d.id}">اصلاح متن</button>`; if (toW) info = '<span class="meta">منتظر نسخهٔ اصلاح‌شدهٔ نویسنده است.</span>'; }
-      if (d.status === 'translating') {
+      const meta = `${fa(d.word_count)} کلمه · ${ago(d.created_at)}${d.uploaded_by && S.names[d.uploaded_by] ? ' · ' + whoH(d.uploaded_by) : ''}${d.source_kind === 'news' ? ' · خبر' + (d.source_name ? ' از ' + esc(d.source_name) : '') : ''}`;
+      if (d.status === 'content_review') todo.push(irow(d, { open: true, ex: ex[d.id], meta, side: srcLink(d) + `<button type="button" class="btn primary small" data-act="opendoc" data-id="${d.id}">بازبینی</button>` + pdel(d.id), _id: d.id }));
+      else if (d.status === 'review_rejected') {
+        const r = irow(d, { open: !toW, ex: ex[d.id], meta, side: chip(toW ? 'review_rejected' : d.status).replace('chip', toW ? 'chip bad' : 'chip') + (toW ? `<button type="button" class="btn small" data-act="opendoc" data-id="${d.id}">مشاهده</button>` : `<button type="button" class="btn small primary" data-act="opendoc" data-id="${d.id}">اصلاح متن</button>`) + pdel(d.id), info: toW ? 'منتظر نسخهٔ اصلاح‌شدهٔ نویسنده است.' : '', callout: d.review_note ? `<div class="callout"><b>یادداشت بازبین:</b> ${esc(d.review_note)}</div>` : '' });
+        (toW ? rest : todo).push(r);
+      } else if (d.status === 'translating') {
         const stale = !d.ai_started_at || (Date.now() - new Date(d.ai_started_at).getTime() > 4 * 60000);
-        info = `<span class="meta"><span class="spin" aria-hidden="true"></span> Gemini در حال ترجمه است…</span>`;
-        extra = `<button type="button" class="btn" data-act="cancelai" data-id="${d.id}">توقف ترجمه</button>`;
-        if (stale) act = `<button type="button" class="btn" data-act="retry" data-id="${d.id}">شروع دوباره ترجمه ماشینی</button>`;
+        rest.push(irow(d, { meta, info: '<span class="spin" aria-hidden="true"></span> ترجمه ماشینی در حال انجام است…', side: `<button type="button" class="btn small" data-act="cancelai" data-id="${d.id}">توقف</button>` + (stale ? `<button type="button" class="btn small primary" data-act="retry" data-id="${d.id}">شروع دوباره</button>` : '') + pdel(d.id) }));
+      } else if (d.status === 'translation_failed') {
+        rest.push(irow(d, { meta, callout: `<div class="callout"><b>خطا:</b> <span class="num" dir="ltr">${esc(d.ai_error || '')}</span></div>`, side: `<button type="button" class="btn small primary" data-act="retry" data-id="${d.id}">تلاش دوباره</button><button type="button" class="btn small" data-act="cancelai" data-id="${d.id}">بازگشت به بازبینی</button>` + pdel(d.id) }));
       }
-      if (d.status === 'translation_failed') { info = `<div class="callout"><b>خطا:</b> <span class="num" dir="ltr">${esc(d.ai_error || '')}</span></div>`; act = `<button type="button" class="btn primary" data-act="retry" data-id="${d.id}">تلاش دوباره</button>`; extra = `<button type="button" class="btn" data-act="cancelai" data-id="${d.id}">بازگشت به بازبینی</button>`; }
-      return `<article class="card"><div class="item"><div class="item-main"><div class="item-title">${esc(d.title)}</div><div class="meta">${fa(d.word_count)} کلمه · ${fmtT(d.created_at)}${d.uploaded_by && S.names[d.uploaded_by] ? ' · فرستنده: ' + whoH(d.uploaded_by) : ''}${d.source_kind === 'news' ? ' · خبر' + (d.source_name ? ' از ' + esc(d.source_name) : '') + (d.source_url ? ' <a href="' + esc(d.source_url) + '" target="_blank" rel="noopener">منبع</a>' : '') : ''}</div></div>${d.status === 'review_rejected' && toW ? '<span class="chip bad">برگشته به نویسنده</span>' : chip(d.status)}<span class="row">${act}${extra}<button type="button" class="btn small danger" data-act="deldoc" data-id="${d.id}">حذف</button></span></div>${info}${d.status === 'review_rejected' && d.review_note ? `<div class="callout"><b>یادداشت بازبین:</b> ${esc(d.review_note)}</div>` : ''}</article>`;
-    }).join('');
-    return head('بازبینی محتوایی', 'متن فارسی را پیش از ترجمه ماشینی بخوانید و اولویت نشر را (۱ تا ۵ ستاره) تعیین کنید. بعد از تایید، فایل خودکار به Gemini داده می‌شود. اگر متن اصلاح لازم دارد، با نظرهای خود به نویسنده برگردانید.') + `
-      <div class="drop"><div class="item-main"><b>بارگذاری فایل فارسی</b><p class="meta">فایل DOCX را انتخاب کنید. متن آن در مرورگر به بند تقسیم می‌شود. تیترها و فهرست‌ها شناسایی می‌شوند.</p></div>
-        <label class="btn primary filebtn" for="fileIn">انتخاب فایل DOCX</label><input type="file" class="vh" id="fileIn" accept=".docx"></div>
-      ${rows ? `<div class="list">${rows}</div>` : emptyCard('فایلی در انتظار بازبینی نیست.')}`;
+    });
+    S.queue = data.filter(d => d.status === 'content_review' || (d.status === 'review_rejected' && (S.roles || {})[d.uploaded_by] !== 'writer')).map(d => d.id);
+    return head('بازبینی محتوایی', 'متن فارسی را بخوانید، اولویت نشر را بدهید و تایید کنید؛ یا با نظر خود برگردانید. بعد از هر تصمیم، خبر بعدی خودکار باز می‌شود.') + `
+      <div class="compactdrop"><span class="meta">بارگذاری فایل فارسی (DOCX). متن به بند تقسیم و تیترها شناسایی می‌شوند.</span>
+        <label class="btn primary small filebtn" for="fileIn">انتخاب فایل DOCX</label><input type="file" class="vh" id="fileIn" accept=".docx"></div>
+      ${inboxTools(data.length)}
+      ${todo.length ? `<h2>منتظر بازبینی <span class="chip accent">${fa(todo.length)}</span></h2><div class="ilist">${todo.join('')}</div>` : emptyCard('فایلی در انتظار بازبینی نیست.')}
+      ${rest.length ? `<h2>در جریان و نیازمند توجه <span class="chip">${fa(rest.length)}</span></h2><div class="ilist">${rest.join('')}</div>` : ''}`;
   };
   VIEWS.newssrc = async function () {
     return head('منابع خبر', 'سایت‌ها و خوراک‌هایی که خبر از آن‌ها گردآوری می‌شود، قواعد فیلتر و محدودیت‌ها.') + await adminNews();
@@ -1090,14 +1209,16 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       sb.from('documents').select(sel).eq('status', 'news_edit').eq('source_kind', 'news').order('created_at', { ascending: false }),
       sb.from('documents').select(sel).eq('status', 'content_review').eq('source_kind', 'news').order('news_edited_at', { ascending: false }).limit(20)]);
     if (a.error) throw a.error;
-    const rows = (a.data || []).map(d => `<article class="card"><div class="item"><div class="item-main"><div class="item-title">${esc(d.title)}</div>
-        <div class="meta">${fa(d.word_count)} کلمه؛ ${fmtT(d.created_at)}${d.source_name ? '؛ منبع: ' + esc(d.source_name) : ''}${d.source_url ? ' <a href="' + esc(d.source_url) + '" target="_blank" rel="noopener">خبر اصلی</a>' : ''}</div>
-        ${d.review_note ? `<div class="callout"><b>بازبین برگرداند:</b> ${esc(d.review_note)}</div>` : ''}</div>
-        <div class="row"><button type="button" class="btn primary" data-act="opendoc" data-id="${d.id}">${d.review_note ? 'اصلاح' : 'بررسی و ویرایش'}</button></div></div></article>`).join('');
+    const ex = await excerptsFor((a.data || []).map(d => d.id));
+    const rows = (a.data || []).map(d => irow(d, { open: true, ex: ex[d.id], meta: `${fa(d.word_count)} کلمه · ${ago(d.created_at)}${d.source_name ? ' · ' + esc(d.source_name) : ''}`,
+      side: srcLink(d) + `<button type="button" class="btn small primary" data-act="opendoc" data-id="${d.id}">${d.review_note ? 'اصلاح' : 'بررسی'}</button>`,
+      callout: d.review_note ? `<div class="callout"><b>بازبین برگرداند:</b> ${esc(d.review_note)}</div>` : '' })).join('');
+    S.queue = (a.data || []).map(d => d.id);
     const sent = (b.data || []).filter(d => me.role === 'admin' || d.news_edited_by === me.id);
-    return head('سبد ویراستار خبر', 'خبرهای گردآوری‌شده از منابع اینجا جمع می‌شوند. متن را بخوانید و ویرایش کنید، سپس برای تایید نهایی و تعیین اولویت به بازبین محتوا بفرستید. خبر نامناسب را رد کنید.')
-      + (rows ? `<div class="list">${rows}</div>` : emptyCard('خبری در سبد نیست. خبرهای تازه که از منابع برسند اینجا می‌آیند.'))
-      + (sent.length ? `<h2>ارسال‌شده برای بازبین <span class="chip">${fa(sent.length)}</span></h2><div class="list">${sent.map(d => `<article class="card"><div class="item"><div class="item-main"><div class="item-title">${esc(d.title)}</div><div class="meta">${fmtT(d.news_edited_at)}${d.source_name ? '؛ منبع: ' + esc(d.source_name) : ''}</div></div>${chip('content_review')}</div></article>`).join('')}</div>` : '');
+    return head('سبد ویراستار خبر', 'خبرها را سریع بخوانید، در صورت نیاز ویرایش کنید و برای بازبین بفرستید یا رد کنید. بعد از هر تصمیم، خبر بعدی خودکار باز می‌شود.')
+      + inboxTools((a.data || []).length)
+      + (rows ? `<div class="ilist">${rows}</div>` : emptyCard('خبری در سبد نیست. خبرهای تازه که از منابع برسند اینجا می‌آیند.'))
+      + (sent.length ? `<h2>ارسال‌شده برای بازبین <span class="chip">${fa(sent.length)}</span></h2><div class="ilist">${sent.map(d => irow(d, { meta: `${ago(d.news_edited_at)}${d.source_name ? ' · ' + esc(d.source_name) : ''}`, side: chip('content_review') })).join('')}</div>` : '');
   };
   const KIND_FA = k => k === 'heading' ? 'تیتر' : k === 'list_item' ? 'فهرست' : 'پاراگراف';
   async function vReviewDoc() {
@@ -1120,43 +1241,82 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     if (S.rwDoc !== id) { S.rwDoc = id; S.rw = {}; S.rwBusy = false; }
     const rw = S.rw || (S.rw = {}), nrw = s.data.filter(g => rw[g.id]).length;
     const canRw = !ro && (ned ? canEd : ['reviewer', 'admin'].includes(me.role));
-    const rwBar = !canRw ? '' : `<div class="rwbar" id="rwBar"><b>بازنویسی ماشینی</b>
+    const rwOpen = !!(S.rwOpen || nrw || S.rwBusy);
+    const rwBar = !canRw ? '' : `<details class="rwbar" id="rwBar"${rwOpen ? ' open' : ''}><summary>بازنویسی ماشینی${nrw ? ` <span class="chip accent">${fa(nrw)} پیشنهاد</span>` : ''}</summary><div class="rwin">
         <select id="rwStyle" aria-label="سبک بازنویسی">${Object.entries(REWRITE_STYLES).map(([k, v]) => `<option value="${k}"${(S.rwStyle || 'polish') === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}<option value="custom"${S.rwStyle === 'custom' ? ' selected' : ''}>دستور دلخواه…</option></select>
         <input type="text" id="rwInstr" class="plain" value="${esc(S.rwInstr || '')}" placeholder="${S.rwStyle === 'custom' ? 'دستور بازنویسی (لازم است)' : 'توضیح اضافه (اختیاری)'}" aria-label="توضیح اضافه برای بازنویسی">
         <button type="button" class="btn small primary" data-act="rewrite"${S.rwBusy ? ' disabled' : ''}>${S.rwBusy ? 'در حال بازنویسی…' : sel.size ? 'بازنویسی بندهای انتخاب‌شده' : 'بازنویسی همهٔ بندها'}</button>
-        ${nrw ? `<span class="chip accent">${fa(nrw)} پیشنهاد</span><button type="button" class="btn small" data-act="rwacceptall">جایگزینی همه</button><button type="button" class="btn small quiet" data-act="rwrejectall">رد همه</button>` : ''}
-        <span class="meta" style="flex-basis:100%">نتیجه فقط پیشنهاد است و تا «جایگزین» نزنید متن عوض نمی‌شود. بندهای بدون نیاز به تغییر پیشنهاد نمی‌گیرند.</span></div>`;
-    return `<div><button type="button" class="btn quiet" data-act="back">→ فهرست</button></div>
-      <section class="page-head"><h1>${esc(doc.title)}</h1><p class="sub">${fa(s.data.length)} بند · ${fa(doc.word_count)} کلمه · ${chip(doc.status)}${doc.uploaded_by ? ' · فرستنده: ' + whoH(doc.uploaded_by) : ''}${isNews && doc.source_name ? ' · منبع: ' + esc(doc.source_name) + (doc.source_url ? ' <a href="' + esc(doc.source_url) + '" target="_blank" rel="noopener">باز کردن خبر اصلی</a>' : '') : ''}</p></section>
+        ${nrw ? `<button type="button" class="btn small" data-act="rwacceptall">جایگزینی همه</button><button type="button" class="btn small quiet" data-act="rwrejectall">رد همه</button>` : ''}
+        <span class="meta" style="flex-basis:100%">فقط پیشنهاد است؛ تا «جایگزین» نزنید متن عوض نمی‌شود.</span></div></details>`;
+    const fs = S.fs == null ? (() => { try { return Number(localStorage.getItem('tl_fs')); } catch (_) { return 1; } })() : S.fs;
+    S.fs = Math.min(3, Math.max(0, Number.isFinite(fs) && localStorage ? (fs || (fs === 0 ? 0 : 1)) : 1));
+    const q = S.queue || [], qi = q.indexOf(id);
+    const nav = qi >= 0 && q.length > 1 ? `<span class="dnav"><button type="button" class="btn small"${qi > 0 ? ` data-act="nav" data-id="${q[qi - 1]}"` : ' disabled'} title="قبلی (K)">→ قبلی</button><span class="meta num">${fa(qi + 1)} از ${fa(q.length)}</span><button type="button" class="btn small"${qi < q.length - 1 ? ` data-act="nav" data-id="${q[qi + 1]}"` : ' disabled'} title="بعدی (J)">بعدی ←</button></span>` : '';
+    const para = (g, i) => {
+      const hasCm = cmUnresolved(g.id) > 0;
+      return `<div class="para${sel.has(g.id) ? ' sel' : ''}${ro ? ' ro' : ''}${hasCm ? ' hascm' : ''}" data-sid="${g.id}">
+        <button type="button" class="gut" aria-pressed="${sel.has(g.id)}" aria-label="انتخاب بند ${fa(i + 1)}"><span class="pc">✓</span><span class="pn">${fa(i + 1)}</span></button>
+        <div class="pbody"><div class="ptxt${g.kind === 'heading' ? ' head' : g.kind === 'list_item' ? ' li' : ''}${g.source_text.trim() ? '' : ' emp'}" dir="rtl" lang="fa" data-ptxt="${g.id}"${ro ? '' : ` data-act="pedit" data-sid="${g.id}" role="button" tabindex="0" aria-label="ویرایش بند ${fa(i + 1)}"`}>${esc(g.source_text.trim() ? g.source_text : (ro ? '' : 'بند خالی — برای نوشتن بزنید'))}</div>
+          <textarea class="t pt fa-edit${g.kind === 'heading' ? ' head' : ''}" dir="rtl" lang="fa" rows="1" data-fa="${g.id}" ${ro ? 'readonly' : ''} aria-label="متن فارسی بند ${fa(i + 1)}">${esc(g.source_text)}</textarea>
+          ${rw[g.id] ? `<div class="rwbox" data-rwbox="${g.id}"><div class="ah">پیشنهاد بازنویسی ماشینی</div><div class="rwt" dir="rtl" lang="fa">${esc(rw[g.id])}</div><div class="row"><button type="button" class="btn small primary" data-act="rwaccept" data-sid="${g.id}">جایگزین کن</button><button type="button" class="btn small quiet" data-act="rwreject" data-sid="${g.id}">رد</button></div></div>` : ''}
+          ${cmBox(g.id)}</div>
+        <div class="pact">${ro ? '' : `<button type="button" class="btn quiet small" data-act="pedit" data-sid="${g.id}">ویرایش</button>`}${cmButton(g.id)}</div></div>`;
+    };
+    const nextHint = q.length > 1 && qi >= 0 ? ' سپس خبر بعدی باز می‌شود.' : '';
+    return `<div class="dview" data-fs="${S.fs}">
+      <div class="dtop"><button type="button" class="btn quiet small" data-act="back">→ فهرست</button>${nav}<span class="sp"></span>
+        <span class="fsz" aria-label="اندازهٔ متن"><button type="button" class="btn quiet small" data-act="fs" data-d="-1" aria-label="کوچک‌تر">A−</button><button type="button" class="btn quiet small" data-act="fs" data-d="1" aria-label="بزرگ‌تر">A+</button></span></div>
+      <section class="dhead"><h1>${esc(doc.title)}</h1><div class="dmeta"><span>${chip(doc.status)}</span><span>${fa(s.data.length)} بند · ${fa(doc.word_count)} کلمه</span>${doc.uploaded_by ? `<span>فرستنده: ${whoH(doc.uploaded_by)}</span>` : ''}${isNews && doc.source_name ? `<span>منبع: ${esc(doc.source_name)}</span>` : ''}${isNews && doc.source_url ? `<a href="${esc(doc.source_url)}" target="_blank" rel="noopener">خبر اصلی ↗</a>` : ''}</div></section>
       ${ned && doc.review_note ? `<div class="callout"><b>بازبین این خبر را برگرداند:</b> ${esc(doc.review_note)}</div>` : ''}
       ${!ned && isNews && doc.editor_note ? `<div class="callout"><b>یادداشت ویراستار خبر:</b> ${esc(doc.editor_note)}</div>` : ''}
       ${rej && doc.review_note ? `<div class="callout"><b>دلیل بازگشت:</b> ${esc(doc.review_note)}</div>` : ''}
       ${ro ? '<div class="callout"><b>منتظر نویسنده:</b> این فایل با نظرهای شما برای نویسنده برگشته است. نسخهٔ اصلاح‌شده به‌صورت فایل تازه در همین فهرست می‌آید.</div>' : ''}
-      <div class="selzone${sel.size ? ' on' : ''}" id="selZone"><div class="selhint"><span>انتخاب چند بند: روی شمارهٔ بند کلیک کنید، با Shift بازه بگیرید یا روی شماره‌ها بکشید.</span>${ro ? '' : '<button type="button" class="btn quiet small" data-act="selall">انتخاب همه</button>'}</div>
+      ${rwBar}
+      <div class="selzone${sel.size ? ' on' : ''}" id="selZone"><div class="selhint"><span>${ro ? '' : 'برای ویرایش روی متن بزنید. برای انتخاب چند بند، شمارهٔ بند را بزنید یا بکشید.'}</span>${ro ? '' : '<button type="button" class="btn quiet small" data-act="selall">انتخاب همه</button>'}</div>
       <div class="selbar" id="selBar" role="region" aria-label="کار روی بندهای انتخاب‌شده"><b id="selN">${fa(sel.size)} بند انتخاب شده</b>
         <input type="text" id="bulkNote" placeholder="یک نظر برای همهٔ بندهای انتخاب‌شده" aria-label="نظر گروهی"><button type="button" class="btn small" data-act="bulkcm">ثبت نظر</button>
-        ${ro ? '' : '<button type="button" class="btn small danger" data-act="bulkdel">حذف بندها</button>'}<button type="button" class="btn small" data-act="selcopy">کپی بندها</button><button type="button" class="btn small" data-act="selall">انتخاب همه</button><button type="button" class="btn small" data-act="selnone">لغو انتخاب</button></div></div>
-      ${rwBar}
-      <div class="sheet" id="sheet">${s.data.map((g, i) => `<div class="para${sel.has(g.id) ? ' sel' : ''}" data-sid="${g.id}">
-        <button type="button" class="gut" aria-pressed="${sel.has(g.id)}" aria-label="انتخاب بند ${fa(i + 1)}"><span class="pc">✓</span><span class="pn">${fa(i + 1)}</span></button>
-        <div class="pbody"><textarea class="t pt fa-edit${g.kind === 'heading' ? ' head' : ''}" dir="rtl" lang="fa" rows="1" data-fa="${g.id}" ${ro ? 'readonly' : ''} aria-label="متن فارسی بند ${fa(i + 1)}">${esc(g.source_text)}</textarea>
-          ${rw[g.id] ? `<div class="rwbox" data-rwbox="${g.id}"><div class="ah">پیشنهاد بازنویسی ماشینی</div><div class="rwt" dir="rtl" lang="fa">${esc(rw[g.id])}</div><div class="row"><button type="button" class="btn small primary" data-act="rwaccept" data-sid="${g.id}">جایگزین کن</button><button type="button" class="btn small quiet" data-act="rwreject" data-sid="${g.id}">رد</button></div></div>` : ''}
-          <div class="pmeta"><span>${KIND_FA(g.kind)}</span>${cmButton(g.id)}</div>${cmBox(g.id)}</div></div>`).join('')}</div>
-      ${doc.status === 'content_review' ? `<section class="card"><div><b>اولویت نشر</b> <span class="meta">(برای تایید لازم است)</span></div>
-        <div class="stars" id="starRow" role="group" aria-label="اولویت نشر از ۱ تا ۵">${[1, 2, 3, 4, 5].map(i => `<button type="button" class="star${(S.star || 0) >= i ? ' on' : ''}" data-act="star" data-n="${i}" aria-label="${fa(i)} ستاره" title="${RATING_LABEL[i]}">★</button>`).join('')}</div>
-        <p class="meta" id="starHint" aria-live="polite">${S.star ? ratingHint(S.star, pm) : `رتبه ۱ (کم‌اهمیت) تا ۵ (خبر اصلی). رتبه ${fa(pm)} و بالاتر در نشریه و سایت، پایین‌تر فقط در سایت.`}</p></section>` : ''}
-      ${ned ? (!canEd ? '<div class="submitbar"><span class="meta">این خبر در سبد ویراستار خبر است.</span></div>' : `<div class="submitbar">${S.confirm === 'nsend'
-        ? `<span class="row" style="flex:1 1 320px"><input type="text" id="edNote" class="plain" placeholder="یادداشت برای بازبین محتوا (اختیاری)" style="flex:1 1 220px"><button type="button" class="btn primary" data-act="nsend" data-id="${id}">ارسال برای بازبین محتوا</button><button type="button" class="btn quiet" data-act="cancelc">انصراف</button></span>`
+        <button type="button" class="btn small" data-act="selcopy">کپی بندها</button>${ro ? '' : '<button type="button" class="btn small danger" data-act="bulkdel">حذف بندها</button>'}<button type="button" class="btn small" data-act="selall">انتخاب همه</button><button type="button" class="btn small" data-act="selnone">لغو انتخاب</button></div></div>
+      <div class="sheet" id="sheet">${s.data.map(para).join('')}</div>
+      ${ned ? (!canEd ? '<div class="submitbar dbar"><span class="meta">این خبر در سبد ویراستار خبر است.</span></div>' : `<div class="submitbar dbar">${S.confirm === 'nsend'
+        ? `<span class="row" style="flex:1 1 320px"><input type="text" id="edNote" class="plain" placeholder="یادداشت برای بازبین محتوا (اختیاری)" style="flex:1 1 220px"><button type="button" class="btn primary" data-act="nsend" data-id="${id}">ارسال برای بازبین${nextHint ? ' و بعدی' : ''}</button><button type="button" class="btn quiet" data-act="cancelc">انصراف</button></span>`
         : S.confirm === 'ndiscard'
           ? `<span class="row" style="flex:1 1 320px"><input type="text" id="ndNote" class="plain" placeholder="دلیل رد خبر (لازم است)" style="flex:1 1 220px"><button type="button" class="btn danger" data-act="ndiscard" data-id="${id}">رد و حذف خبر</button><button type="button" class="btn quiet" data-act="cancelc">انصراف</button></span>`
-          : `<span class="meta">متن را ویرایش کنید؛ هر بند هنگام خروج از کادر ذخیره می‌شود. نظر روی بندها هم برای بازبین دیده می‌شود.</span><span class="row"><button type="button" class="btn danger" data-act="askndiscard">رد خبر</button><button type="button" class="btn primary" data-act="asknsend">ارسال برای بازبین محتوا</button></span>`}</div>`) : ro ? `<div class="submitbar"><span class="meta">در انتظار نسخهٔ اصلاح‌شده</span><span class="row"><button type="button" class="btn danger" data-act="deldoc" data-id="${id}">حذف فایل</button></span></div>` : `<div class="submitbar">${rej
-        ? `<span class="meta">متن را اصلاح کنید و دوباره برای بازبینی بفرستید.</span><span class="row"><button type="button" class="btn primary" data-act="resubmit" data-id="${id}">ارسال مجدد برای بازبینی</button><button type="button" class="btn danger" data-act="deldoc" data-id="${id}">حذف فایل</button></span>`
+          : `<span class="meta">ویرایش هر بند هنگام خروج از کادر ذخیره می‌شود.</span><span class="dact"><button type="button" class="btn danger" data-act="askndiscard">رد خبر</button><button type="button" class="btn primary" data-act="asknsend">ارسال برای بازبین محتوا</button></span>`}</div>`) : ro ? `<div class="submitbar dbar"><span class="meta">در انتظار نسخهٔ اصلاح‌شده</span><span class="dact"><button type="button" class="btn danger" data-act="deldoc" data-id="${id}">حذف فایل</button></span></div>` : `<div class="submitbar dbar">${rej
+        ? `<span class="meta">متن را اصلاح کنید و دوباره برای بازبینی بفرستید.</span><span class="dact"><button type="button" class="btn danger" data-act="deldoc" data-id="${id}">حذف فایل</button><button type="button" class="btn primary" data-act="resubmit" data-id="${id}">ارسال مجدد برای بازبینی</button></span>`
         : S.confirm === 'approve'
-          ? `<span>متن فارسی تایید و به Gemini داده شود؟ ${starsStatic(S.star || 0)}</span><span class="row"><button type="button" class="btn primary" data-act="approve" data-id="${id}">بله، تایید و ترجمه</button><button type="button" class="btn" data-act="cancelc">انصراف</button></span>`
+          ? `<span>متن فارسی تایید و به Gemini داده شود؟ ${starsStatic(S.star || 0)}</span><span class="dact"><button type="button" class="btn primary" data-act="approve" data-id="${id}">بله، تایید و ترجمه</button><button type="button" class="btn" data-act="cancelc">انصراف</button></span>`
           : S.confirm === 'reject'
             ? `<span class="row" style="flex:1 1 320px"><input type="text" id="rejNote" class="plain" placeholder="${toW ? 'یادداشت برای نویسنده (لازم است)' : 'دلیل بازگشت (لازم است)'}" style="flex:1 1 220px"><button type="button" class="btn" data-act="reject" data-id="${id}" data-w="${toW ? 1 : 0}">${toW ? 'بازگرداندن به نویسنده' : 'بازگرداندن'}</button><button type="button" class="btn quiet" data-act="cancelc">انصراف</button></span>${toW ? `<span class="meta" style="flex-basis:100%">${nCm ? fa(nCm) + ' نظر روی بندها هم برای نویسنده فرستاده می‌شود.' : 'می‌توانید روی بندها هم نظر بگذارید؛ نویسنده همه را می‌بیند.'}</span>` : ''}`
-            : `<span class="meta">ویرایش هر بند هنگام خروج از کادر ذخیره می‌شود.</span><span class="row"><button type="button" class="btn danger" data-act="deldoc" data-id="${id}">حذف فایل</button><button type="button" class="btn" data-act="askreject">${toW ? 'بازگرداندن به نویسنده' : isNews ? 'بازگرداندن به ویراستار خبر' : 'بازگرداندن برای اصلاح'}</button><button type="button" class="btn primary" data-act="askapprove">تایید و ارسال برای ترجمه ماشینی</button></span>`}</div>`}`;
+            : `<div class="dstars"><span class="meta">اولویت نشر</span><div class="stars sm" id="starRow" role="group" aria-label="اولویت نشر از ۱ تا ۵">${[1, 2, 3, 4, 5].map(i => `<button type="button" class="star${(S.star || 0) >= i ? ' on' : ''}" data-act="star" data-n="${i}" aria-label="${fa(i)} ستاره" title="${RATING_LABEL[i]}">★</button>`).join('')}</div><span class="meta stl" id="starHint" aria-live="polite">${S.star ? ratingShort(S.star, pm) : 'برای تایید لازم است'}</span></div>
+              <span class="dact"><details class="moremenu"><summary class="btn quiet" aria-label="گزینه‌های بیشتر">⋯</summary><div class="menu"><button type="button" class="btn small danger" data-act="deldoc" data-id="${id}">حذف فایل</button></div></details><button type="button" class="btn" data-act="askreject">${toW ? 'بازگرداندن به نویسنده' : isNews ? 'بازگرداندن به ویراستار' : 'بازگرداندن'}</button><button type="button" class="btn primary" data-act="askapprove">تایید و ترجمه</button></span>`}</div>`}
+    </div>`;
   }
+  // ---- queue flow and in-place editing ------------------------------------------
+  function gotoDoc(id) {
+    S.docId = id || null; S.confirm = null; S.star = null; S.sel = new Set(); S.lastSel = null;
+    render(); try { window.scrollTo({ top: 0 }); } catch (_) { /* ignore */ }
+  }
+  // after a decision: remove the finished item from the queue and open the one that took its place
+  function goNext(id) {
+    const q = S.queue || [], i = q.indexOf(id);
+    if (i >= 0) q.splice(i, 1);
+    const nxt = i >= 0 ? (q[i] || q[i - 1] || null) : null;
+    S.confirm = null; S.star = null; S.sel = new Set(); S.lastSel = null; S.docId = nxt || null;
+    try { window.scrollTo({ top: 0 }); } catch (_) { /* ignore */ }
+    return nxt;
+  }
+  function enterEdit(sid) {
+    const p = document.querySelector(`.para[data-sid="${sid}"]`), ta = p && p.querySelector('textarea[data-fa]');
+    if (!p || !ta || ta.readOnly) return;
+    p.classList.add('editing'); grow(ta); ta.focus();
+    try { ta.setSelectionRange(ta.value.length, ta.value.length); } catch (_) { /* ignore */ }
+  }
+  function paraSync(sid) {
+    const p = document.querySelector(`.para[data-sid="${sid}"]`); if (!p) return;
+    const ta = p.querySelector('textarea[data-fa]'), x = p.querySelector('.ptxt');
+    if (ta && x) { x.textContent = ta.value.trim() ? ta.value : (ta.readOnly ? '' : 'بند خالی — برای نوشتن بزنید'); x.classList.toggle('emp', !ta.value.trim()); }
+  }
+
   async function startTranslation(id) {
     try { await fnCall('translate-document', { document_id: id }); }
     catch (e) { toast('شروع ترجمه ماشینی ناموفق بود: ' + errText(e)); }
@@ -1376,6 +1536,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     return `<div class="row"><b>اولویت نشر</b>${starsEdit(doc.id, doc.priority || 0).replace(/data-act="setprio"/g, 'data-act="qaprio"')}${hint}</div>
       <p class="meta" style="margin-top:6px">ناظر می‌تواند رتبهٔ بازبین را تغییر دهد. تغییر بلافاصله ثبت می‌شود و در تاریخچهٔ رتبه می‌ماند.</p>`;
   }
+  function ratingShort(n, pm) { return `${RATING_LABEL[n]} · ${n >= pm ? 'نشریه و سایت' : 'فقط سایت'}`; }
   function ratingHint(n, pm) {
     return `رتبه ${fa(n)}: ${RATING_LABEL[n]} · ${n >= pm ? 'در نشریه و سایت منتشر می‌شود' : 'فقط در سایت منتشر می‌شود'}`;
   }
@@ -1873,6 +2034,13 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     tab(el) { S.newsEdit = null; S.newsDraft = null; S.newsNote = null; S.newsTest = null; S.newsDel = null; S.newsAdd = false; S.tab = el.dataset.tab; S.docId = null; S.qa = null; S.confirm = null; S.panel = false; setBell(); render(); },
     back() { S.docId = null; S.confirm = null; S.sel = new Set(); render(); },
     cancelc() { S.confirm = null; render(); },
+    nav(el) { gotoDoc(el.dataset.id); },
+    fs(el) { S.fs = Math.min(3, Math.max(0, (S.fs == null ? 1 : S.fs) + Number(el.dataset.d))); try { localStorage.setItem('tl_fs', String(S.fs)); } catch (_) { /* ignore */ } const v = $('.dview'); if (v) v.dataset.fs = S.fs; growAll(); },
+    pedit(el) {
+      const sid = el.dataset.sid; if (!sid) return;
+      if (el.classList.contains('ptxt')) { const sl = window.getSelection && window.getSelection(); if (sl && !sl.isCollapsed) return; }
+      enterEdit(sid);
+    },
     reload() { location.reload(); },
     async wtext(el) {
       const box = document.getElementById('wt-' + el.dataset.id); if (!box) return;
@@ -1916,28 +2084,28 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     async nsend(el) {
       const note = ($('#edNote') || {}).value || '';
       await rpc('news_submit_to_review', { p_doc: el.dataset.id, p_note: note.trim() || null });
-      S.confirm = null; S.docId = null; toast('برای بازبین محتوا ارسال شد.'); render();
+      goNext(el.dataset.id); toast('برای بازبین محتوا ارسال شد.'); render();
     },
     async ndiscard(el) {
       const why = ($('#ndNote') || {}).value || '';
       if (!why.trim()) { toast('دلیل رد خبر را بنویسید.'); return; }
       await rpc('news_discard', { p_doc: el.dataset.id, p_reason: why.trim() });
-      S.confirm = null; S.docId = null; toast('خبر رد شد.'); render();
+      goNext(el.dataset.id); toast('خبر رد شد.'); render();
     },
     askreject() { S.confirm = 'reject'; render(); },
     asksubmit() { S.confirm = 'submit'; const b = $('#bar'); if (b) b.innerHTML = barHtml(S.docId); },
     async approve(el) {
       await rpc('review_decision', { p_doc: el.dataset.id, p_approve: true, p_note: null, p_priority: S.star });
-      S.confirm = null; S.docId = null; S.star = null; toast('تایید شد. ترجمه ماشینی شروع شد.');
-      await startTranslation(el.dataset.id); render();
+      goNext(el.dataset.id); toast('تایید شد. ترجمه ماشینی شروع شد.');
+      render(); await startTranslation(el.dataset.id);
     },
     async reject(el) {
       const note = ($('#rejNote') || {}).value || '';
       if (!note.trim()) { toast('دلیل بازگشت را بنویسید.'); return; }
       await rpc('review_decision', { p_doc: el.dataset.id, p_approve: false, p_note: note.trim() });
-      S.confirm = null; S.docId = null; toast(el.dataset.w === '1' ? 'با نظرها برای نویسنده برگردانده شد.' : 'برای اصلاح به ویراستار خبر برگردانده شد.'); render();
+      goNext(el.dataset.id); toast(el.dataset.w === '1' ? 'با نظرها برای نویسنده برگردانده شد.' : 'برگردانده شد.'); render();
     },
-    async resubmit(el) { await rpc('resubmit_for_review', { p_doc: el.dataset.id }); toast('برای بازبینی ارسال شد.'); render(); },
+    async resubmit(el) { await rpc('resubmit_for_review', { p_doc: el.dataset.id }); goNext(el.dataset.id); toast('برای بازبینی ارسال شد.'); render(); },
     async cancelai(el) {
       await rpc('cancel_translation', { p_doc: el.dataset.id });
       toast('ترجمه ماشینی متوقف شد و فایل به بازبینی برگشت.'); render();
@@ -2000,7 +2168,8 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       if (el.dataset.sure !== '1') { el.dataset.sure = '1'; el.textContent = 'مطمئنید؟ دوباره بزنید'; return; }
       const path = await rpc('delete_document', { p_doc: el.dataset.id });
       if (path) { try { await sb.storage.from('source-files').remove([path]); } catch (_) { /* the original file may already be gone */ } }
-      S.docId = null; toast('حذف شد.'); render();
+      { const q = S.queue || [], i = q.indexOf(el.dataset.id); if (i >= 0) { goNext(el.dataset.id); } else S.docId = null; }
+      toast('حذف شد.'); render();
     },
     async claim(el) {
       try { await rpc('claim_document', { p_doc: el.dataset.id, p_hours: 24 }); }
@@ -2029,7 +2198,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     star(el) {
       S.star = Number(el.dataset.n);
       document.querySelectorAll('#starRow .star').forEach(b => b.classList.toggle('on', Number(b.dataset.n) <= S.star));
-      $('#starHint').textContent = ratingHint(S.star, S.printMin || 4);
+      const sh = $('#starHint'); if (sh) sh.textContent = ratingShort(S.star, S.printMin || 4);
     },
     async qaprio(el) {
       const n = Number(el.dataset.n), id = el.dataset.id;
@@ -2214,7 +2383,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     async rwaccept(el) {
       const sid = el.dataset.sid, text = (S.rw || {})[sid]; if (text == null) return;
       const { error } = await sb.from('segments').update({ source_text: text }).eq('id', sid); if (error) throw error;
-      delete S.rw[sid]; const ta = document.querySelector(`[data-fa="${sid}"]`); if (ta) { ta.value = text; grow(ta); }
+      delete S.rw[sid]; const ta = document.querySelector(`[data-fa="${sid}"]`); if (ta) { ta.value = text; grow(ta); paraSync(sid); }
       const b = document.querySelector(`[data-rwbox="${sid}"]`); if (b) b.remove(); toast('جایگزین شد.');
     },
     rwreject(el) { delete (S.rw || {})[el.dataset.sid]; const b = document.querySelector(`[data-rwbox="${el.dataset.sid}"]`); if (b) b.remove(); },
@@ -2346,6 +2515,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   document.addEventListener('input', e => {
     const t = e.target;
     if (t.id === 'rwInstr') S.rwInstr = t.value;
+    if (t.id === 'qFilter') { S.qf = t.value; applyQf(); }
     if (t.id === 'wBase') { S.wBase = t.value.trim(); try { localStorage.setItem('tl_base', S.wBase); } catch (_) { /* ignore */ } }
     if (t.id === 'glQ') { const q = normFa(t.value); document.querySelectorAll('#glTable tbody tr').forEach(r => { r.hidden = !!q && !r.dataset.q.includes(q); }); }
     if (t.matches('textarea.t')) grow(t);
@@ -2355,6 +2525,24 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     }
   });
   document.addEventListener('focusin', e => { const t = e.target; if (t.matches && t.matches('textarea[data-sid]')) st(t.dataset.sid).startedAt = Date.now(); });
+  document.addEventListener('focusout', e => {
+    const f = e.target;
+    if (f.matches && f.matches('textarea[data-fa]')) {
+      const p = f.closest('.para'), to = e.relatedTarget;
+      if (p && !(to && p.contains(to))) { paraSync(f.dataset.fa); p.classList.remove('editing'); }
+    }
+  });
+  document.addEventListener('keydown', e => {
+    const t = e.target;
+    if (t.matches && t.matches('.ptxt[data-act="pedit"]') && (e.key === 'Enter' || e.key === 'F2')) { e.preventDefault(); enterEdit(t.dataset.sid); return; }
+    if (e.key === 'Escape' && t.matches && t.matches('textarea[data-fa]')) { t.blur(); return; }
+    const typing = t.matches && t.matches('input,textarea,select,[contenteditable]');
+    if (!typing && !e.ctrlKey && !e.metaKey && !e.altKey && S.docId && (e.key === 'j' || e.key === 'k')) {
+      const q = S.queue || [], i = q.indexOf(S.docId), n = q[i + (e.key === 'j' ? 1 : -1)];
+      if (i >= 0 && n) gotoDoc(n);
+    }
+  });
+  document.addEventListener('toggle', e => { if (e.target && e.target.id === 'rwBar') S.rwOpen = e.target.open; }, true);
   document.addEventListener('focusout', e => {
     const t = e.target;
     if (t.matches && t.matches('textarea[data-sid]')) {
