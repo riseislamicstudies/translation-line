@@ -1792,7 +1792,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   const REWRITE_STYLES = {"polish": "ویرایش و روان‌سازی", "simple": "ساده‌تر", "formal": "رسمی‌تر", "concise": "خلاصه‌تر", "news": "سبک خبری استاندارد"};
   async function adminAI() {
     const names = AI_KEYS.map(k => k[0]);
-    const cfgKeys = ['ai_base_url', 'ai_max_tokens', 'ai_review_rounds', 'ai_prompt_review', 'ai_prompt_rewrite'];
+    const cfgKeys = ['ai_wire_api', 'ai_extra_headers', 'ai_base_url', 'ai_max_tokens', 'ai_review_rounds', 'ai_prompt_review', 'ai_prompt_rewrite'];
     AI_TASKS.forEach(t => { cfgKeys.push('ai_provider_' + t[0], 'ai_model_' + t[0]); });
     let err = '';
     const has = {};
@@ -1815,8 +1815,10 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
           <div class="row" style="align-self:end"><button type="button" class="btn small" data-act="aitest" data-task="${t[0]}">آزمایش اتصال</button><span class="meta" id="aiT_${t[0]}"></span></div></div>`).join('<hr style="border:0;border-top:1px solid var(--line);margin:10px 0">')}
         <div class="aigrid" style="margin-top:12px">
           <label class="f">آدرس پایهٔ سرویس سازگار با OpenAI (https)<input class="ltr" type="text" id="aiBase" value="${esc(c.ai_base_url || '')}" placeholder="https://api.example.com/v1"></label>
+          <label class="f">روش ارتباط با OpenAI و سرویس سازگار<select id="aiWire"><option value="chat"${c.ai_wire_api !== 'responses' ? ' selected' : ''}>Chat Completions (رایج‌ترین)</option><option value="responses"${c.ai_wire_api === 'responses' ? ' selected' : ''}>Responses (wire_api = "responses")</option></select></label>
           <label class="f">حداکثر طول پاسخ (توکن)<input type="number" min="256" max="32000" id="aiMax" value="${esc(c.ai_max_tokens || '')}" placeholder="مثلاً ۸۰۰۰"></label>
           <label class="f">دورهای بازبینی خودکار بعد از ترجمه<select id="aiRounds">${[0, 1, 2, 3].map(n => `<option value="${n}"${String(c.ai_review_rounds || '0') === String(n) ? ' selected' : ''}>${n === 0 ? 'خاموش' : fa(n) + ' دور'}</option>`).join('')}</select></label></div>
+        <label class="f">سرآیندهای اضافی سرویس سازگار (اختیاری، هر خط «نام: مقدار»)<textarea class="plain ltr" id="aiHdr" rows="2" placeholder="x-example-header: value">${esc(c.ai_extra_headers || '')}</textarea></label>
         <p class="meta">بازبینی ماشینی فقط «پیشنهاد» می‌دهد؛ مترجم یا ناظر تصمیم می‌گیرد. هر دور یک بار هزینهٔ درخواست دارد. مترجم و ناظر هم می‌توانند دستی بازبینی بخواهند.</p>
         <details class="gl"><summary>پرامپت بازبینی ترجمه</summary><label class="f">باید شامل <span class="num">{{PARAGRAPHS_JSON}}</span> باشد؛ خالی یا پیش‌فرض یعنی متن استاندارد<textarea class="plain ltr" id="aiPrR" rows="12">${esc(c.ai_prompt_review || AI_DEF.review)}</textarea></label></details>
         <details class="gl"><summary>پرامپت بازنویسی خبر</summary><label class="f">باید شامل <span class="num">{{PARAGRAPHS_JSON}}</span> باشد؛ دستور سبک در <span class="num">{{INSTRUCTION}}</span> جایگزین می‌شود<textarea class="plain ltr" id="aiPrW" rows="12">${esc(c.ai_prompt_rewrite || AI_DEF.rewrite)}</textarea></label></details>
@@ -2331,7 +2333,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         if (base && !/^https:\/\/[^\s]+$/i.test(base)) throw new Error('آدرس پایه باید با https:// شروع شود.');
         const mx = $('#aiMax').value.trim(); if (mx && !(Number(mx) >= 256 && Number(mx) <= 32000)) throw new Error('طول پاسخ باید بین ۲۵۶ و ۳۲۰۰۰ باشد.');
         const pr = (id, def) => { const v = $(id).value.trim(); if (!v.includes('{{PARAGRAPHS_JSON}}')) throw new Error('پرامپت باید شامل {{PARAGRAPHS_JSON}} باشد.'); return v === def.trim() ? '' : v; };
-        const rows = { ai_base_url: base, ai_max_tokens: mx, ai_review_rounds: $('#aiRounds').value, ai_prompt_review: pr('#aiPrR', AI_DEF.review), ai_prompt_rewrite: pr('#aiPrW', AI_DEF.rewrite) };
+        const rows = { ai_base_url: base, ai_max_tokens: mx, ai_review_rounds: $('#aiRounds').value, ai_wire_api: $('#aiWire').value, ai_extra_headers: $('#aiHdr').value.trim(), ai_prompt_review: pr('#aiPrR', AI_DEF.review), ai_prompt_rewrite: pr('#aiPrW', AI_DEF.rewrite) };
         AI_TASKS.forEach(t => { rows['ai_provider_' + t[0]] = $('#aiP_' + t[0]).value; rows['ai_model_' + t[0]] = $('#aiM_' + t[0]).value.trim(); });
         const now = new Date().toISOString();
         const u = await sb.from('app_config').upsert(Object.entries(rows).map(([key, value]) => ({ key, value, updated_at: now }))); if (u.error) throw u.error;
