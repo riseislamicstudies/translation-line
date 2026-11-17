@@ -171,6 +171,23 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   .hist li { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
   .hist .by { color: var(--muted); }
   .hist .txt { font-family: var(--f-en); direction: ltr; text-align: left; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+
+  .airev { margin-top: 8px; border: 1px dashed var(--accent); background: var(--accent-soft); border-radius: 10px; padding: 8px 12px; display: grid; gap: 6px; }
+  .airev .ah { font-size: 12px; font-weight: 700; color: var(--accent); }
+  .airev .at { font-family: var(--f-en); direction: ltr; text-align: left; font-size: 16px; line-height: 1.7; overflow-wrap: anywhere; color: var(--fg); }
+  .airev ins { text-decoration: none; background: var(--ok-soft); color: var(--ok); border-radius: 3px; padding: 0 2px; }
+  .airev del { background: var(--bad-soft); color: var(--bad); border-radius: 3px; padding: 0 2px; }
+  .airev .an { font-size: 13px; color: var(--muted, var(--fg)); }
+  .aibar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; background: var(--bar); }
+  .aibar select, .rwbar select { width: auto; flex: 0 0 auto; max-width: 100%; }
+  .aibar .grow1 { flex: 1 1 220px; }
+  .rwbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; background: var(--bar); margin: 8px 0; }
+  .rwbar select, .rwbar input { min-width: 0; }
+  .rwbar input[type=text] { flex: 1 1 200px; }
+  .rwbox { margin-top: 6px; border: 1px dashed var(--accent); background: var(--accent-soft); border-radius: 10px; padding: 8px 12px; display: grid; gap: 6px; }
+  .rwbox .ah { font-size: 12px; font-weight: 700; color: var(--accent); }
+  .rwbox .rwt { line-height: 1.9; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .aigrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
   .mnote { font-size: 13px; background: var(--accent-soft); color: var(--accent); border-radius: 8px; padding: 6px 12px; direction: ltr; text-align: left; }
   .submitbar { position: sticky; bottom: 0; z-index: 10; background: var(--bar); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; }
   .toolbar { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; font-size: 13px; color: var(--muted); }
@@ -905,6 +922,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     $('#main').innerHTML = html;
     growAll();
     refreshCounts();
+    aiWatch();
   }
   let softT = null;
   function soft() {
@@ -1099,6 +1117,15 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     const nCm = Object.values(S.cm || {}).reduce((n, a) => n + a.length, 0);
     const sel = S.sel || (S.sel = new Set());
     const have = new Set(s.data.map(g => g.id)); [...sel].forEach(x => { if (!have.has(x)) sel.delete(x); });
+    if (S.rwDoc !== id) { S.rwDoc = id; S.rw = {}; S.rwBusy = false; }
+    const rw = S.rw || (S.rw = {}), nrw = s.data.filter(g => rw[g.id]).length;
+    const canRw = !ro && (ned ? canEd : ['reviewer', 'admin'].includes(me.role));
+    const rwBar = !canRw ? '' : `<div class="rwbar" id="rwBar"><b>بازنویسی ماشینی</b>
+        <select id="rwStyle" aria-label="سبک بازنویسی">${Object.entries(REWRITE_STYLES).map(([k, v]) => `<option value="${k}"${(S.rwStyle || 'polish') === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}<option value="custom"${S.rwStyle === 'custom' ? ' selected' : ''}>دستور دلخواه…</option></select>
+        <input type="text" id="rwInstr" class="plain" value="${esc(S.rwInstr || '')}" placeholder="${S.rwStyle === 'custom' ? 'دستور بازنویسی (لازم است)' : 'توضیح اضافه (اختیاری)'}" aria-label="توضیح اضافه برای بازنویسی">
+        <button type="button" class="btn small primary" data-act="rewrite"${S.rwBusy ? ' disabled' : ''}>${S.rwBusy ? 'در حال بازنویسی…' : sel.size ? 'بازنویسی بندهای انتخاب‌شده' : 'بازنویسی همهٔ بندها'}</button>
+        ${nrw ? `<span class="chip accent">${fa(nrw)} پیشنهاد</span><button type="button" class="btn small" data-act="rwacceptall">جایگزینی همه</button><button type="button" class="btn small quiet" data-act="rwrejectall">رد همه</button>` : ''}
+        <span class="meta" style="flex-basis:100%">نتیجه فقط پیشنهاد است و تا «جایگزین» نزنید متن عوض نمی‌شود. بندهای بدون نیاز به تغییر پیشنهاد نمی‌گیرند.</span></div>`;
     return `<div><button type="button" class="btn quiet" data-act="back">→ فهرست</button></div>
       <section class="page-head"><h1>${esc(doc.title)}</h1><p class="sub">${fa(s.data.length)} بند · ${fa(doc.word_count)} کلمه · ${chip(doc.status)}${doc.uploaded_by ? ' · فرستنده: ' + whoH(doc.uploaded_by) : ''}${isNews && doc.source_name ? ' · منبع: ' + esc(doc.source_name) + (doc.source_url ? ' <a href="' + esc(doc.source_url) + '" target="_blank" rel="noopener">باز کردن خبر اصلی</a>' : '') : ''}</p></section>
       ${ned && doc.review_note ? `<div class="callout"><b>بازبین این خبر را برگرداند:</b> ${esc(doc.review_note)}</div>` : ''}
@@ -1109,9 +1136,11 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       <div class="selbar" id="selBar" role="region" aria-label="کار روی بندهای انتخاب‌شده"><b id="selN">${fa(sel.size)} بند انتخاب شده</b>
         <input type="text" id="bulkNote" placeholder="یک نظر برای همهٔ بندهای انتخاب‌شده" aria-label="نظر گروهی"><button type="button" class="btn small" data-act="bulkcm">ثبت نظر</button>
         ${ro ? '' : '<button type="button" class="btn small danger" data-act="bulkdel">حذف بندها</button>'}<button type="button" class="btn small" data-act="selcopy">کپی بندها</button><button type="button" class="btn small" data-act="selall">انتخاب همه</button><button type="button" class="btn small" data-act="selnone">لغو انتخاب</button></div></div>
+      ${rwBar}
       <div class="sheet" id="sheet">${s.data.map((g, i) => `<div class="para${sel.has(g.id) ? ' sel' : ''}" data-sid="${g.id}">
         <button type="button" class="gut" aria-pressed="${sel.has(g.id)}" aria-label="انتخاب بند ${fa(i + 1)}"><span class="pc">✓</span><span class="pn">${fa(i + 1)}</span></button>
         <div class="pbody"><textarea class="t pt fa-edit${g.kind === 'heading' ? ' head' : ''}" dir="rtl" lang="fa" rows="1" data-fa="${g.id}" ${ro ? 'readonly' : ''} aria-label="متن فارسی بند ${fa(i + 1)}">${esc(g.source_text)}</textarea>
+          ${rw[g.id] ? `<div class="rwbox" data-rwbox="${g.id}"><div class="ah">پیشنهاد بازنویسی ماشینی</div><div class="rwt" dir="rtl" lang="fa">${esc(rw[g.id])}</div><div class="row"><button type="button" class="btn small primary" data-act="rwaccept" data-sid="${g.id}">جایگزین کن</button><button type="button" class="btn small quiet" data-act="rwreject" data-sid="${g.id}">رد</button></div></div>` : ''}
           <div class="pmeta"><span>${KIND_FA(g.kind)}</span>${cmButton(g.id)}</div>${cmBox(g.id)}</div></div>`).join('')}</div>
       ${doc.status === 'content_review' ? `<section class="card"><div><b>اولویت نشر</b> <span class="meta">(برای تایید لازم است)</span></div>
         <div class="stars" id="starRow" role="group" aria-label="اولویت نشر از ۱ تا ۵">${[1, 2, 3, 4, 5].map(i => `<button type="button" class="star${(S.star || 0) >= i ? ' on' : ''}" data-act="star" data-n="${i}" aria-label="${fa(i)} ستاره" title="${RATING_LABEL[i]}">★</button>`).join('')}</div>
@@ -1153,6 +1182,48 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   };
 
   const segMap = {};
+  // ---- machine review (translation) ---------------------------------
+  function aiRevBox(g, cur) {
+    if (!g.ai_review_text) return '';
+    const c = cur != null ? cur : g.current_text;
+    const df = diffOps(c || '', g.ai_review_text).map(o => o.t === 'eq' ? esc(o.w) : o.t === 'del' ? `<del>${esc(o.w)}</del>` : `<ins>${esc(o.w)}</ins>`).join(' ');
+    return `<div class="airev" data-airev="${g.id}"><div class="ah">پیشنهاد بازبینی ماشینی${g.ai_review_round ? ' · دور ' + fa(g.ai_review_round) : ''}</div>
+      <div class="at" lang="en" dir="ltr">${df}</div>${g.ai_review_note ? `<div class="an">${esc(g.ai_review_note)}</div>` : ''}
+      <div class="row"><button type="button" class="btn small primary" data-act="aiaccept" data-sid="${g.id}">جایگزین کن</button><button type="button" class="btn small quiet" data-act="aireject" data-sid="${g.id}">رد پیشنهاد</button></div></div>`;
+  }
+  function aiBar(doc, segs, canAct) {
+    const n = segs.filter(g => g.ai_review_text).length, stt = doc.ai_review_state;
+    let msg;
+    if (stt === 'running') msg = '<span class="spin"></span> بازبینی ماشینی در جریان است… نتیجه خودکار نمایش داده می‌شود.';
+    else if (stt === 'failed') msg = `<span class="chip bad">بازبینی ماشینی ناموفق</span> <span class="meta num" dir="ltr">${esc(doc.ai_review_error || '')}</span>`;
+    else if (n) msg = `<span class="chip accent">${fa(n)} پیشنهاد ماشینی</span> <span class="meta">زیر هر بند دیده می‌شود؛ هیچ تغییری خودکار اعمال نمی‌شود.</span>`;
+    else if (stt === 'done') msg = '<span class="chip ok">بازبینی ماشینی انجام شد</span> <span class="meta">پیشنهادی نبود.</span>';
+    else msg = '<span class="meta">بازبینی ماشینی هنوز اجرا نشده است.</span>';
+    if (!canAct && !n && !stt) return '';
+    return `<div class="aibar" id="aiBar" data-state="${esc(stt || '')}" data-doc="${doc.id}"><span class="grow1">${msg}</span>
+      ${canAct ? `${n ? '<button type="button" class="btn small primary" data-act="aiacceptall">جایگزینی همهٔ پیشنهادها</button><button type="button" class="btn small quiet" data-act="airejectall">رد همه</button>' : ''}
+      <select id="aiRoundsSel" aria-label="تعداد دور بازبینی">${[1, 2, 3].map(k => `<option value="${k}"${(S.aiRounds || 1) === k ? ' selected' : ''}>${fa(k)} دور</option>`).join('')}</select>
+      <button type="button" class="btn small" data-act="aireview"${stt === 'running' ? ' disabled' : ''}>بازبینی ماشینی</button>` : ''}</div>`;
+  }
+  let aiPollT = null;
+  function aiWatch() {
+    const bar = $('#aiBar');
+    if (!bar || bar.dataset.state !== 'running') { clearInterval(aiPollT); aiPollT = null; return; }
+    if (aiPollT) return;
+    aiPollT = setInterval(async () => {
+      const b = $('#aiBar'); if (!b || b.dataset.state !== 'running') { clearInterval(aiPollT); aiPollT = null; return; }
+      const a = document.activeElement;
+      if (a && a.matches && a.matches('textarea')) return;      // never re-render while someone is typing
+      const { data } = await sb.from('documents').select('ai_review_state').eq('id', b.dataset.doc).maybeSingle();
+      if (data && data.ai_review_state !== 'running') { clearInterval(aiPollT); aiPollT = null; try { await flushAll(); } catch (_) { /* shown in status */ } render(true); }
+    }, 6000);
+  }
+  function aiRevRemove(sid) {
+    const g = segMap[sid]; if (g) { g.ai_review_text = null; g.ai_review_note = null; }
+    const b = document.querySelector(`[data-airev="${sid}"]`); if (b) b.remove();
+    const bar = $('#aiBar'); if (bar) { const n = Object.values(segMap).filter(x => x.ai_review_text && document.getElementById('seg-' + x.id)).length; if (!n) { const ab = bar.querySelector('[data-act="aiacceptall"]'); if (ab) ab.remove(); const rb = bar.querySelector('[data-act="airejectall"]'); if (rb) rb.remove(); const m = bar.querySelector('.grow1'); if (m) m.innerHTML = '<span class="meta">همهٔ پیشنهادها بررسی شد.</span>'; } }
+  }
+
   async function vEdit() {
     const id = S.docId;
     const [d, s] = await Promise.all([sb.from('documents').select('*').eq('id', id).single(), sb.from('segments').select('*').eq('document_id', id).order('position')]);
@@ -1174,6 +1245,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         ${gl.length ? `<ul class="gl-list">${gl.map(g => `<li><span lang="fa">${esc(g.persian)}</span> ← <span class="en" lang="en">${esc(g.english)}</span></li>`).join('')}</ul>` : ''}
         ${notes.length ? `<ul class="gl-list">${notes.map(n => `<li>بند ${fa(n.paragraph_id)}: <span class="en" lang="en">${esc(n.note)}</span></li>`).join('')}</ul>` : ''}</details>` : ''}
       ${ogPanel(segs, g => g.current_text)}
+      ${aiBar(doc, segs, editable)}
       <div class="toolbar"><span id="progress" data-total="${segs.length}">${fa(edited)} از ${fa(segs.length)} بند ویرایش شده</span><span class="saved" id="saved">${editable ? 'ذخیره خودکار فعال است' : 'فقط‌خواندنی'}</span></div>
       <div class="segs">${segs.map((g, i) => `<article class="seg${g.flagged ? ' flagged' : ''}" id="seg-${g.id}">
         <div class="seg-head"><span>بند ${fa(i + 1)} · ${g.kind === 'heading' ? 'تیتر' : g.kind === 'list_item' ? 'فهرست' : 'پاراگراف'}</span><span data-chips="${g.id}">${segChips(g)}</span></div>
@@ -1183,7 +1255,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         <textarea id="ta-${g.id}" class="t en${g.kind === 'heading' ? ' head' : ''}" dir="ltr" lang="en" rows="2" data-sid="${g.id}" ${editable ? '' : 'readonly'} aria-label="ترجمه انگلیسی بند ${fa(i + 1)}">${esc(g.current_text || '')}</textarea>
         <div class="seg-foot"><button type="button" class="btn quiet small" data-act="hist" data-sid="${g.id}">تاریخچه</button>${cmButton(g.id)}
           ${editable ? `<button type="button" class="btn quiet small" data-act="revert" data-sid="${g.id}">بازگردانی به ترجمه ماشینی</button><button type="button" class="btn quiet small" data-act="flag" data-sid="${g.id}">${g.flagged ? 'برداشتن پرچم' : 'پرچم‌گذاری'}</button>` : ''}</div>
-        <div data-histbox="${g.id}"></div>${cmBox(g.id)}</article>`).join('')}</div>
+        ${aiRevBox(g)}<div data-histbox="${g.id}"></div>${cmBox(g.id)}</article>`).join('')}</div>
       ${editable ? `<div class="submitbar" id="bar">${barHtml(id)}</div>` : ''}`;
   }
   let curDoc = null;
@@ -1344,11 +1416,12 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       <section class="page-head"><h1>${esc(doc.title)}</h1><p class="sub">مترجم: ${esc(nm(doc.claimed_by))} · ${fa(changed)} از ${fa(segs.length)} بند ویرایش شده · TER ${pct(dist / fin)} · ${fa(segs.reduce((n, g) => n + g.seconds_spent, 0) / 60 | 0)} دقیقه زمان ثبت‌شده</p></section>
       <section class="card" id="qaPrio">${qaPrioInner(doc, pm)}</section>
       ${ogPanel(segs, g => g.current_text)}
+      ${aiBar(doc, segs, true)}
       <div class="toolbar"><div class="legend"><span>راهنما:</span><del>حذف‌شده از ترجمه ماشینی</del><ins>افزوده‌شده توسط مترجم</ins></div><span class="saved" id="saved">برای اصلاح مستقیم هر بند، «ویرایش ترجمه» را بزنید. تغییرها هنگام خروج از کادر ذخیره می‌شوند.</span></div>
       <div class="segs">${segs.map((g, i) => `<article class="seg${g.flagged ? ' flagged' : ''}" id="seg-${g.id}"><div class="seg-head"><span>بند ${fa(i + 1)}</span><span data-chips="${g.id}">${qaChips(g)}</span></div>
           <p class="fa${g.kind === 'heading' ? ' head' : ''}" lang="fa" dir="rtl">${esc(g.source_text)}</p>${ogLine(g, g.current_text, false)}<p class="diff" data-diff="${g.id}">${diffHtml(g)}</p>
           <div data-qaedit="${g.id}" hidden><textarea id="ta-${g.id}" class="t en${g.kind === 'heading' ? ' head' : ''}" dir="ltr" lang="en" rows="2" data-sid="${g.id}" aria-label="ویرایش ترجمه بند ${fa(i + 1)}">${esc(g.current_text || '')}</textarea><p class="meta">این ویرایش با نام شما در تاریخچه ثبت می‌شود و مترجم آن را در بند می‌بیند.</p></div>
-          <div class="seg-foot"><button type="button" class="btn quiet small" data-act="qaedit" data-sid="${g.id}">ویرایش ترجمه</button><button type="button" class="btn quiet small" data-act="hist" data-sid="${g.id}">تاریخچه</button>${cmButton(g.id)}</div><div data-histbox="${g.id}"></div>${cmBox(g.id)}</article>`).join('')}</div>
+          <div class="seg-foot"><button type="button" class="btn quiet small" data-act="qaedit" data-sid="${g.id}">ویرایش ترجمه</button><button type="button" class="btn quiet small" data-act="hist" data-sid="${g.id}">تاریخچه</button>${cmButton(g.id)}</div>${aiRevBox(g)}<div data-histbox="${g.id}"></div>${cmBox(g.id)}</article>`).join('')}</div>
       <section class="card"><label class="f"><b style="color:var(--fg)">یادداشت برای مترجم</b> (برای بازگرداندن لازم است)<textarea class="plain" id="qaNote" rows="3" dir="rtl" placeholder="مثلاً: اصطلاح بند دوم را با واژه‌نامه سازمان یکدست کنید."></textarea></label>
         <div class="row"><button type="button" class="btn primary" data-act="qaapprove" data-id="${id}">تایید و ارسال به سبد انتشار</button><button type="button" class="btn" data-act="qareturn" data-id="${id}">بازگرداندن به مترجم با نظرها</button></div>
         <p class="meta">بازگرداندن، یادداشت بالا، نظرهای بندها و ویرایش‌های مستقیم شما را با هم برای مترجم می‌فرستد.</p></section>`;
@@ -1608,11 +1681,11 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   // view: admin
   // ===================================================================
   VIEWS.admin = async function () {
-    const tabs = [['users', 'کاربران و نقش‌ها'], ['prompt', 'پرامپت و مدل'], ['gemini', 'کلید Gemini'], ['pubset', 'تنظیمات انتشار'], ['invite', 'لینک ورود اعضا'], ['writers', 'دعوت نویسندگان'], ['glossary', 'واژه‌نامه'], ['news', 'منابع خبر'], ['uploads', 'بارگذاری‌ها'], ['files', 'همه فایل‌ها']];
+    const tabs = [['users', 'کاربران و نقش‌ها'], ['prompt', 'پرامپت و مدل'], ['gemini', 'سرویس هوش مصنوعی'], ['pubset', 'تنظیمات انتشار'], ['invite', 'لینک ورود اعضا'], ['writers', 'دعوت نویسندگان'], ['glossary', 'واژه‌نامه'], ['news', 'منابع خبر'], ['uploads', 'بارگذاری‌ها'], ['files', 'همه فایل‌ها']];
     let body;
     if (S.adminTab === 'users') body = await adminUsers();
     else if (S.adminTab === 'prompt') body = await adminPrompt();
-    else if (S.adminTab === 'gemini') body = await adminGemini();
+    else if (S.adminTab === 'gemini') body = await adminAI();
     else if (S.adminTab === 'pubset') body = await adminPubset();
     else if (S.adminTab === 'invite') body = await adminInvite();
     else if (S.adminTab === 'glossary') body = await adminGlossary();
@@ -1712,15 +1785,42 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       <p class="meta">نسخه‌های قبلی حذف نمی‌شوند. هر سند، شناسه پرامپتی را که با آن ترجمه شده نگه می‌دارد.</p></form>
       <h2>تاریخچه نسخه‌ها</h2><div class="table-wrap"><table><thead><tr><th>نسخه</th><th>مدل</th><th>تاریخ</th><th></th></tr></thead><tbody>${data.map(p => `<tr><td class="num">${fa(p.version)}</td><td class="num">${esc(p.model)}</td><td class="meta">${fmtT(p.created_at)}</td><td>${p.is_active ? '<span class="chip ok">فعال</span>' : `<button type="button" class="btn small" data-act="activateprompt" data-id="${p.id}">فعال‌سازی</button>`}</td></tr>`).join('')}</tbody></table></div>`;
   }
-  async function adminGemini() {
-    let has = false, err = '';
-    try { has = await rpc('has_secret', { p_name: 'GEMINI_API_KEY' }); } catch (e) { err = 'تابع has_secret پیدا نشد. فایل schema_update_1.sql را اجرا کرده‌اید؟ ' + errText(e); }
+  const AI_TASKS = [['translate', 'ترجمهٔ ماشینی (فارسی ← انگلیسی)'], ['review', 'بازبینی ماشینی ترجمه'], ['rewrite', 'بازنویسی ماشینی خبر فارسی']];
+  const AI_PROVIDERS = [['gemini', 'Google Gemini'], ['openai', 'OpenAI (ChatGPT)'], ['anthropic', 'Anthropic (Claude)'], ['openai_compat', 'سازگار با OpenAI (آدرس دلخواه)']];
+  const AI_KEYS = [['GEMINI_API_KEY', 'Gemini', 'AIza...'], ['OPENAI_API_KEY', 'OpenAI', 'sk-...'], ['ANTHROPIC_API_KEY', 'Anthropic', 'sk-ant-...'], ['OPENAI_COMPAT_API_KEY', 'سرویس سازگار با OpenAI', 'کلید سرویس']];
+  const AI_DEF = {"review": "You are a senior reviewer of Persian-to-English translations of Islamic-studies and humanities texts.\n\nYou receive a JSON array. Each element has: \"id\", \"fa\" (the Persian original) and \"en\" (the current English translation of that paragraph):\n{{PARAGRAPHS_JSON}}\n\nFor every element, check the English against the Persian and fix only real problems:\n- meaning errors, omissions, additions, wrong numbers, names or dates;\n- wrong or inconsistent terminology (follow the mandatory glossary below, if any);\n- grammar, awkward or unidiomatic English, and an inappropriate register for a scholarly publication.\nKeep transliterated names and technical terms consistent. If a paragraph is already correct, return the \"en\" text unchanged and an empty note. Do not rewrite for taste.\n\nReturn ONLY one valid JSON object, no markdown fences and no other text, exactly in this shape:\n{\"items\":[{\"id\":1,\"translation\":\"the corrected English paragraph\",\"note\":\"one short sentence IN PERSIAN saying what you changed and why, or an empty string\"}]}\nReturn exactly one item for every input element, with the same \"id\" values and in the same order.", "rewrite": "You are an experienced Persian news editor.\n\nYou receive a JSON array. Each element has \"id\" and \"text\" (one paragraph or heading of a Persian news item):\n{{PARAGRAPHS_JSON}}\n\nRewrite every text in Persian according to this instruction:\n{{INSTRUCTION}}\n\nRules:\n- Keep every fact, name, number, date, title and quotation exactly as in the original. Never add information that is not in the text.\n- Write natural, correct Persian (use the half-space ZWNJ properly); keep a heading short.\n- If a text needs no change, return it unchanged.\n\nReturn ONLY one valid JSON object, no markdown fences and no other text, exactly in this shape:\n{\"items\":[{\"id\":1,\"text\":\"the rewritten Persian text\"}]}\nReturn exactly one item for every input element, with the same \"id\" values and in the same order."};
+  const REWRITE_STYLES = {"polish": "ویرایش و روان‌سازی", "simple": "ساده‌تر", "formal": "رسمی‌تر", "concise": "خلاصه‌تر", "news": "سبک خبری استاندارد"};
+  async function adminAI() {
+    const names = AI_KEYS.map(k => k[0]);
+    const cfgKeys = ['ai_base_url', 'ai_max_tokens', 'ai_review_rounds', 'ai_prompt_review', 'ai_prompt_rewrite'];
+    AI_TASKS.forEach(t => { cfgKeys.push('ai_provider_' + t[0], 'ai_model_' + t[0]); });
+    let err = '';
+    const has = {};
+    try { await Promise.all(names.map(async n => { has[n] = await rpc('has_secret', { p_name: n }); })); } catch (e) { err = 'تابع has_secret پیدا نشد. فایل schema_update_1.sql و schema_update_12.sql را اجرا کرده‌اید؟ ' + errText(e); }
+    const r = await sb.from('app_config').select('key,value').in('key', cfgKeys);
+    const c = {}; (r.data || []).forEach(x => { c[x.key] = x.value; });
+    const pr = t => c['ai_provider_' + t] || 'gemini';
     return `${err ? `<div class="callout">${esc(err)}</div>` : ''}
-      <form class="card" id="keyForm"><h2>کلید API جمینای ${has ? '<span class="chip ok">ذخیره شده</span>' : '<span class="chip bad">ذخیره نشده</span>'}</h2>
-        <p class="sub">کلید از Google AI Studio گرفته می‌شود. بعد از ذخیره، هیچ‌کس (حتی مدیر) نمی‌تواند آن را دوباره ببیند؛ فقط تابع ترجمه در سرور از آن استفاده می‌کند. برای عوض‌کردن، کلید جدید را ذخیره کنید.</p>
-        <label class="f">کلید جدید<input class="ltr" type="password" id="gKey" autocomplete="off" placeholder="AIza..."></label>
-        <div class="row"><button class="btn primary" type="submit">ذخیره کلید</button>${has ? '<button class="btn danger" type="button" data-act="delkey">حذف کلید</button>' : ''}</div>
-        <p class="meta">اگر در سطح رایگان هستید، فقط متن‌های غیرمحرمانه بفرستید.</p></form>
+      <section class="card"><h2>کلیدهای API</h2>
+        <p class="sub">هر کلید بعد از ذخیره دیگر برای هیچ‌کس (حتی مدیر) نمایش داده نمی‌شود و فقط توابع سرور از آن استفاده می‌کنند. فقط کلید سرویس‌هایی را بگذارید که می‌خواهید استفاده کنید.</p>
+        <div class="aigrid">${AI_KEYS.map(k => `<form class="aikey card" data-name="${k[0]}"><b>${esc(k[1])} ${has[k[0]] ? '<span class="chip ok">ذخیره شده</span>' : '<span class="chip">ندارد</span>'}</b>
+          <input class="ltr" type="password" autocomplete="off" placeholder="${esc(k[2])}" aria-label="کلید ${esc(k[1])}">
+          <div class="row"><button class="btn primary small" type="submit">ذخیره</button>${has[k[0]] ? `<button class="btn danger small" type="button" data-act="delkey" data-name="${k[0]}">حذف</button>` : ''}</div></form>`).join('')}</div>
+        <p class="meta">اگر در سطح رایگان هستید، فقط متن‌های غیرمحرمانه بفرستید.</p></section>
+      <form class="card" id="aiCfg"><h2>سرویس و مدل هر کار</h2>
+        <p class="sub">برای هر کار می‌توانید سرویس و مدل جدا انتخاب کنید (مثلاً ترجمه با Gemini و بازبینی با Claude). خالی‌گذاشتن نام مدل یعنی مدل پیش‌فرض؛ برای ترجمه با Gemini مدل نسخهٔ فعال در تب «پرامپت و مدل» استفاده می‌شود.</p>
+        ${AI_TASKS.map(t => `<div class="aigrid"><div class="f"><b>${t[1]}</b></div>
+          <label class="f">سرویس<select id="aiP_${t[0]}">${AI_PROVIDERS.map(p => `<option value="${p[0]}"${pr(t[0]) === p[0] ? ' selected' : ''}>${p[1]}</option>`).join('')}</select></label>
+          <label class="f">نام مدل<input class="ltr" type="text" id="aiM_${t[0]}" value="${esc(c['ai_model_' + t[0]] || '')}" placeholder="مثلاً gpt-4o-mini / claude-sonnet / gemini-flash"></label>
+          <div class="row" style="align-self:end"><button type="button" class="btn small" data-act="aitest" data-task="${t[0]}">آزمایش اتصال</button><span class="meta" id="aiT_${t[0]}"></span></div></div>`).join('<hr style="border:0;border-top:1px solid var(--line);margin:10px 0">')}
+        <div class="aigrid" style="margin-top:12px">
+          <label class="f">آدرس پایهٔ سرویس سازگار با OpenAI (https)<input class="ltr" type="text" id="aiBase" value="${esc(c.ai_base_url || '')}" placeholder="https://api.example.com/v1"></label>
+          <label class="f">حداکثر طول پاسخ (توکن)<input type="number" min="256" max="32000" id="aiMax" value="${esc(c.ai_max_tokens || '')}" placeholder="مثلاً ۸۰۰۰"></label>
+          <label class="f">دورهای بازبینی خودکار بعد از ترجمه<select id="aiRounds">${[0, 1, 2, 3].map(n => `<option value="${n}"${String(c.ai_review_rounds || '0') === String(n) ? ' selected' : ''}>${n === 0 ? 'خاموش' : fa(n) + ' دور'}</option>`).join('')}</select></label></div>
+        <p class="meta">بازبینی ماشینی فقط «پیشنهاد» می‌دهد؛ مترجم یا ناظر تصمیم می‌گیرد. هر دور یک بار هزینهٔ درخواست دارد. مترجم و ناظر هم می‌توانند دستی بازبینی بخواهند.</p>
+        <details class="gl"><summary>پرامپت بازبینی ترجمه</summary><label class="f">باید شامل <span class="num">{{PARAGRAPHS_JSON}}</span> باشد؛ خالی یا پیش‌فرض یعنی متن استاندارد<textarea class="plain ltr" id="aiPrR" rows="12">${esc(c.ai_prompt_review || AI_DEF.review)}</textarea></label></details>
+        <details class="gl"><summary>پرامپت بازنویسی خبر</summary><label class="f">باید شامل <span class="num">{{PARAGRAPHS_JSON}}</span> باشد؛ دستور سبک در <span class="num">{{INSTRUCTION}}</span> جایگزین می‌شود<textarea class="plain ltr" id="aiPrW" rows="12">${esc(c.ai_prompt_rewrite || AI_DEF.rewrite)}</textarea></label></details>
+        <div class="row"><button class="btn primary" type="submit">ذخیرهٔ تنظیمات</button><button type="button" class="btn quiet" data-act="airesetprompts">بازگرداندن پرامپت‌ها به پیش‌فرض</button></div></form>
       <div class="card"><h2>آزمایش سریع</h2><p class="sub">یک فایل آزمایشی کوچک می‌سازد. بعد در تب «بازبین محتوا» آن را تایید کنید تا ترجمه ماشینی اجرا شود و در سبد ظاهر شود.</p>
         <div class="row"><button type="button" class="btn" data-act="sampledoc">ساخت فایل آزمایشی</button></div></div>`;
   }
@@ -2059,7 +2159,68 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       const b = await sb.from('prompts').update({ is_active: true }).eq('id', el.dataset.id); if (b.error) throw b.error;
       toast('فعال شد.'); render();
     },
-    async delkey() { await rpc('set_secret', { p_name: 'GEMINI_API_KEY', p_value: '' }); toast('کلید حذف شد.'); render(); },
+    async delkey(el) { await rpc('set_secret', { p_name: el.dataset.name || 'GEMINI_API_KEY', p_value: '' }); toast('کلید حذف شد.'); render(); },
+    async aitest(el) {
+      const t = el.dataset.task, out = $('#aiT_' + t); if (out) out.textContent = 'در حال آزمایش… (تنظیمات را اول ذخیره کنید)';
+      try {
+        const r = await fnCall('ai-assist', { action: 'test', task: t });
+        if (r && r.ok) { if (out) out.textContent = '✓ ' + r.provider + ' · ' + r.model + ' · ' + fa(r.ms) + ' میلی‌ثانیه'; }
+        else if (out) out.textContent = '✗ ' + errText(new Error((r && r.error) || 'نامشخص'));
+      } catch (e) { if (out) out.textContent = '✗ ' + errText(e); }
+    },
+    airesetprompts() { $('#aiPrR').value = AI_DEF.review; $('#aiPrW').value = AI_DEF.rewrite; toast('پیش‌فرض گذاشته شد؛ برای اعمال «ذخیرهٔ تنظیمات» را بزنید.'); },
+    async aireview() {
+      const id = S.qa || S.docId; if (!id) return;
+      S.aiRounds = Number(($('#aiRoundsSel') || {}).value) || 1;
+      try { await flushAll(); } catch (_) { /* shown in status */ }
+      const r = await fnCall('ai-assist', { action: 'review', document_id: id, rounds: S.aiRounds });
+      if (r && r.error) throw new Error(r.error === 'already_running' ? 'بازبینی ماشینی هم‌اکنون در جریان است.' : r.error);
+      toast('بازبینی ماشینی شروع شد.'); render(true);
+    },
+    async aiaccept(el) {
+      const sid = el.dataset.sid, g = segMap[sid], ta = document.getElementById('ta-' + sid); if (!g || !ta || !g.ai_review_text) return;
+      ta.value = g.ai_review_text; grow(ta); st(sid).dirty = true; segUpdate(sid);
+      await queueSave(sid);
+      await rpc('dismiss_ai_review', { p_segment: sid }); aiRevRemove(sid);
+    },
+    async aireject(el) { await rpc('dismiss_ai_review', { p_segment: el.dataset.sid }); aiRevRemove(el.dataset.sid); },
+    async aiacceptall() {
+      const ids = [...document.querySelectorAll('[data-airev]')].map(b => b.dataset.airev);
+      for (const sid of ids) await ACT.aiaccept({ dataset: { sid } });
+      toast(fa(ids.length) + ' پیشنهاد جایگزین شد.');
+    },
+    async airejectall() {
+      const ids = [...document.querySelectorAll('[data-airev]')].map(b => b.dataset.airev);
+      for (const sid of ids) { await rpc('dismiss_ai_review', { p_segment: sid }); aiRevRemove(sid); }
+    },
+    // ---- machine rewrite (Persian news)
+    async rewrite() {
+      const id = S.docId; if (!id || S.rwBusy) return;
+      const style = S.rwStyle || 'polish', instr = (S.rwInstr || '').trim();
+      if (style === 'custom' && !instr) { toast('دستور بازنویسی را بنویسید.'); return; }
+      const ids = [...document.querySelectorAll('.para.sel')].map(p => p.dataset.sid);
+      S.rwBusy = true; render();
+      try {
+        const r = await fnCall('ai-assist', { action: 'rewrite', document_id: id, style: style === 'custom' ? '' : style, instruction: instr, segment_ids: ids });
+        if (!r || r.ok === false) { const m = { no_text_selected: 'متنی برای بازنویسی نبود.', style_required: 'سبک یا دستور را مشخص کنید.' }; throw new Error(m[r && r.error] || (r && r.error) || 'پاسخ نامعتبر'); }
+        if (S.docId === id) {
+          S.rw = S.rw || {}; (r.items || []).forEach(it => { S.rw[it.id] = it.text; });
+          toast((r.items || []).length ? fa(r.items.length) + ' پیشنهاد آماده شد.' + (r.partial ? ' (بخشی از بندها به‌علت محدودیت زمان انجام نشد؛ دوباره اجرا کنید.)' : '') : 'نیازی به تغییر پیدا نشد.');
+        }
+      } finally { S.rwBusy = false; if (S.docId === id) render(); }
+    },
+    async rwaccept(el) {
+      const sid = el.dataset.sid, text = (S.rw || {})[sid]; if (text == null) return;
+      const { error } = await sb.from('segments').update({ source_text: text }).eq('id', sid); if (error) throw error;
+      delete S.rw[sid]; const ta = document.querySelector(`[data-fa="${sid}"]`); if (ta) { ta.value = text; grow(ta); }
+      const b = document.querySelector(`[data-rwbox="${sid}"]`); if (b) b.remove(); toast('جایگزین شد.');
+    },
+    rwreject(el) { delete (S.rw || {})[el.dataset.sid]; const b = document.querySelector(`[data-rwbox="${el.dataset.sid}"]`); if (b) b.remove(); },
+    async rwacceptall() {
+      const ids = Object.keys(S.rw || {}); for (const sid of ids) await ACT.rwaccept({ dataset: { sid } });
+      toast(fa(ids.length) + ' بند جایگزین شد.'); render();
+    },
+    rwrejectall() { S.rw = {}; render(); },
     async sampledoc() {
       const id = await insertDoc('فایل آزمایشی ' + clock(), null, null, [
         { kind: 'heading', text: 'مقدمه‌ای بر مطالعات ترجمه' },
@@ -2161,9 +2322,20 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         for (const [k, v] of Object.entries(vals)) { if (!(Number(v) >= 0)) throw new Error('مقدارها باید عدد باشند.'); const r = await sb.from('app_config').upsert({ key: k, value: String(Number(v)), updated_at: new Date().toISOString() }); if (r.error) throw r.error; }
         toast('محدودیت‌ها ذخیره شد.'); return render();
       }
-      if (f.id === 'keyForm') {
-        const v = $('#gKey').value.trim(); if (!v) throw new Error('کلید را وارد کنید.');
-        await rpc('set_secret', { p_name: 'GEMINI_API_KEY', p_value: v }); toast('کلید ذخیره شد.'); return render();
+      if (f.classList.contains('aikey')) {
+        const v = f.querySelector('input').value.trim(); if (!v) throw new Error('کلید را وارد کنید.');
+        await rpc('set_secret', { p_name: f.dataset.name, p_value: v }); toast('کلید ذخیره شد.'); return render();
+      }
+      if (f.id === 'aiCfg') {
+        const base = $('#aiBase').value.trim();
+        if (base && !/^https:\/\/[^\s]+$/i.test(base)) throw new Error('آدرس پایه باید با https:// شروع شود.');
+        const mx = $('#aiMax').value.trim(); if (mx && !(Number(mx) >= 256 && Number(mx) <= 32000)) throw new Error('طول پاسخ باید بین ۲۵۶ و ۳۲۰۰۰ باشد.');
+        const pr = (id, def) => { const v = $(id).value.trim(); if (!v.includes('{{PARAGRAPHS_JSON}}')) throw new Error('پرامپت باید شامل {{PARAGRAPHS_JSON}} باشد.'); return v === def.trim() ? '' : v; };
+        const rows = { ai_base_url: base, ai_max_tokens: mx, ai_review_rounds: $('#aiRounds').value, ai_prompt_review: pr('#aiPrR', AI_DEF.review), ai_prompt_rewrite: pr('#aiPrW', AI_DEF.rewrite) };
+        AI_TASKS.forEach(t => { rows['ai_provider_' + t[0]] = $('#aiP_' + t[0]).value; rows['ai_model_' + t[0]] = $('#aiM_' + t[0]).value.trim(); });
+        const now = new Date().toISOString();
+        const u = await sb.from('app_config').upsert(Object.entries(rows).map(([key, value]) => ({ key, value, updated_at: now }))); if (u.error) throw u.error;
+        toast('تنظیمات ذخیره شد.'); return render();
       }
     } catch (err) {
       if (f.id === 'loginForm') viewLogin(errText(err)); else toast(errText(err));
@@ -2171,6 +2343,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   });
   document.addEventListener('input', e => {
     const t = e.target;
+    if (t.id === 'rwInstr') S.rwInstr = t.value;
     if (t.id === 'wBase') { S.wBase = t.value.trim(); try { localStorage.setItem('tl_base', S.wBase); } catch (_) { /* ignore */ } }
     if (t.id === 'glQ') { const q = normFa(t.value); document.querySelectorAll('#glTable tbody tr').forEach(r => { r.hidden = !!q && !r.dataset.q.includes(q); }); }
     if (t.matches('textarea.t')) grow(t);
@@ -2199,6 +2372,8 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         AVATAR = await resizeAvatar(f);
         const pv = $('#suPrev'); pv.style.backgroundImage = `url(${AVATAR})`; pv.classList.add('has'); pv.innerHTML = '';
       }
+      else if (t.id === 'rwStyle') { S.rwStyle = t.value; const i = $('#rwInstr'); if (i) i.placeholder = t.value === 'custom' ? 'دستور بازنویسی (لازم است)' : 'توضیح اضافه (اختیاری)'; }
+      else if (t.id === 'aiRoundsSel') { S.aiRounds = Number(t.value) || 1; }
       else if (t.matches('textarea[data-fa]')) { const { error } = await sb.from('segments').update({ source_text: t.value }).eq('id', t.dataset.fa); if (error) throw error; }
       else if (t.matches('[data-prole]')) { const { error } = await sb.from('profiles').update({ role: t.value }).eq('id', t.dataset.prole); if (error) throw error; toast('نقش ذخیره شد.'); await loadNames(); }
       else if (t.matches('[data-pname]')) { const { error } = await sb.from('profiles').update({ full_name: t.value.trim() }).eq('id', t.dataset.pname); if (error) throw error; toast('نام ذخیره شد.'); await loadNames(); }
