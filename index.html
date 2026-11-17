@@ -1812,7 +1812,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         ${AI_TASKS.map(t => `<div class="aigrid"><div class="f"><b>${t[1]}</b></div>
           <label class="f">سرویس<select id="aiP_${t[0]}">${AI_PROVIDERS.map(p => `<option value="${p[0]}"${pr(t[0]) === p[0] ? ' selected' : ''}>${p[1]}</option>`).join('')}</select></label>
           <label class="f">نام مدل<input class="ltr" type="text" id="aiM_${t[0]}" value="${esc(c['ai_model_' + t[0]] || '')}" placeholder="مثلاً gpt-4o-mini / claude-sonnet / gemini-flash"></label>
-          <div class="row" style="align-self:end"><button type="button" class="btn small" data-act="aitest" data-task="${t[0]}">آزمایش اتصال</button><span class="meta" id="aiT_${t[0]}"></span></div></div>`).join('<hr style="border:0;border-top:1px solid var(--line);margin:10px 0">')}
+          <div class="row" style="align-self:end"><button type="button" class="btn small" data-act="aitest" data-task="${t[0]}">آزمایش اتصال</button><span class="meta" id="aiT_${t[0]}" dir="auto" style="flex-basis:100%;overflow-wrap:anywhere;user-select:text"></span></div></div>`).join('<hr style="border:0;border-top:1px solid var(--line);margin:10px 0">')}
         <div class="aigrid" style="margin-top:12px">
           <label class="f">آدرس پایهٔ سرویس سازگار با OpenAI (https)<input class="ltr" type="text" id="aiBase" value="${esc(c.ai_base_url || '')}" placeholder="https://api.example.com/v1"></label>
           <label class="f">روش ارتباط با OpenAI و سرویس سازگار<select id="aiWire"><option value="chat"${c.ai_wire_api !== 'responses' ? ' selected' : ''}>Chat Completions (رایج‌ترین)</option><option value="responses"${c.ai_wire_api === 'responses' ? ' selected' : ''}>Responses (wire_api = "responses")</option></select></label>
@@ -2167,8 +2167,8 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       try {
         const r = await fnCall('ai-assist', { action: 'test', task: t });
         if (r && r.ok) { if (out) out.textContent = '✓ ' + r.provider + ' · ' + r.model + ' · ' + fa(r.ms) + ' میلی‌ثانیه'; }
-        else if (out) out.textContent = '✗ ' + errText(new Error((r && r.error) || 'نامشخص'));
-      } catch (e) { if (out) out.textContent = '✗ ' + errText(e); }
+        else if (out) out.textContent = '✗ ' + String((r && r.error) || 'نامشخص');
+      } catch (e) { if (out) out.textContent = '✗ ' + String(e && e.message || e); }
     },
     airesetprompts() { $('#aiPrR').value = AI_DEF.review; $('#aiPrW').value = AI_DEF.rewrite; toast('پیش‌فرض گذاشته شد؛ برای اعمال «ذخیرهٔ تنظیمات» را بزنید.'); },
     async aireview() {
