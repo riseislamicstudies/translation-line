@@ -467,8 +467,9 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   .brandline h1 { margin: 0; }
   .rlogo { height: 34px; width: auto; max-width: 150px; display: block; }
   .top .rlogo { height: 30px; }
-  :root[data-theme="dark"] .rlogo { filter: brightness(0) invert(1); }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .rlogo { filter: brightness(0) invert(1); } }
+  .rlogo.night { display: none; }
+  :root[data-theme="dark"] .rlogo.day { display: none; } :root[data-theme="dark"] .rlogo.night { display: block; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .rlogo.day { display: none; } :root:not([data-theme="light"]) .rlogo.night { display: block; } }
   .brandline a { display: inline-flex; align-items: center; text-decoration: none; color: inherit; font-weight: 700; }
   .vsep { width: 1px; height: 24px; background: var(--line); }
   .schol { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-weight: 700; font-size: 26px; letter-spacing: -.01em; color: var(--fg); line-height: 1; }
@@ -604,6 +605,24 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   .irow-m { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
   .irow-m .pm-sp { flex-basis: 100%; height: 0; }
   .irow-m .stars-ro, .irow-m .stars { font-size: 15px; }
+
+  /* ===== v16: images + publish meta ===== */
+  .pmeta { display: flex; flex-direction: column; gap: 12px; margin-top: 4px; }
+  .pm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+  .pm-img { margin: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); display: flex; flex-direction: column; }
+  .pm-img.pend { border-color: color-mix(in srgb, var(--gold, #b3966f) 60%, var(--line)); }
+  .pm-img > img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; background: var(--sunk); display: block; }
+  .pm-img figcaption { display: flex; flex-direction: column; gap: 6px; padding: 8px; }
+  .pm-badges, .pm-btns { display: flex; flex-wrap: wrap; gap: 4px; }
+  .pm-more summary { cursor: pointer; font-size: 13px; color: var(--muted); }
+  .pm-more .f { margin-top: 6px; }
+  .pm-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .pm-fields .wide { grid-column: 1 / -1; }
+  .pm-count { float: inline-end; }
+  .wimgs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 12px; text-align: start; }
+  .wimgs p { flex-basis: 100%; margin: 0; }
+  details.pmdet > summary { cursor: pointer; font-weight: 700; padding: 4px 0; }
+  @media (max-width: 760px) { .pm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pm-fields { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -714,6 +733,8 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     invalid_phone: 'شماره تماس معتبر نیست.',
     invalid_avatar: 'عکس پذیرفته نشد. عکس دیگری انتخاب کنید.',
     avatar_required: 'عکس پروفایل الزامی است.',
+    too_many_images: 'حداکثر ۱۲ تصویر برای هر مطلب مجاز است.',
+    invalid_slug: 'نامک (slug) فقط حروف کوچک لاتین، عدد و خط تیره دارد.',
     password_too_short: 'رمز باید دست‌کم ۸ نویسه باشد.',
     rate_limited: 'در یک ساعت گذشته فایل زیادی فرستاده‌اید. کمی بعد دوباره تلاش کنید.',
     invalid_input: 'فایل معتبر نیست. متن آن را بررسی کنید.',
@@ -804,7 +825,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     boot();
   }
   const RISE_SITE = 'https://riseislamicstudies.com/', SCHOLARIA_URL = 'https://riseislamicstudies.com/scholaria/';
-  const RISE_LOGO = `<img class="rlogo" src="https://riseislamicstudies.com/wp-content/uploads/2026/10/Asset-2-day.svg" alt="رایز" height="34" onerror="this.replaceWith(Object.assign(document.createElement('b'),{textContent:'رایز'}))">`;
+  const RISE_LOGO = `<img class="rlogo day" src="https://riseislamicstudies.com/wp-content/uploads/2026/10/Asset-2-day.svg" alt="رایز" height="34" onerror="this.replaceWith(Object.assign(document.createElement('b'),{textContent:'رایز'}))"><img class="rlogo night" src="https://riseislamicstudies.com/wp-content/uploads/2026/10/Asset-2-night.svg" alt="" aria-hidden="true" height="34" onerror="this.remove()">`;
   const SCHOLARIA_MARK = '<span class="schol" dir="ltr" lang="en">Scholar<span>ia</span></span>';
   function viewLogin(msg) {
     $('#root').innerHTML = `${themeBtn('float')}<div class="center"><form class="box card" id="loginForm">
@@ -1042,6 +1063,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     refreshCounts();
     aiWatch();
     applyQf();
+    hydratePmeta();
   }
   let softT = null;
   function soft() {
@@ -1067,6 +1089,9 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       <p class="sub">فایل Word (DOCX) متن فارسی را انتخاب کنید تا برای بررسی فرستاده شود.</p>
       ${w ? `<div class="okcard" role="status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></svg><span>${w.fixed ? 'نسخهٔ اصلاح‌شدهٔ ' : ''}«${esc(w.title)}» فرستاده شد.</span></div>` : ''}
       ${nRet ? `<div class="callout" role="status"><b>${fa(nRet)} فایل برای اصلاح برگشته است.</b> نظر بازبین را بخوانید و نسخهٔ اصلاح‌شده را بفرستید.</div>` : ''}
+      <div class="wimgs"><label class="btn small filebtn" for="wImgs">افزودن تصویر (اختیاری)</label><input type="file" class="vh" id="wImgs" accept="image/jpeg,image/png,image/webp" multiple>
+        <span class="meta">${(S.wImgs || []).length ? fa(S.wImgs.length) + ' تصویر انتخاب شده: ' + (S.wImgs || []).map(f => esc(f.name)).join('، ') + ' ' : ''}</span>${(S.wImgs || []).length ? '<button type="button" class="btn quiet small" data-act="wimgclear">حذف انتخاب</button>' : ''}
+        <p class="meta">عکس‌ها برای انتشار باید توسط بازبین محتوا تایید شوند. اگر عکسی ندارید، همکاران ما با هوش مصنوعی یک تصویر مفهومی برای مطلب می‌سازند. اولین تصویر، تصویر شاخص می‌شود.</p></div>
       <div class="wdrop" id="wDrop">
         <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg></span>
         ${S.busy === 'upload' ? '<span class="meta"><span class="spin"></span> در حال ارسال…</span>' : `<label class="btn primary bigbtn filebtn" for="wFile">بارگذاری فایل</label>`}
@@ -1076,7 +1101,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         return `<div class="hrow${open ? ' ret' : ''}"><div class="item-main"><div class="item-title">${esc(h.title)}</div><div class="meta">${fa(h.word_count)} کلمه · ${fmtT(h.created_at)}</div></div><span class="chip ${k}">${t}</span><button type="button" class="btn small" data-act="wtext" data-id="${h.id}">نمایش متن</button>
           ${open ? `<button type="button" class="btn small" data-act="wfeed" data-id="${h.id}">دیدن نظرها</button><button type="button" class="btn small primary" data-act="wfix" data-id="${h.id}">ارسال نسخهٔ اصلاح‌شده</button>` : ''}
           ${open && h.review_note ? `<div class="callout" style="flex-basis:100%"><b>نظر بازبین:</b> ${esc(h.review_note)}</div>` : ''}
-          <div class="final-text fa" id="wt-${h.id}" dir="rtl" lang="fa" hidden></div><div class="wfeed" id="wf-${h.id}" hidden></div></div>`; }).join('')}</div>` : ''}</section>`;
+          <div class="final-text fa" id="wt-${h.id}" dir="rtl" lang="fa" hidden></div><div class="wfeed" id="wf-${h.id}" hidden></div>${['content_review', 'review_rejected'].includes(h.status) && !h.replaced_by ? `<details class="pmdet" style="flex-basis:100%"><summary>تصاویر این مطلب</summary>${pmetaSlot(h.id, { attach: true, writer: true })}</details>` : ''}</div>`; }).join('')}</div>` : ''}</section>`;
   };
   async function doWriterUpload(file, replaces) {
     if (!/\.docx$/i.test(file.name)) throw new Error('فقط فایل DOCX (Word) پذیرفته می‌شود.');
@@ -1091,7 +1116,9 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       const up = await sb.storage.from('source-files').upload(id + '/source.docx', file, { contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
       if (!up.error) path = id + '/source.docx';
       await rpc('writer_submit', { p_id: id, p_title: title, p_filename: file.name, p_path: path, p_segments: segs.map(x => ({ kind: x.kind, text: x.text })), p_replaces: replaces || null });
-      S.wDone = { title, fixed: !!replaces };
+      const imgs = S.wImgs || []; S.wImgs = []; let okImgs = 0;
+      for (const f of imgs) { try { await pmUpload(id, f); okImgs++; } catch (e) { toast(`${f.name}: ${errText(e)}`); } }
+      S.wDone = { title, fixed: !!replaces, imgs: okImgs };
     } finally { S.busy = ''; render(); }
   }
   async function refreshCounts() {
@@ -1210,11 +1237,12 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       .in('status', ['content_review', 'review_rejected', 'translating', 'translation_failed']).is('replaced_by', null).order('created_at', { ascending: false });
     if (error) throw error;
     const ex = await excerptsFor(data.filter(d => ['content_review', 'review_rejected'].includes(d.status)).map(d => d.id));
+    const stR = await imgStats(data.filter(d => d.status === 'content_review').map(d => d.id));
     const todo = [], rest = [];
     data.forEach(d => {
       const toW = isW((S.roles || {})[d.uploaded_by]);
       const meta = `${fa(d.word_count)} کلمه · ${ago(d.created_at)}${d.uploaded_by && S.names[d.uploaded_by] ? ' · ' + whoH(d.uploaded_by) : ''}${' · ' + kindLabel(d.source_kind) + (d.source_kind === 'news' && d.source_name ? ' از ' + esc(d.source_name) : '')}`;
-      if (d.status === 'content_review') todo.push(irow(d, { open: true, ex: ex[d.id], meta, side: srcLink(d) + `<button type="button" class="btn primary small" data-act="opendoc" data-id="${d.id}">بازبینی</button>` + pdel(d.id), _id: d.id }));
+      if (d.status === 'content_review') todo.push(irow(d, { open: true, ex: ex[d.id], meta: meta + imgChips(stR[d.id]), side: srcLink(d) + `<button type="button" class="btn primary small" data-act="opendoc" data-id="${d.id}">بازبینی</button>` + pdel(d.id), _id: d.id }));
       else if (d.status === 'review_rejected') {
         const r = irow(d, { open: !toW, ex: ex[d.id], meta, side: chip(toW ? 'review_rejected' : d.status).replace('chip', toW ? 'chip bad' : 'chip') + (toW ? `<button type="button" class="btn small" data-act="opendoc" data-id="${d.id}">مشاهده</button>` : `<button type="button" class="btn small primary" data-act="opendoc" data-id="${d.id}">اصلاح متن</button>`) + pdel(d.id), info: toW ? 'منتظر نسخهٔ اصلاح‌شدهٔ نویسنده است.' : '', callout: d.review_note ? `<div class="callout"><b>یادداشت بازبین:</b> ${esc(d.review_note)}</div>` : '' });
         (toW ? rest : todo).push(r);
@@ -1245,7 +1273,8 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       sb.from('documents').select(sel).eq('status', 'content_review').eq('source_kind', 'news').order('news_edited_at', { ascending: false }).limit(20)]);
     if (a.error) throw a.error;
     const ex = await excerptsFor((a.data || []).map(d => d.id));
-    const rows = (a.data || []).map(d => irow(d, { open: true, ex: ex[d.id], meta: `${fa(d.word_count)} کلمه · ${ago(d.created_at)}${d.source_name ? ' · ' + esc(d.source_name) : ''}`,
+    const stN = await imgStats((a.data || []).map(d => d.id));
+    const rows = (a.data || []).map(d => irow(d, { open: true, ex: ex[d.id], meta: `${fa(d.word_count)} کلمه · ${ago(d.created_at)}${d.source_name ? ' · ' + esc(d.source_name) : ''}${imgChips(stN[d.id])}`,
       side: srcLink(d) + `<button type="button" class="btn small primary" data-act="opendoc" data-id="${d.id}">${d.review_note ? 'اصلاح' : 'بررسی'}</button>`,
       callout: d.review_note ? `<div class="callout"><b>بازبین برگرداند:</b> ${esc(d.review_note)}</div>` : '' })).join('');
     S.queue = (a.data || []).map(d => d.id);
@@ -1312,6 +1341,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         <input type="text" id="bulkNote" placeholder="یک نظر برای همهٔ بندهای انتخاب‌شده" aria-label="نظر گروهی"><button type="button" class="btn small" data-act="bulkcm">ثبت نظر</button>
         <button type="button" class="btn small" data-act="selcopy">کپی بندها</button>${ro ? '' : '<button type="button" class="btn small danger" data-act="bulkdel">حذف بندها</button>'}<button type="button" class="btn small" data-act="selall">انتخاب همه</button><button type="button" class="btn small" data-act="selnone">لغو انتخاب</button></div></div>
       <div class="sheet" id="sheet">${s.data.map(para).join('')}</div>
+      ${pmetaSlot(id, { fields: true, attach: true })}
       ${ned ? (!canEd ? '<div class="submitbar dbar"><span class="meta">این خبر در سبد ویراستار خبر است.</span></div>' : `<div class="submitbar dbar">${S.confirm === 'nsend'
         ? `<span class="row" style="flex:1 1 320px"><input type="text" id="edNote" class="plain" placeholder="یادداشت برای بازبین محتوا (اختیاری)" style="flex:1 1 220px"><button type="button" class="btn primary" data-act="nsend" data-id="${id}">ارسال برای بازبین${nextHint ? ' و بعدی' : ''}</button><button type="button" class="btn quiet" data-act="cancelc">انصراف</button></span>`
         : S.confirm === 'ndiscard'
@@ -1611,6 +1641,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     return `<div><button type="button" class="btn quiet" data-act="qaback">→ فهرست</button></div>
       <section class="page-head"><h1>${esc(doc.title)}</h1><p class="sub">مترجم: ${esc(nm(doc.claimed_by))} · ${fa(changed)} از ${fa(segs.length)} بند ویرایش شده · TER ${pct(dist / fin)} · ${fa(segs.reduce((n, g) => n + g.seconds_spent, 0) / 60 | 0)} دقیقه زمان ثبت‌شده</p></section>
       <section class="card" id="qaPrio">${qaPrioInner(doc, pm)}</section>
+      ${pmetaSlot(id, { fields: true, attach: true })}
       ${ogPanel(segs, g => g.current_text)}
       ${aiBar(doc, segs, true)}
       <div class="toolbar"><div class="legend"><span>راهنما:</span><del>حذف‌شده از ترجمه ماشینی</del><ins>افزوده‌شده توسط مترجم</ins></div><span class="saved" id="saved">برای اصلاح مستقیم هر بند، «ویرایش ترجمه» را بزنید. تغییرها هنگام خروج از کادر ذخیره می‌شوند.</span></div>
@@ -1621,6 +1652,118 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       <section class="card"><label class="f"><b style="color:var(--fg)">یادداشت برای مترجم</b> (برای بازگرداندن لازم است)<textarea class="plain" id="qaNote" rows="3" dir="rtl" placeholder="مثلاً: اصطلاح بند دوم را با واژه‌نامه سازمان یکدست کنید."></textarea></label>
         <div class="row"><button type="button" class="btn primary" data-act="qaapprove" data-id="${id}">تایید و ارسال به سبد انتشار</button><button type="button" class="btn" data-act="qareturn" data-id="${id}">بازگرداندن به مترجم با نظرها</button></div>
         <p class="meta">بازگرداندن، یادداشت بالا، نظرهای بندها و ویرایش‌های مستقیم شما را با هم برای مترجم می‌فرستد.</p></section>`;
+  }
+
+  // ===================================================================
+  // images + publish metadata card (writer, news editor, reviewer, supervisor, publisher)
+  // ===================================================================
+  const PM_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+  const pmetaSlot = (docId, o) => `<section class="card pmeta" data-pmeta="${docId}" data-fields="${o.fields ? 1 : 0}" data-attach="${o.attach ? 1 : 0}" data-writer="${o.writer ? 1 : 0}"><span class="meta"><span class="spin" aria-hidden="true"></span> در حال بارگذاری تصاویر…</span></section>`;
+  async function imgStats(ids) {
+    const out = {}; ids.forEach(i => { out[i] = { n: 0, pending: 0, feat: false }; });
+    if (!ids.length) return out;
+    try {
+      const { data } = await sb.from('document_images').select('document_id,approved,kind').in('document_id', ids);
+      (data || []).forEach(x => { const o = out[x.document_id]; if (!o) return; o.n++; if (!x.approved) o.pending++; if (x.kind === 'featured' && x.approved) o.feat = true; });
+    } catch (_) { /* images are optional */ }
+    return out;
+  }
+  const imgChips = (s, news) => !s ? '' : (s.pending ? ` <span class="chip gold">${fa(s.pending)} تصویر منتظر تایید</span>` : '') + (s.feat ? ' <span class="chip ok">تصویر شاخص ✓</span>' : (s.n ? '' : ' <span class="chip">بدون تصویر</span>'));
+  async function prepImage(file) {
+    if (!PM_TYPES.includes(file.type)) throw new Error('فقط تصویر JPG، PNG یا WebP پذیرفته می‌شود.');
+    if (file.size > 25 * 1024 * 1024) throw new Error('حجم تصویر بیشتر از ۲۵ مگابایت است.');
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error('تصویر خوانده نشد.')); i.src = url; });
+      const k = Math.min(1, 2400 / Math.max(img.naturalWidth, img.naturalHeight));
+      if (k === 1 && file.size <= 5 * 1024 * 1024) return { blob: file, type: file.type };
+      const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      let type = file.type, blob = await new Promise(r => c.toBlob(r, type, 0.9));
+      if (!blob || blob.size > 5.5 * 1024 * 1024) { type = 'image/jpeg'; blob = await new Promise(r => c.toBlob(r, type, 0.85)); }
+      if (!blob || blob.size > 6 * 1024 * 1024) throw new Error('حجم تصویر بعد از کوچک‌سازی هم زیاد است.');
+      return { blob, type };
+    } finally { URL.revokeObjectURL(url); }
+  }
+  async function pmUpload(docId, file) {
+    const { blob, type } = await prepImage(file);
+    const ext = type === 'image/png' ? 'png' : type === 'image/webp' ? 'webp' : 'jpg';
+    const path = `${docId}/${uuid()}.${ext}`;
+    const up = await sb.storage.from('doc-images').upload(path, blob, { contentType: type });
+    if (up.error) throw up.error;
+    try { await rpc('attach_image', { p_doc: docId, p_path: path, p_filename: file.name, p_mime: type, p_size: blob.size, p_alt: null, p_after: null }); }
+    catch (e) { await sb.storage.from('doc-images').remove([path]); throw e; }
+  }
+  async function pmCats() {
+    if (S.wpCatList) return S.wpCatList;
+    try { const r = await fnCall('publish-wordpress', { action: 'categories' }); S.wpCatList = (r.categories || []).map(x => ({ id: x.id, name: String(x.name).replace(/&amp;/g, '&') })); }
+    catch (_) { S.wpCatList = []; }
+    return S.wpCatList;
+  }
+  const toLocalInput = iso => { if (!iso) return ''; const d = new Date(iso), z = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`; };
+  async function pmLoad(box) {
+    const id = box.dataset.pmeta, withFields = box.dataset.fields === '1', canAtt = box.dataset.attach === '1', isWriter = box.dataset.writer === '1';
+    const canReview = ['reviewer', 'admin'].includes(me.role);
+    const jobs = [sb.from('document_images').select('*').eq('document_id', id).order('created_at')];
+    if (withFields) jobs.push(sb.from('documents').select('source_kind,pub_slug,pub_excerpt,pub_tags,pub_category,pub_seo_title,pub_seo_desc,pub_seo_focus,pub_at').eq('id', id).single(), pmCats());
+    const [im, dm, cats] = await Promise.all(jobs);
+    if (im.error) throw im.error;
+    const imgs = im.data || [], urls = {};
+    if (imgs.length) { const r = await sb.storage.from('doc-images').createSignedUrls(imgs.map(x => x.path), 3600); (r.data || []).forEach(x => { if (x.signedUrl) urls[x.path] = x.signedUrl; }); }
+    const hasFeat = imgs.some(x => x.kind === 'featured' && x.approved);
+    const pendingN = imgs.filter(x => !x.approved).length;
+    const note = isWriter
+      ? `<div class="callout">عکس‌ها برای انتشار باید توسط بازبین محتوا تایید شوند. اگر عکسی ندارید، همکاران ما با هوش مصنوعی یک تصویر مفهومی برای مطلب شما می‌سازند.</div>`
+      : (!hasFeat && !pendingN ? '<p class="meta">تصویر شاخص ندارد. اگر تصویری همراه فایل نیامده، همکاران با هوش مصنوعی تصویر مفهومی بسازند و همین‌جا بارگذاری کنند.</p>' : '');
+    const card = x => `<figure class="pm-img${x.approved ? '' : ' pend'}" data-imgid="${x.id}">
+        <img src="${esc(urls[x.path] || '')}" alt="${esc(x.alt_text || '')}" loading="lazy">
+        <figcaption><span class="pm-badges">${x.kind === 'featured' ? '<span class="chip accent">شاخص</span>' : ''}${x.approved ? '<span class="chip ok">تاییدشده</span>' : '<span class="chip gold">منتظر تایید</span>'}</span>
+          <span class="pm-btns">${!x.approved && canReview ? `<button type="button" class="btn small primary" data-act="pmok" data-id="${x.id}">تایید</button><button type="button" class="btn small danger" data-act="pmno" data-id="${x.id}">رد و حذف</button>` : ''}
+          ${canAtt && x.kind !== 'featured' ? `<button type="button" class="btn small" data-act="pmfeat" data-id="${x.id}">شاخص شود</button>` : ''}
+          ${canAtt && (!isWriter || x.uploaded_by === me.id) ? `<button type="button" class="btn small quiet danger" data-act="pmrm" data-id="${x.id}">حذف</button>` : ''}</span>
+          ${canAtt ? `<details class="pm-more"><summary>متن جایگزین و توضیح</summary>
+            <label class="f">متن جایگزین (Alt)<input type="text" class="plain" data-pmi="alt" value="${esc(x.alt_text || '')}" maxlength="300"></label>
+            <label class="f">توضیح زیر تصویر<input type="text" class="plain" data-pmi="caption" value="${esc(x.caption || '')}" maxlength="500"></label>
+            ${x.kind === 'inline' && !isWriter ? `<label class="f">جای تصویر در متن (بعد از بند شمارهٔ)<input type="number" class="plain ltr" min="1" data-pmi="after" value="${x.after_position || ''}" placeholder="خالی: انتهای متن"></label>` : ''}</details>` : (x.alt_text ? `<span class="meta">${esc(x.alt_text)}</span>` : '')}
+        </figcaption></figure>`;
+    const catOpts = (cur) => (cats && cats.length ? `<option value="">پیش‌فرض این نوع محتوا</option>${cats.map(c => `<option value="${c.id}"${String(cur || '') === String(c.id) ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}` : `<option value="">${cur ? 'دسته ' + esc(cur) : 'پیش‌فرض (وردپرس وصل نیست یا دسته‌ای نیست)'}</option>`);
+    const m = (dm && dm.data) || {};
+    const fields = !withFields ? '' : `<h3>اطلاعات انتشار در سایت</h3><p class="meta">همهٔ این فیلدها اختیاری‌اند و هنگام ارسال به وردپرس استفاده می‌شوند. هر تغییر خودکار ذخیره می‌شود.</p>
+      <div class="pm-fields">
+        <label class="f">نامک (slug، انگلیسی)<input type="text" class="plain ltr" data-pmf="slug" value="${esc(m.pub_slug || '')}" placeholder="my-article-title" maxlength="190"></label>
+        <label class="f">دستهٔ سایت<select data-pmf="category">${catOpts(m.pub_category)}</select></label>
+        <label class="f wide">برچسب‌ها (انگلیسی، با کاما جدا کنید)<input type="text" class="plain ltr" data-pmf="tags" value="${esc((m.pub_tags || []).join(', '))}" placeholder="islamic studies, philosophy"></label>
+        <label class="f wide">خلاصهٔ مطلب (Excerpt)<textarea class="plain ltr" rows="2" data-pmf="excerpt" maxlength="600">${esc(m.pub_excerpt || '')}</textarea></label>
+        <label class="f">عنوان سئو <span class="meta pm-count" data-cnt="seo_title">${fa((m.pub_seo_title || '').length)}/۶۰</span><input type="text" class="plain ltr" data-pmf="seo_title" value="${esc(m.pub_seo_title || '')}" maxlength="120"></label>
+        <label class="f">کلمهٔ کلیدی اصلی<input type="text" class="plain ltr" data-pmf="seo_focus" value="${esc(m.pub_seo_focus || '')}" maxlength="100"></label>
+        <label class="f wide">توضیح متا (Meta description) <span class="meta pm-count" data-cnt="seo_desc">${fa((m.pub_seo_desc || '').length)}/۱۶۰</span><textarea class="plain ltr" rows="2" data-pmf="seo_desc" maxlength="320">${esc(m.pub_seo_desc || '')}</textarea></label>
+        <label class="f">زمان انتشار (به وقت همین دستگاه)<input type="datetime-local" class="plain ltr" data-pmf="publish_at" value="${toLocalInput(m.pub_at)}"></label>
+      </div>`;
+    box.innerHTML = `<h2>تصویر${withFields ? ' و اطلاعات انتشار' : 'ها'}</h2>${note}
+      ${imgs.length ? `<div class="pm-grid">${imgs.map(card).join('')}</div>` : '<p class="meta">هنوز تصویری اضافه نشده است.</p>'}
+      ${canAtt ? `<div class="row"><label class="btn small filebtn" for="pmf-${id}">افزودن تصویر</label><input type="file" class="vh" id="pmf-${id}" data-pmup="${id}" accept="image/jpeg,image/png,image/webp" multiple><span class="meta">JPG، PNG یا WebP. اولین تصویر، تصویر شاخص می‌شود.</span></div>` : ''}${fields}`;
+  }
+  async function hydratePmeta(force) {
+    for (const box of document.querySelectorAll('[data-pmeta]')) {
+      if (box.closest('details:not([open])')) continue;
+      if (box.dataset.ready === '1' && !force) continue;
+      box.dataset.ready = '1';
+      try { await pmLoad(box); } catch (e) { box.innerHTML = `<p class="meta">تصاویر بارگذاری نشد: ${esc(errText(e))}</p>`; }
+    }
+  }
+  async function pmAct(btn, fn) {
+    const box = btn.closest('[data-pmeta]');
+    try { await fn(box); } catch (e) { toast(errText(e)); }
+    if (box) { box.dataset.ready = '0'; await hydratePmeta(); }
+  }
+  async function pmSaveMeta(box) {
+    const g = k => ((box.querySelector(`[data-pmf="${k}"]`) || {}).value || '').trim(), at = g('publish_at');
+    await rpc('set_publish_meta', { p_doc: box.dataset.pmeta, p_meta: { slug: g('slug'), excerpt: g('excerpt'), tags: g('tags').split(/[,،]/).map(s => s.trim()).filter(Boolean), category: g('category'), seo_title: g('seo_title'), seo_desc: g('seo_desc'), seo_focus: g('seo_focus'), publish_at: at ? new Date(at).toISOString() : '' } });
+  }
+  async function pmSaveImg(box, fig) {
+    const v = k => { const e = fig.querySelector(`[data-pmi="${k}"]`); return e ? e.value.trim() : null; };
+    const a = v('after');
+    await rpc('update_image', { p_id: fig.dataset.imgid, p_alt: v('alt'), p_caption: v('caption'), p_after: a ? Math.max(1, parseInt(a, 10) || 1) : null });
   }
 
   // ===================================================================
@@ -1644,6 +1787,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     const print = approved.filter(d => d.priority >= pm).sort(byPrio);
     const site = approved.filter(d => d.priority && d.priority < pm).sort(byPrio);
     const none = approved.filter(d => !d.priority);
+    const stP = await imgStats(all.map(d => d.id));
     const wpChip = d => d.wp_post_id ? `<span class="chip ${d.wp_status === 'publish' ? 'ok' : 'gold'}">وردپرس: ${d.wp_status === 'publish' ? 'منتشرشده' : d.wp_status === 'draft' ? 'پیش‌نویس' : esc(d.wp_status || '—')}</span>` : '';
     const row = d => {
       const open = !!S.pubText[d.id], isApp = d.status === 'approved';
@@ -1656,9 +1800,9 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       } else if (canPub && !isApp && S.unpub !== d.id) act = `<button type="button" class="btn small" data-act="unpask" data-id="${d.id}">بازگرداندن به آمادهٔ انتشار</button>`;
       const menu = `<details class="moremenu"><summary class="btn quiet small" aria-label="گزینه‌های بیشتر">⋯</summary><div class="menu"><button type="button" class="btn small quiet" data-act="pubcopy" data-id="${d.id}">کپی متن انگلیسی</button><button type="button" class="btn small quiet" data-act="pubdl" data-id="${d.id}" data-title="${esc(d.title)}">دانلود فایل Word</button></div></details>`;
       const side = `<button type="button" class="btn quiet small" data-act="pubshow" data-id="${d.id}">${open ? 'بستن' : 'پیش‌نمایش'}</button>${act}${menu}`;
-      const meta = `${kindChip(d.source_kind)}${d.senior_only ? ' <span class="chip gold">ارشد</span>' : ''} ${isApp ? starsEditOrStatic(d, canPub) : starsStatic(d.priority)} ${wpChip(d)}<span class="pm-sp"></span><span>مترجم: ${esc(nm(d.claimed_by))} · ناظر: ${esc(nm(d.supervisor_id))} · ${isApp ? fmtT(d.updated_at) : 'منتشر شد ' + fmtT(d.published_at || d.updated_at) + (d.published_by ? ' توسط ' + esc(nm(d.published_by)) : '')}</span>`;
+      const meta = `${kindChip(d.source_kind)}${d.senior_only ? ' <span class="chip gold">ارشد</span>' : ''} ${isApp ? starsEditOrStatic(d, canPub) : starsStatic(d.priority)} ${wpChip(d)}${imgChips(stP[d.id])}<span class="pm-sp"></span><span>مترجم: ${esc(nm(d.claimed_by))} · ناظر: ${esc(nm(d.supervisor_id))} · ${isApp ? fmtT(d.updated_at) : 'منتشر شد ' + fmtT(d.published_at || d.updated_at) + (d.published_by ? ' توسط ' + esc(nm(d.published_by)) : '')}</span>`;
       const unp = S.unpub === d.id ? `<div class="callout"><b>بازگرداندن به آمادهٔ انتشار</b>${d.wp_status === 'publish' ? '<br>نوشتهٔ وردپرس هم به «پیش‌نویس» برمی‌گردد و از سایت برداشته می‌شود.' : ''}<div class="row" style="margin-top:8px"><input type="text" id="unpNote" class="plain" placeholder="دلیل (اختیاری)" style="flex:1 1 220px"><button type="button" class="btn danger small" data-act="unpublish" data-id="${d.id}">بازگردان</button><button type="button" class="btn small" data-act="unpcancel">انصراف</button></div></div>` : '';
-      const panel = open ? `<div class="pubpanel">${canPub && isApp ? `<label class="f">عنوان انگلیسی برای انتشار<input type="text" class="plain ltr" data-ptitle="${d.id}" value="${esc(title)}" placeholder="خالی: اولین تیتر ترجمه"></label>` : ''}<div class="final-text" lang="en" dir="ltr">${esc(S.pubText[d.id].map(g => g.current_text).join('\n\n'))}</div></div>` : '';
+      const panel = open ? `<div class="pubpanel">${canPub && isApp ? `<label class="f">عنوان انگلیسی برای انتشار<input type="text" class="plain ltr" data-ptitle="${d.id}" value="${esc(title)}" placeholder="خالی: اولین تیتر ترجمه"></label>` : ''}${pmetaSlot(d.id, { fields: canPub && isApp, attach: canPub && isApp })}<div class="final-text" lang="en" dir="ltr">${esc(S.pubText[d.id].map(g => g.current_text).join('\n\n'))}</div></div>` : '';
       const err = d.wp_error ? `<div class="callout"><b>خطای وردپرس:</b> <span class="num" dir="ltr">${esc(d.wp_error)}</span></div>` : '';
       const wl = d.wp_url ? `<a class="btn small quiet" href="${esc(d.wp_url)}" target="_blank" rel="noopener">دیدن در سایت ↗</a>` : '';
       return irow({ id: d.id, title: d.title, source_name: '' }, { meta, side: wl + side, callout: unp + err + panel });
@@ -1968,7 +2112,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         ${L.length ? `<div class="table-wrap"><table><thead><tr><th>فایل</th><th>وضعیت</th><th>کلمه</th><th>تاریخ</th></tr></thead><tbody>${L.map(d => `<tr><td class="wrapok">${esc(d.title)}</td><td>${chip(d.status)}</td><td class="num">${fa(d.word_count)}</td><td class="meta">${fmtT(d.created_at)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="meta">هنوز فایلی نفرستاده است.</p>'}</details>`; }).join('')}</section>`;
   }
   async function adminWP() {
-    const keys = ['wp_url', 'wp_user', 'wp_status', 'wp_post_type', 'wp_cat_news', 'wp_cat_scholaria', 'wp_cat_journal'];
+    const keys = ['wp_url', 'wp_user', 'wp_status', 'wp_post_type', 'wp_cat_news', 'wp_cat_scholaria', 'wp_cat_journal', 'wp_seo_title_key', 'wp_seo_desc_key', 'wp_seo_focus_key'];
     let has = false, err = '';
     try { has = await rpc('has_secret', { p_name: 'WP_APP_PASSWORD' }); } catch (e) { err = errText(e); }
     const r = await sb.from('app_config').select('key,value').in('key', keys);
@@ -1991,9 +2135,26 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         </div>
         <h3>دستهٔ هر نوع محتوا</h3>
         <div class="aigrid">${Object.entries(DOC_KIND).map(([k, v]) => `<label class="f">${v}${catSel(k)}</label>`).join('')}</div>
+        <h3>فیلدهای سئو</h3>
+        <p class="meta">نام فیلدهای افزونهٔ سئوی سایت که عنوان سئو، توضیح متا و کلمهٔ کلیدی در آن‌ها نوشته می‌شود. خالی بگذارید تا ارسال نشوند. برای Yoast: <span dir="ltr">_yoast_wpseo_title, _yoast_wpseo_metadesc, _yoast_wpseo_focuskw</span> و برای Rank Math: <span dir="ltr">rank_math_title, rank_math_description, rank_math_focus_keyword</span>. این فیلدها باید در وردپرس برای REST ثبت شده باشند (کد نمونه پایین همین صفحه).</p>
+        <div class="aigrid">
+          <label class="f">فیلد عنوان سئو<input class="ltr" type="text" id="wpSeoT" value="${esc(c.wp_seo_title_key || '')}"></label>
+          <label class="f">فیلد توضیح متا<input class="ltr" type="text" id="wpSeoD" value="${esc(c.wp_seo_desc_key || '')}"></label>
+          <label class="f">فیلد کلمهٔ کلیدی<input class="ltr" type="text" id="wpSeoF" value="${esc(c.wp_seo_focus_key || '')}"></label>
+        </div>
         <div class="row"><button class="btn primary" type="submit">ذخیرهٔ تنظیمات</button><button type="button" class="btn" data-act="wptest">آزمایش اتصال</button><button type="button" class="btn" data-act="wpcats">دریافت دسته‌ها از سایت</button></div>
         <p class="meta" id="wpT" dir="auto" style="overflow-wrap:anywhere;user-select:text">${S.wpMsg ? esc(S.wpMsg) : ''}</p>
-        <p class="meta">عنوان نوشته از اولین تیتر ترجمهٔ انگلیسی گرفته می‌شود (در صفحهٔ «آماده انتشار» قابل ویرایش است) و بقیه متن به‌صورت تیتر، بند و فهرست فرستاده می‌شود. اگر نوشته قبلاً فرستاده شده باشد، دوباره نوشتهٔ جدید نمی‌سازد و همان را به‌روز می‌کند.</p></form>`;
+        <p class="meta">عنوان نوشته از اولین تیتر ترجمهٔ انگلیسی گرفته می‌شود (در صفحهٔ «آماده انتشار» قابل ویرایش است) و بقیه متن به‌صورت تیتر، بند و فهرست فرستاده می‌شود. اگر نوشته قبلاً فرستاده شده باشد، دوباره نوشتهٔ جدید نمی‌سازد و همان را به‌روز می‌کند. تصاویر تاییدشده به کتابخانهٔ رسانهٔ وردپرس آپلود می‌شوند و تصویر شاخص ست می‌شود.</p></form>
+      <section class="card"><h2>کد ثبت فیلدهای سئو در وردپرس</h2><p class="meta">این کد را در «افزونهٔ سفارشی» یا فایل <span dir="ltr">functions.php</span> قالب قرار دهید (یک بار). بدون آن وردپرس نوشتن این فیلدها را از REST نمی‌پذیرد. اگر Rank Math دارید، نام‌های بالا را به‌جای نام‌های Yoast بگذارید.</p>
+        <pre class="code" dir="ltr" style="white-space:pre-wrap;user-select:all">add_action('init', function () {
+  $keys = ['_yoast_wpseo_title', '_yoast_wpseo_metadesc', '_yoast_wpseo_focuskw'];
+  foreach ($keys as $k) {
+    register_post_meta('post', $k, [
+      'show_in_rest' => true, 'single' => true, 'type' => 'string',
+      'auth_callback' => function () { return current_user_can('edit_posts'); },
+    ]);
+  }
+});</pre></section>`;
   }
   async function adminPubset() {
     const pm = await loadPrintMin();
@@ -2125,6 +2286,11 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     tab(el) { S.qf = ''; S.pubConfirm = null; S.unpub = null; S.newsEdit = null; S.newsDraft = null; S.newsNote = null; S.newsTest = null; S.newsDel = null; S.newsAdd = false; S.tab = el.dataset.tab; S.docId = null; S.qa = null; S.confirm = null; S.panel = false; setBell(); render(); },
     back() { S.docId = null; S.confirm = null; S.sel = new Set(); render(); },
     cancelc() { S.confirm = null; render(); },
+    wimgclear() { S.wImgs = []; render(); },
+    pmok(el) { return pmAct(el, async () => { await rpc('review_image', { p_id: el.dataset.id, p_ok: true }); toast('تصویر تایید شد.'); }); },
+    pmno(el) { return pmAct(el, async () => { const path = await rpc('review_image', { p_id: el.dataset.id, p_ok: false }); if (path) await sb.storage.from('doc-images').remove([path]); toast('تصویر رد و حذف شد.'); }); },
+    pmfeat(el) { return pmAct(el, async () => { await rpc('set_featured_image', { p_id: el.dataset.id }); toast('تصویر شاخص عوض شد.'); }); },
+    pmrm(el) { return pmAct(el, async () => { const path = await rpc('remove_image', { p_id: el.dataset.id }); if (path) await sb.storage.from('doc-images').remove([path]); toast('تصویر حذف شد.'); }); },
     pickfile() { if (!S.upKind) { toast('اول نوع محتوا را انتخاب کنید.'); const s = $('#upKind'); if (s) s.focus(); return; } const i = $('#fileIn'); if (i) i.click(); },
     nav(el) { gotoDoc(el.dataset.id); },
     fs(el) { S.fs = Math.min(3, Math.max(0, (S.fs == null ? 1 : S.fs) + Number(el.dataset.d))); try { localStorage.setItem('tl_fs', String(S.fs)); } catch (_) { /* ignore */ } const v = $('.dview'); if (v) v.dataset.fs = S.fs; growAll(); },
@@ -2628,7 +2794,10 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         if (url && !/^https:\/\/[^\s]+$/i.test(url)) throw new Error('آدرس سایت باید با https:// شروع شود.');
         const type = $('#wpType').value.trim() || 'posts';
         if (!/^[a-z0-9_-]+$/i.test(type)) throw new Error('نوع نوشته فقط حروف لاتین، عدد و خط تیره دارد.');
-        const rows = { wp_url: url, wp_user: $('#wpUser').value.trim(), wp_status: $('#wpStatus').value, wp_post_type: type };
+        const keyOk = v => !v || /^[A-Za-z0-9_.-]{1,80}$/.test(v);
+        const sT = $('#wpSeoT').value.trim(), sD = $('#wpSeoD').value.trim(), sF = $('#wpSeoF').value.trim();
+        if (![sT, sD, sF].every(keyOk)) throw new Error('نام فیلد سئو فقط حروف لاتین، عدد، خط تیره و زیرخط دارد.');
+        const rows = { wp_url: url, wp_user: $('#wpUser').value.trim(), wp_status: $('#wpStatus').value, wp_post_type: type, wp_seo_title_key: sT, wp_seo_desc_key: sD, wp_seo_focus_key: sF };
         Object.keys(DOC_KIND).forEach(k => { const v = ($('#wpc_' + k).value || '').trim(); if (v && !/^\d+(,\d+)*$/.test(v)) throw new Error('شناسهٔ دسته باید عدد باشد.'); rows['wp_cat_' + k] = v; });
         const now = new Date().toISOString();
         const u = await sb.from('app_config').upsert(Object.entries(rows).map(([key, value]) => ({ key, value, updated_at: now }))); if (u.error) throw u.error;
@@ -2657,6 +2826,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     const t = e.target;
     if (t.id === 'rwInstr') S.rwInstr = t.value;
     if (t.id === 'qFilter') { S.qf = t.value; applyQf(); }
+    if (t.dataset && (t.dataset.pmf === 'seo_title' || t.dataset.pmf === 'seo_desc')) { const c = t.closest('[data-pmeta]').querySelector(`[data-cnt="${t.dataset.pmf}"]`); if (c) c.textContent = fa(t.value.length) + '/' + fa(t.dataset.pmf === 'seo_title' ? 60 : 160); }
     if (t.id === 'wBase') { S.wBase = t.value.trim(); try { localStorage.setItem('tl_base', S.wBase); } catch (_) { /* ignore */ } }
     if (t.id === 'glQ') { const q = normFa(t.value); document.querySelectorAll('#glTable tbody tr').forEach(r => { r.hidden = !!q && !r.dataset.q.includes(q); }); }
     if (t.matches('textarea.t')) grow(t);
@@ -2683,7 +2853,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       if (i >= 0 && n) gotoDoc(n);
     }
   });
-  document.addEventListener('toggle', e => { if (e.target && e.target.id === 'rwBar') S.rwOpen = e.target.open; }, true);
+  document.addEventListener('toggle', e => { if (e.target && e.target.id === 'rwBar') S.rwOpen = e.target.open; if (e.target && e.target.open && e.target.querySelector && e.target.querySelector('[data-pmeta]')) hydratePmeta(); }, true);
   document.addEventListener('focusout', e => {
     const t = e.target;
     if (t.matches && t.matches('textarea[data-sid]')) {
@@ -2695,6 +2865,16 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   document.addEventListener('change', async e => {
     const t = e.target;
     try {
+      if (t.matches && t.matches('[data-pmup]')) {
+        const files = [...(t.files || [])], id = t.dataset.pmup, box = t.closest('[data-pmeta]'); t.value = '';
+        let ok = 0; for (const f of files) { try { await pmUpload(id, f); ok++; } catch (e) { toast(`${f.name}: ${errText(e)}`); } }
+        if (ok) toast(me.role === 'writer' || me.role === 'journal_writer' ? `${fa(ok)} تصویر بارگذاری شد؛ بعد از تایید بازبین استفاده می‌شود.` : `${fa(ok)} تصویر بارگذاری شد.`);
+        if (box) { box.dataset.ready = '0'; await hydratePmeta(); }
+        return;
+      }
+      if (t.matches && t.matches('[data-pmf]')) { const box = t.closest('[data-pmeta]'); try { await pmSaveMeta(box); const c = box.querySelector(`[data-cnt="${t.dataset.pmf}"]`); if (c) c.textContent = fa(t.value.length) + '/' + fa(t.dataset.pmf === 'seo_title' ? 60 : 160); toast('ذخیره شد.'); } catch (e) { toast(errText(e)); } return; }
+      if (t.matches && t.matches('[data-pmi]')) { const box = t.closest('[data-pmeta]'); try { await pmSaveImg(box, t.closest('[data-imgid]')); toast('ذخیره شد.'); } catch (e) { toast(errText(e)); } return; }
+      if (t.id === 'wImgs') { S.wImgs = [...(t.files || [])].slice(0, 12); t.value = ''; render(); return; }
       if (t.id === 'upKind') { S.upKind = t.value; }
       else if (t.id === 'seniorOnly') { S.seniorOnly = t.checked; }
       else if (t.id === 'fileIn') { const f = t.files && t.files[0]; if (f) await doUpload(f); t.value = ''; }
