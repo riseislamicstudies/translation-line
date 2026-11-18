@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>سکوی محتوا</title>
+<title>سکوی رایز</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cdefs%3E%3ClinearGradient id='a' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%237c6cff'/%3E%3Cstop offset='1' stop-color='%233b82f6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M20 4 36 12 20 20 4 12Z' fill='url(%23a)'/%3E%3Cpath d='M4 19.5 20 27.5 36 19.5' fill='none' stroke='%237c6cff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round' opacity='.7'/%3E%3Cpath d='M4 27 20 35 36 27' fill='none' stroke='%237c6cff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round' opacity='.38'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&family=Literata:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&family=Plus+Jakarta+Sans:wght@600;700&family=Literata:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <script>
 try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'light') _t = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light'; document.documentElement.setAttribute('data-theme', _t); } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); }
 </script>
@@ -463,7 +463,16 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   .prev svg { width: 28px; height: 28px; }
   .prev.has { border-style: solid; border-color: var(--accent); transform: scale(1.03); }
   .req { color: var(--bad); }
-  .brandline { display: flex; align-items: center; gap: 10px; }
+  .brandline { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .brandline h1 { margin: 0; }
+  .rlogo { height: 34px; width: auto; max-width: 150px; display: block; }
+  .top .rlogo { height: 30px; }
+  :root[data-theme="dark"] .rlogo { filter: brightness(0) invert(1); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .rlogo { filter: brightness(0) invert(1); } }
+  .brandline a { display: inline-flex; align-items: center; text-decoration: none; color: inherit; font-weight: 700; }
+  .vsep { width: 1px; height: 24px; background: var(--line); }
+  .schol { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-weight: 700; font-size: 26px; letter-spacing: -.01em; color: var(--fg); line-height: 1; }
+  .schol span { color: #b3966f; }
 
   .wcard { width: min(560px, 100%); text-align: center; align-items: center; gap: 18px; padding: clamp(22px, 5vw, 40px); background: linear-gradient(160deg, var(--accent-soft), var(--surface) 62%); }
   .wcard h1 { font-size: clamp(24px, 4vw, 30px); }
@@ -702,8 +711,9 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     email_taken: 'با این ایمیل قبلاً حساب ساخته شده است. وارد شوید یا از ایمیل دیگری استفاده کنید.',
     name_required: 'نام و نام خانوادگی را بنویسید.',
     invalid_email: 'ایمیل معتبر نیست.',
-    invalid_phone: 'شماره تلفن معتبر نیست.',
+    invalid_phone: 'شماره تماس معتبر نیست.',
     invalid_avatar: 'عکس پذیرفته نشد. عکس دیگری انتخاب کنید.',
+    avatar_required: 'عکس پروفایل الزامی است.',
     password_too_short: 'رمز باید دست‌کم ۸ نویسه باشد.',
     rate_limited: 'در یک ساعت گذشته فایل زیادی فرستاده‌اید. کمی بعد دوباره تلاش کنید.',
     invalid_input: 'فایل معتبر نیست. متن آن را بررسی کنید.',
@@ -793,15 +803,17 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     try { localStorage.setItem(LS, JSON.stringify(cfg)); } catch (_) { /* ignore */ }
     boot();
   }
+  const RISE_SITE = 'https://riseislamicstudies.com/', SCHOLARIA_URL = 'https://riseislamicstudies.com/scholaria/';
+  const RISE_LOGO = `<img class="rlogo" src="https://riseislamicstudies.com/wp-content/uploads/2026/10/Asset-2-day.svg" alt="رایز" height="34" onerror="this.replaceWith(Object.assign(document.createElement('b'),{textContent:'رایز'}))">`;
+  const SCHOLARIA_MARK = '<span class="schol" dir="ltr" lang="en">Scholar<span>ia</span></span>';
   function viewLogin(msg) {
     $('#root').innerHTML = `${themeBtn('float')}<div class="center"><form class="box card" id="loginForm">
-      <h1>ورود به سکوی محتوا</h1>
+      <div class="brandline">${RISE_LOGO}<h1>ورود به سکوی رایز</h1></div>
       ${msg ? `<div class="callout">${esc(msg)}</div>` : ''}
       <label class="f">ایمیل<input class="ltr" type="email" id="lgEmail" autocomplete="username" required></label>
       <label class="f">رمز عبور<input class="ltr" type="password" id="lgPass" autocomplete="current-password" required></label>
       <button class="btn primary" type="submit" id="lgBtn">ورود</button>
-      <p class="meta">ثبت‌نام عمومی بسته است. حساب را مدیر می‌سازد، یا با لینک دعوت می‌توانید به‌عنوان نویسنده ثبت‌نام کنید.</p>
-      <button class="btn quiet small" type="button" data-act="resetcfg">تغییر پروژه Supabase</button>
+      <p class="meta">ثبت‌نام عمومی امکان‌پذیر نیست. حساب را مدیر می‌سازد یا با لینک دعوت می‌توانید به‌عنوان نویسنده اسکالریا ثبت‌نام کنید.</p>
     </form></div>`;
   }
   const SVG_USER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
@@ -812,17 +824,17 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     try { const r = await fnCall('writer-signup', { action: 'check', token: INVITE }); valid = !!(r && r.valid); } catch (e) { return viewLogin(errText(e)); }
     if (!valid) { clearInvite(); return viewLogin(ERR.invite_invalid); }
     $('#root').innerHTML = `${themeBtn('float')}<div class="center"><form class="box card wide" id="signupForm">
-      <div class="brandline"><svg class="logo" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c6cff"/><stop offset="1" stop-color="#3b82f6"/></linearGradient></defs><path d="M20 4 36 12 20 20 4 12Z" fill="url(#lg1)"/><path d="M4 19.5 20 27.5 36 19.5" fill="none" stroke="#7c6cff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/><path d="M4 27 20 35 36 27" fill="none" stroke="#7c6cff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" opacity=".38"/><circle cx="20" cy="12" r="2.6" fill="#fff"/></svg><b class="wm">سکوی محتوا</b></div>
-      <h1>ساخت حساب نویسنده</h1>
+      <div class="brandline"><a href="${RISE_SITE}" target="_blank" rel="noopener" aria-label="سایت رایز">${RISE_LOGO}</a><span class="vsep" aria-hidden="true"></span><a href="${SCHOLARIA_URL}" target="_blank" rel="noopener" aria-label="بخش اسکالریا">${SCHOLARIA_MARK}</a></div>
+      <h1>ساخت حساب اسکالریا</h1>
       <p class="sub">اطلاعات خود را وارد کنید. بعد از ثبت‌نام فقط یک دکمهٔ «بارگذاری فایل» خواهید داشت.</p>
       ${msg ? `<div class="callout">${esc(msg)}</div>` : ''}
       <div class="pick"><label class="prev" id="suPrev" for="suAvatar" title="انتخاب عکس">${SVG_USER}</label>
-        <div><label class="btn small" for="suAvatar">انتخاب عکس آواتار</label><input type="file" class="vh" id="suAvatar" accept="image/*"><p class="meta">اختیاری. عکس در مرورگر شما کوچک می‌شود.</p></div></div>
+        <div><label class="btn small" for="suAvatar">انتخاب عکس پروفایل</label><input type="file" class="vh" id="suAvatar" accept="image/*"><p class="meta"><b>الزامی.</b> عکس پروفایل برای نمایش اکانت در اسکالریا مورد نیاز است.</p></div></div>
       <div class="grid-2f">
         <label class="f"><span>نام <span class="req">*</span></span><input type="text" id="suFirst" autocomplete="given-name" required maxlength="60"></label>
         <label class="f"><span>نام خانوادگی <span class="req">*</span></span><input type="text" id="suLast" autocomplete="family-name" required maxlength="60"></label>
       </div>
-      <label class="f"><span>شماره تلفن <span class="req">*</span></span><input class="ltr" type="text" id="suPhone" autocomplete="tel" inputmode="tel" required placeholder="0912…"></label>
+      <label class="f"><span>شماره تماس <span class="req">*</span></span><input class="ltr" type="text" id="suPhone" autocomplete="tel" inputmode="tel" required></label>
       <label class="f"><span>ایمیل <span class="req">*</span></span><input class="ltr" type="email" id="suEmail" autocomplete="email" required></label>
       <div class="grid-2f">
         <label class="f"><span>رمز (دست‌کم ۸ نویسه) <span class="req">*</span></span><input class="ltr" type="password" id="suPass" autocomplete="new-password" minlength="8" required></label>
@@ -848,6 +860,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   async function doSignup() {
     const first = $('#suFirst').value.trim(), last = $('#suLast').value.trim();
     const pass = $('#suPass').value;
+    if (!AVATAR) throw new Error('عکس پروفایل الزامی است. لطفاً یک عکس انتخاب کنید.');
     if (pass !== $('#suPass2').value) throw new Error('رمز و تکرار آن یکی نیست.');
     const email = $('#suEmail').value.trim();
     await fnCall('writer-signup', { action: 'signup', token: INVITE, first_name: first, last_name: last, phone: $('#suPhone').value.trim(), email, password: pass, avatar: AVATAR });
@@ -939,7 +952,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     const tabs = simple ? [] : all;
     document.body.classList.toggle('no-nav', simple);
     $('#root').innerHTML = `<header class="top${simple ? ' simple' : ''}"><div class="wrap top-in">
-        <div class="brand"><svg class="logo" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c6cff"/><stop offset="1" stop-color="#3b82f6"/></linearGradient></defs><path d="M20 4 36 12 20 20 4 12Z" fill="url(#lg1)"/><path d="M4 19.5 20 27.5 36 19.5" fill="none" stroke="#7c6cff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/><path d="M4 27 20 35 36 27" fill="none" stroke="#7c6cff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" opacity=".38"/><circle cx="20" cy="12" r="2.6" fill="#fff"/></svg><b class="wm">سکوی محتوا</b></div>
+        <div class="brand">${RISE_LOGO}<b class="wm">سکوی رایز</b></div>
         <nav class="tabs" id="tabs" role="tablist">${tabs.map(([k, l]) => `<button type="button" class="tab" role="tab" data-act="tab" data-tab="${k}" aria-selected="${S.tab === k}">${svgI(k)}<span>${l}</span><span class="count" data-count="${k}" hidden></span></button>`).join('')}</nav>
         <div class="actions">${writer ? '' : `<div class="bellwrap"><button class="bell" id="bell" type="button" data-act="bell" aria-haspopup="true" aria-expanded="false" aria-label="اعلان‌ها"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="bt">اعلان‌ها</span> <span class="dot" id="bellDot" hidden></span></button><div class="panel" id="panel" hidden></div></div>`}
         <div class="who">${themeBtn()}<span class="avatar" title="${esc(me.full_name || '')}" aria-hidden="true">${me.avatar_url ? `<img src="${esc(me.avatar_url)}" alt="">` : esc((me.full_name || '?').trim().charAt(0))}</span><span class="who-t"><b>${esc(me.full_name || '')}</b><small class="meta">${ROLE_FA[me.role]}</small></span><button class="btn quiet small" type="button" data-act="logout">خروج</button></div></div>
@@ -983,7 +996,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     }
   }
   function browserNotify(text) {
-    try { if (document.hidden && 'Notification' in window && Notification.permission === 'granted') new Notification('سکوی محتوا', { body: text }); } catch (_) { /* ignore */ }
+    try { if (document.hidden && 'Notification' in window && Notification.permission === 'granted') new Notification('سکوی رایز', { body: text }); } catch (_) { /* ignore */ }
   }
   async function loadNotifs() {
     const { data } = await sb.from('notifications').select('*').eq('user_id', me.id).order('created_at', { ascending: false }).limit(30);
@@ -2433,7 +2446,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     },
     async wptest() {
       S.wpMsg = 'در حال آزمایش…'; const t = $('#wpT'); if (t) t.textContent = S.wpMsg;
-      try { const r = await fnCall('publish-wordpress', { action: 'test' }); S.wpMsg = `✓ اتصال برقرار است: «${r.site || '—'}» · کاربر ${r.user || '—'}${r.can_publish ? '' : ' · هشدار: این کاربر اجازهٔ انتشار ندارد (فقط پیش‌نویس)'}`; }
+      try { const r = await fnCall('publish-wordpress', { action: 'test' }); S.wpMsg = `✓ اتصال برقرار است: «${r.site || '—'}» · کاربر ${r.user || '—'}${r.can_publish === false ? ' · هشدار: این کاربر اجازهٔ انتشار ندارد (فقط پیش‌نویس)' : ''}`; }
       catch (e) { S.wpMsg = '✗ ' + errText(e); }
       const t2 = $('#wpT'); if (t2) t2.textContent = S.wpMsg;
     },
