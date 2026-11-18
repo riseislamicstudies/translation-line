@@ -768,6 +768,8 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   const LS = 'tl_cfg_v1';
   let cfg = null;
   try { cfg = JSON.parse(localStorage.getItem(LS)); } catch (_) { cfg = null; }
+  // Built-in connection (public URL + anon key, safe by design): no per-browser setup needed.
+  if (!cfg || !cfg.url || !cfg.key) cfg = { url: 'https://tersvbytrecqzuzkthfa.supabase.co', key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlcnN2Ynl0cmVjcXp1emt0aGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQxOTc0NDQsImV4cCI6MjEwOTc3MzQ0NH0.Qq0JEASQEt5t0Yw668GYeBlqHkVVFEQpScPVTqENNVQ' };
   // A secret key must never be used in a browser: refuse a JWT whose role is service_role.
   function isServiceKey(key) {
     if (/^sb_secret_/.test(key)) return true;
