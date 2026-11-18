@@ -579,6 +579,22 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     .irow-side { justify-content: flex-start; }
     .ilist { margin-inline: calc(-1 * clamp(14px, 3vw, 28px)); border-radius: 0; border-inline: 0; }
   }
+
+  /* ===== v14: kinds, publish page ===== */
+  .chip.kind-news { background: color-mix(in srgb, #0e7490 14%, var(--surface)); color: #0e7490; }
+  .chip.kind-journal { background: color-mix(in srgb, #9333ea 13%, var(--surface)); color: #7e22ce; }
+  .chk { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; cursor: pointer; }
+  .chk input { width: 18px; height: 18px; }
+  .fchips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .fchip { all: unset; box-sizing: border-box; cursor: pointer; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: 13px; }
+  .fchip.on { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  .fchip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .pubpanel { display: flex; flex-direction: column; gap: 10px; }
+  .irow .moremenu .menu { inset-inline-end: 0; bottom: auto; top: calc(100% + 6px); }
+  .wpkey { display: flex; flex-direction: column; gap: 10px; max-width: 520px; }
+  .irow-m { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+  .irow-m .pm-sp { flex-basis: 100%; height: 0; }
+  .irow-m .stars-ro, .irow-m .stars { font-size: 15px; }
 </style>
 </head>
 <body>
@@ -656,7 +672,11 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     in_pool: ['در سبد ترجمه', 'accent'], in_progress: ['در حال ترجمه', 'gold'], awaiting_qa: ['در انتظار ناظر', 'gold'],
     changes_requested: ['نیازمند اصلاح', 'bad'], news_edit: ['در سبد ویراستار خبر', 'gold'], approved: ['آماده انتشار', 'ok'], published: ['منتشر شد', 'ok']
   };
-  const ROLE_FA = { none: 'بدون نقش', admin: 'مدیر', reviewer: 'بازبین محتوا', translator: 'مترجم', supervisor: 'ناظر', writer: 'نویسنده', news_editor: 'ویراستار خبر' };
+  const ROLE_FA = { none: 'بدون نقش', admin: 'مدیر', reviewer: 'بازبین محتوا', translator: 'مترجم', supervisor: 'ناظر', writer: 'نویسنده اسکالریا', journal_writer: 'نویسنده رسمی', news_editor: 'ویراستار خبر' };
+  const isW = r => r === 'writer' || r === 'journal_writer';
+  const DOC_KIND = { news: 'خبر', scholaria: 'مقالهٔ اسکالریا', journal: 'مقالهٔ نشریه' };
+  const kindLabel = k => DOC_KIND[k] || 'مقاله';
+  const kindChip = k => `<span class="chip kind-${esc(k || 'scholaria')}">${kindLabel(k)}</span>`;
   const chip = st => { const [t, k] = STATUS[st] || [st, '']; return `<span class="chip ${k}">${t}</span>`; };
 
   const ERR = {
@@ -860,13 +880,13 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     const { data, error } = await sb.from('profiles').select('*').eq('id', user.id).single();
     if (error || !data) { await sb.auth.signOut(); return viewLogin('پروفایل کاربر پیدا نشد. اسکریپت schema.sql را اجرا کرده‌اید؟'); }
     me = data;
-    if (data.role !== 'writer') await loadNames();
+    if (!isW(data.role)) await loadNames();
     else { const c = await sb.from('profile_contacts').select('last_name').eq('id', user.id).maybeSingle(); me.last_name = (c.data && c.data.last_name) || ''; }
     S.tab = null; S.docId = null; S.qa = null;
     renderShell();
     if (me.role === 'none') return;
     S.tab = tabsFor(me.role)[0][0];
-    if (me.role !== 'writer') { subscribe(); clearInterval(pollT); pollT = setInterval(soft, 20000); loadNotifs(); }
+    if (!isW(me.role)) { subscribe(); clearInterval(pollT); pollT = setInterval(soft, 20000); loadNotifs(); }
     render();
   }
   async function loadNames() {
@@ -897,7 +917,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     if (role === 'admin' || role === 'supervisor') t.push(['qa', 'ناظر']);
     if (['admin', 'reviewer', 'supervisor'].includes(role)) t.push(['pub', 'آماده انتشار'], ['quality', 'کیفیت']);
     if (role === 'admin') t.push(['admin', 'مدیریت']);
-    if (role === 'writer') t.push(['write', 'ارسال متن']);
+    if (isW(role)) t.push(['write', 'ارسال متن']);
     return t;
   }
   const themeBtn = (cls) => `<button type="button" class="theme ${cls || ''}" data-act="theme" aria-label="تغییر حالت روز و شب" title="روز / شب"><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>`;
@@ -913,7 +933,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   };
   const svgI = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k] || ''}</svg>`;
   function renderShell() {
-    const writer = me.role === 'writer';
+    const writer = isW(me.role);
     const all = me.role === 'none' ? [] : tabsFor(me.role);
     const simple = all.length <= 1;
     const tabs = simple ? [] : all;
@@ -1062,12 +1082,12 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     } finally { S.busy = ''; render(); }
   }
   async function refreshCounts() {
-    if (me && me.role === 'writer') return;
+    if (me && isW(me.role)) return;
     const { data } = await sb.from('documents').select('status,claimed_by,uploaded_by,replaced_by');
     if (!data) return;
     const c = { newsed: 0, review: 0, trans: 0, qa: 0, pub: 0 };
     data.forEach(d => {
-      if (['content_review', 'translating', 'translation_failed'].includes(d.status) || (d.status === 'review_rejected' && !d.replaced_by && (S.roles || {})[d.uploaded_by] !== 'writer')) c.review++;
+      if (['content_review', 'translating', 'translation_failed'].includes(d.status) || (d.status === 'review_rejected' && !d.replaced_by && !isW((S.roles || {})[d.uploaded_by]))) c.review++;
       if (d.status === 'news_edit') c.newsed++;
       if (d.status === 'in_pool') c.trans++;
       if (d.status === 'awaiting_qa') c.qa++;
@@ -1113,6 +1133,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   }
   async function doUpload(file) {
     if (!/\.docx$/i.test(file.name)) throw new Error('فقط فایل DOCX پذیرفته می‌شود.');
+    if (!S.upKind || !DOC_KIND[S.upKind]) throw new Error('اول نوع محتوا را انتخاب کنید.');
     if (file.size > 8 * 1024 * 1024) throw new Error('حجم فایل بیشتر از ۸ مگابایت است.');
     S.busy = 'upload'; toast('در حال خواندن فایل…');
     try {
@@ -1126,7 +1147,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       const up = await sb.storage.from('source-files').upload(id + '/source.docx', file, { contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
       if (!up.error) storedPath = id + '/source.docx';
       const wc = segs.reduce((n, s) => n + words(s.text).length, 0);
-      const ins = await sb.from('documents').insert({ id, title, source_filename: file.name, source_path: storedPath, word_count: wc, uploaded_by: me.id });
+      const ins = await sb.from('documents').insert({ id, title, source_filename: file.name, source_path: storedPath, word_count: wc, uploaded_by: me.id, source_kind: S.upKind });
       if (ins.error) throw ins.error;
       const rows = segs.map((s, i) => ({ document_id: id, position: i + 1, kind: s.kind, source_text: s.text }));
       for (let i = 0; i < rows.length; i += 200) {
@@ -1178,8 +1199,8 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     const ex = await excerptsFor(data.filter(d => ['content_review', 'review_rejected'].includes(d.status)).map(d => d.id));
     const todo = [], rest = [];
     data.forEach(d => {
-      const toW = (S.roles || {})[d.uploaded_by] === 'writer';
-      const meta = `${fa(d.word_count)} کلمه · ${ago(d.created_at)}${d.uploaded_by && S.names[d.uploaded_by] ? ' · ' + whoH(d.uploaded_by) : ''}${d.source_kind === 'news' ? ' · خبر' + (d.source_name ? ' از ' + esc(d.source_name) : '') : ''}`;
+      const toW = isW((S.roles || {})[d.uploaded_by]);
+      const meta = `${fa(d.word_count)} کلمه · ${ago(d.created_at)}${d.uploaded_by && S.names[d.uploaded_by] ? ' · ' + whoH(d.uploaded_by) : ''}${' · ' + kindLabel(d.source_kind) + (d.source_kind === 'news' && d.source_name ? ' از ' + esc(d.source_name) : '')}`;
       if (d.status === 'content_review') todo.push(irow(d, { open: true, ex: ex[d.id], meta, side: srcLink(d) + `<button type="button" class="btn primary small" data-act="opendoc" data-id="${d.id}">بازبینی</button>` + pdel(d.id), _id: d.id }));
       else if (d.status === 'review_rejected') {
         const r = irow(d, { open: !toW, ex: ex[d.id], meta, side: chip(toW ? 'review_rejected' : d.status).replace('chip', toW ? 'chip bad' : 'chip') + (toW ? `<button type="button" class="btn small" data-act="opendoc" data-id="${d.id}">مشاهده</button>` : `<button type="button" class="btn small primary" data-act="opendoc" data-id="${d.id}">اصلاح متن</button>`) + pdel(d.id), info: toW ? 'منتظر نسخهٔ اصلاح‌شدهٔ نویسنده است.' : '', callout: d.review_note ? `<div class="callout"><b>یادداشت بازبین:</b> ${esc(d.review_note)}</div>` : '' });
@@ -1191,10 +1212,11 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         rest.push(irow(d, { meta, callout: `<div class="callout"><b>خطا:</b> <span class="num" dir="ltr">${esc(d.ai_error || '')}</span></div>`, side: `<button type="button" class="btn small primary" data-act="retry" data-id="${d.id}">تلاش دوباره</button><button type="button" class="btn small" data-act="cancelai" data-id="${d.id}">بازگشت به بازبینی</button>` + pdel(d.id) }));
       }
     });
-    S.queue = data.filter(d => d.status === 'content_review' || (d.status === 'review_rejected' && (S.roles || {})[d.uploaded_by] !== 'writer')).map(d => d.id);
+    S.queue = data.filter(d => d.status === 'content_review' || (d.status === 'review_rejected' && !isW((S.roles || {})[d.uploaded_by]))).map(d => d.id);
     return head('بازبینی محتوایی', 'متن فارسی را بخوانید، اولویت نشر را بدهید و تایید کنید؛ یا با نظر خود برگردانید. بعد از هر تصمیم، خبر بعدی خودکار باز می‌شود.') + `
-      <div class="compactdrop"><span class="meta">بارگذاری فایل فارسی (DOCX). متن به بند تقسیم و تیترها شناسایی می‌شوند.</span>
-        <label class="btn primary small filebtn" for="fileIn">انتخاب فایل DOCX</label><input type="file" class="vh" id="fileIn" accept=".docx"></div>
+      <div class="compactdrop"><span class="meta">بارگذاری دستی فایل فارسی (DOCX). نوع محتوا را حتماً انتخاب کنید.</span>
+        <select id="upKind" aria-label="نوع محتوا" style="width:auto"><option value="">نوع محتوا…</option>${Object.entries(DOC_KIND).map(([k, v]) => `<option value="${k}"${S.upKind === k ? ' selected' : ''}>${v}</option>`).join('')}</select>
+        <button type="button" class="btn primary small" data-act="pickfile">انتخاب فایل DOCX</button><input type="file" class="vh" id="fileIn" accept=".docx"></div>
       ${inboxTools(data.length)}
       ${todo.length ? `<h2>منتظر بازبینی <span class="chip accent">${fa(todo.length)}</span></h2><div class="ilist">${todo.join('')}</div>` : emptyCard('فایلی در انتظار بازبینی نیست.')}
       ${rest.length ? `<h2>در جریان و نیازمند توجه <span class="chip">${fa(rest.length)}</span></h2><div class="ilist">${rest.join('')}</div>` : ''}`;
@@ -1233,7 +1255,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     await loadComments(id);
     const pm = await loadPrintMin();
     const rej = doc.status === 'review_rejected';
-    const toW = (S.roles || {})[doc.uploaded_by] === 'writer';
+    const toW = isW((S.roles || {})[doc.uploaded_by]);
     const ro = rej && toW;                       // waiting for the writer's new version
     const nCm = Object.values(S.cm || {}).reduce((n, a) => n + a.length, 0);
     const sel = S.sel || (S.sel = new Set());
@@ -1266,7 +1288,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     return `<div class="dview" data-fs="${S.fs}">
       <div class="dtop"><button type="button" class="btn quiet small" data-act="back">→ فهرست</button>${nav}<span class="sp"></span>
         <span class="fsz" aria-label="اندازهٔ متن"><button type="button" class="btn quiet small" data-act="fs" data-d="-1" aria-label="کوچک‌تر">A−</button><button type="button" class="btn quiet small" data-act="fs" data-d="1" aria-label="بزرگ‌تر">A+</button></span></div>
-      <section class="dhead"><h1>${esc(doc.title)}</h1><div class="dmeta"><span>${chip(doc.status)}</span><span>${fa(s.data.length)} بند · ${fa(doc.word_count)} کلمه</span>${doc.uploaded_by ? `<span>فرستنده: ${whoH(doc.uploaded_by)}</span>` : ''}${isNews && doc.source_name ? `<span>منبع: ${esc(doc.source_name)}</span>` : ''}${isNews && doc.source_url ? `<a href="${esc(doc.source_url)}" target="_blank" rel="noopener">خبر اصلی ↗</a>` : ''}</div></section>
+      <section class="dhead"><h1>${esc(doc.title)}</h1><div class="dmeta"><span>${chip(doc.status)}</span><span>${kindChip(doc.source_kind)}</span><span>${fa(s.data.length)} بند · ${fa(doc.word_count)} کلمه</span>${doc.uploaded_by ? `<span>فرستنده: ${whoH(doc.uploaded_by)}</span>` : ''}${isNews && doc.source_name ? `<span>منبع: ${esc(doc.source_name)}</span>` : ''}${isNews && doc.source_url ? `<a href="${esc(doc.source_url)}" target="_blank" rel="noopener">خبر اصلی ↗</a>` : ''}</div></section>
       ${ned && doc.review_note ? `<div class="callout"><b>بازبین این خبر را برگرداند:</b> ${esc(doc.review_note)}</div>` : ''}
       ${!ned && isNews && doc.editor_note ? `<div class="callout"><b>یادداشت ویراستار خبر:</b> ${esc(doc.editor_note)}</div>` : ''}
       ${rej && doc.review_note ? `<div class="callout"><b>دلیل بازگشت:</b> ${esc(doc.review_note)}</div>` : ''}
@@ -1284,7 +1306,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
           : `<span class="meta">ویرایش هر بند هنگام خروج از کادر ذخیره می‌شود.</span><span class="dact"><button type="button" class="btn danger" data-act="askndiscard">رد خبر</button><button type="button" class="btn primary" data-act="asknsend">ارسال برای بازبین محتوا</button></span>`}</div>`) : ro ? `<div class="submitbar dbar"><span class="meta">در انتظار نسخهٔ اصلاح‌شده</span><span class="dact"><button type="button" class="btn danger" data-act="deldoc" data-id="${id}">حذف فایل</button></span></div>` : `<div class="submitbar dbar">${rej
         ? `<span class="meta">متن را اصلاح کنید و دوباره برای بازبینی بفرستید.</span><span class="dact"><button type="button" class="btn danger" data-act="deldoc" data-id="${id}">حذف فایل</button><button type="button" class="btn primary" data-act="resubmit" data-id="${id}">ارسال مجدد برای بازبینی</button></span>`
         : S.confirm === 'approve'
-          ? `<span>متن فارسی تایید و به Gemini داده شود؟ ${starsStatic(S.star || 0)}</span><span class="dact"><button type="button" class="btn primary" data-act="approve" data-id="${id}">بله، تایید و ترجمه</button><button type="button" class="btn" data-act="cancelc">انصراف</button></span>`
+          ? `<span class="row"><span>متن فارسی تایید و برای ترجمه ماشینی فرستاده شود؟ ${starsStatic(S.star || 0)}</span><label class="chk"><input type="checkbox" id="seniorOnly"${S.seniorOnly ? ' checked' : ''}> فقط برای مترجم ارشد</label></span><span class="dact"><button type="button" class="btn primary" data-act="approve" data-id="${id}">بله، تایید و ترجمه</button><button type="button" class="btn" data-act="cancelc">انصراف</button></span>`
           : S.confirm === 'reject'
             ? `<span class="row" style="flex:1 1 320px"><input type="text" id="rejNote" class="plain" placeholder="${toW ? 'یادداشت برای نویسنده (لازم است)' : 'دلیل بازگشت (لازم است)'}" style="flex:1 1 220px"><button type="button" class="btn" data-act="reject" data-id="${id}" data-w="${toW ? 1 : 0}">${toW ? 'بازگرداندن به نویسنده' : 'بازگرداندن'}</button><button type="button" class="btn quiet" data-act="cancelc">انصراف</button></span>${toW ? `<span class="meta" style="flex-basis:100%">${nCm ? fa(nCm) + ' نظر روی بندها هم برای نویسنده فرستاده می‌شود.' : 'می‌توانید روی بندها هم نظر بگذارید؛ نویسنده همه را می‌بیند.'}</span>` : ''}`
             : `<div class="dstars"><span class="meta">اولویت نشر</span><div class="stars sm" id="starRow" role="group" aria-label="اولویت نشر از ۱ تا ۵">${[1, 2, 3, 4, 5].map(i => `<button type="button" class="star${(S.star || 0) >= i ? ' on' : ''}" data-act="star" data-n="${i}" aria-label="${fa(i)} ستاره" title="${RATING_LABEL[i]}">★</button>`).join('')}</div><span class="meta stl" id="starHint" aria-live="polite">${S.star ? ratingShort(S.star, pm) : 'برای تایید لازم است'}</span></div>
@@ -1293,7 +1315,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   }
   // ---- queue flow and in-place editing ------------------------------------------
   function gotoDoc(id) {
-    S.docId = id || null; S.confirm = null; S.star = null; S.sel = new Set(); S.lastSel = null;
+    S.docId = id || null; S.confirm = null; S.star = null; S.seniorOnly = false; S.sel = new Set(); S.lastSel = null;
     render(); try { window.scrollTo({ top: 0 }); } catch (_) { /* ignore */ }
   }
   // after a decision: remove the finished item from the queue and open the one that took its place
@@ -1301,7 +1323,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     const q = S.queue || [], i = q.indexOf(id);
     if (i >= 0) q.splice(i, 1);
     const nxt = i >= 0 ? (q[i] || q[i - 1] || null) : null;
-    S.confirm = null; S.star = null; S.sel = new Set(); S.lastSel = null; S.docId = nxt || null;
+    S.confirm = null; S.star = null; S.seniorOnly = false; S.sel = new Set(); S.lastSel = null; S.docId = nxt || null;
     try { window.scrollTo({ top: 0 }); } catch (_) { /* ignore */ }
     return nxt;
   }
@@ -1328,13 +1350,13 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   VIEWS.trans = async function () {
     if (S.docId) return vEdit();
     const [pool, mine] = await Promise.all([
-      sb.from('documents').select('id,title,word_count,created_at').eq('status', 'in_pool').order('created_at'),
+      sb.from('documents').select('id,title,word_count,created_at,source_kind,senior_only').eq('status', 'in_pool').order('created_at'),
       sb.from('documents').select('id,title,status,word_count,qa_note,claim_expires_at').eq('claimed_by', me.id).in('status', ['in_progress', 'changes_requested', 'awaiting_qa', 'approved', 'published']).order('created_at', { ascending: false })
     ]);
     if (pool.error) throw pool.error; if (mine.error) throw mine.error;
     return head('کار مترجم', 'فایل آماده را از سبد ترجمه بردارید. هر فایل فقط برای یک نفر رزرو می‌شود و تا ۲۴ ساعت مهلت دارید.') + `
       <section class="card"><div class="pool"><div><div class="pool-n num">${fa(pool.data.length)}</div><div class="meta">فایل آماده در سبد ترجمه</div></div></div>
-        ${pool.data.length ? `<div class="list">${pool.data.map(d => `<div class="item"><div class="item-main"><div class="item-title">${esc(d.title)}</div><div class="meta">${fa(d.word_count)} کلمه · ترجمه ماشینی آماده</div></div><button type="button" class="btn primary" data-act="claim" data-id="${d.id}">برداشتن فایل</button></div>`).join('')}</div>`
+        ${pool.data.length ? `<div class="list">${pool.data.map(d => `<div class="item"><div class="item-main"><div class="item-title">${esc(d.title)}</div><div class="meta">${kindChip(d.source_kind)}${d.senior_only ? ' <span class="chip gold">ارشد</span>' : ''} ${fa(d.word_count)} کلمه · ترجمه ماشینی آماده</div></div><button type="button" class="btn primary" data-act="claim" data-id="${d.id}">برداشتن فایل</button></div>`).join('')}</div>`
           : '<p class="meta">سبد ترجمه خالی است. وقتی فایلی آماده شود اعلان می‌گیرید.</p>'}</section>
       <section class="list"><h2>فایل‌های من</h2>${mine.data.length ? mine.data.map(d => `<article class="card"><div class="item"><div class="item-main"><div class="item-title">${esc(d.title)}</div><div class="meta">${fa(d.word_count)} کلمه${d.status === 'in_progress' && d.claim_expires_at ? ' · مهلت تا ' + fmtT(d.claim_expires_at) : ''}</div></div>${chip(d.status)}
         ${['in_progress', 'changes_requested'].includes(d.status) ? `<button type="button" class="btn primary" data-act="opendoc" data-id="${d.id}">${d.status === 'changes_requested' ? 'اصلاح' : 'ادامه ترجمه'}</button>` : `<button type="button" class="btn" data-act="opendoc" data-id="${d.id}">مشاهده</button>`}</div>
@@ -1593,29 +1615,54 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   // ===================================================================
   VIEWS.pub = async function () {
     const pm = await loadPrintMin();
-    const { data, error } = await sb.from('documents').select('id,title,status,claimed_by,supervisor_id,word_count,updated_at,priority').in('status', ['approved', 'published']).order('updated_at', { ascending: false });
-    if (error) throw error;
+    const [rd, rc] = await Promise.all([
+      sb.from('documents').select('id,title,status,claimed_by,supervisor_id,word_count,updated_at,priority,source_kind,senior_only,publish_title,wp_post_id,wp_url,wp_status,wp_error,published_by,published_at,unpublish_note').in('status', ['approved', 'published']).order('updated_at', { ascending: false }),
+      sb.from('app_config').select('key,value').in('key', ['wp_url', 'wp_status'])]);
+    if (rd.error) throw rd.error;
+    const wc = {}; (rc.data || []).forEach(x => { wc[x.key] = x.value; });
+    const wpOn = /^https:\/\//i.test(wc.wp_url || ''), wpPub = wc.wp_status === 'publish';
     const canPub = ['admin', 'supervisor'].includes(me.role);
-    const approved = data.filter(d => d.status === 'approved');
-    const published = data.filter(d => d.status === 'published').slice(0, 30);
+    const all = rd.data || [];
+    const kf = S.pubKind || '';
+    const approvedAll = all.filter(d => d.status === 'approved');
+    const approved = approvedAll.filter(d => !kf || d.source_kind === kf);
+    const published = all.filter(d => d.status === 'published' && (!kf || d.source_kind === kf)).sort((a, b) => new Date(b.published_at || b.updated_at) - new Date(a.published_at || a.updated_at)).slice(0, 40);
     const byPrio = (x, y) => (y.priority || 0) - (x.priority || 0) || new Date(y.updated_at) - new Date(x.updated_at);
     const print = approved.filter(d => d.priority >= pm).sort(byPrio);
     const site = approved.filter(d => d.priority && d.priority < pm).sort(byPrio);
     const none = approved.filter(d => !d.priority);
-    const card = d => `<article class="card"><div class="item"><div class="item-main"><div class="item-title">${esc(d.title)}</div><div class="meta">مترجم: ${esc(nm(d.claimed_by))} · ناظر: ${esc(nm(d.supervisor_id))} · ${fmtT(d.updated_at)}</div></div>
-        <div class="row">${canPub && d.status === 'approved' ? starsEdit(d.id, d.priority || 0) : starsStatic(d.priority)}${chip(d.status)}</div></div>
-        <div class="row"><button type="button" class="btn" data-act="pubshow" data-id="${d.id}">${S.pubText[d.id] ? 'بستن متن' : 'دیدن متن انگلیسی'}</button>
-        <button type="button" class="btn" data-act="pubcopy" data-id="${d.id}">کپی متن</button>
-        <button type="button" class="btn" data-act="pubdl" data-id="${d.id}" data-title="${esc(d.title)}">دانلود فایل Word</button>
-        ${canPub && d.status === 'approved' ? `<button type="button" class="btn primary" data-act="publish" data-id="${d.id}">علامت‌گذاری به‌عنوان منتشرشده</button>` : ''}</div>
-        ${S.pubText[d.id] ? `<div class="final-text" lang="en" dir="ltr">${esc(S.pubText[d.id].map(g => g.current_text).join('\n\n'))}</div>` : ''}</article>`;
-    const section = (title, sub, list) => `<section class="list"><h2>${title} <span class="chip">${fa(list.length)}</span></h2><p class="meta">${sub}</p>${list.length ? list.map(card).join('') : emptyCard('موردی نیست.')}</section>`;
-    return head('آماده انتشار', 'ترجمه‌های تاییدشده ناظر، دسته‌بندی‌شده بر اساس رتبه اولویت.') +
-      section('نشریه', `رتبه ${fa(pm)} تا ۵، از بالاترین اولویت`, print) +
-      (pm > 1 ? section('فقط سایت', `رتبه ۱ تا ${fa(pm - 1)}`, site) : '') +
-      (none.length ? section('بدون رتبه', 'تاییدشده‌های قبل از رتبه‌بندی. با ستاره‌ها رتبه بدهید.', none) : '') +
-      (published.length ? section('منتشرشده', '۳۰ مورد اخیر', published) : '');
+    const wpChip = d => d.wp_post_id ? `<span class="chip ${d.wp_status === 'publish' ? 'ok' : 'gold'}">وردپرس: ${d.wp_status === 'publish' ? 'منتشرشده' : d.wp_status === 'draft' ? 'پیش‌نویس' : esc(d.wp_status || '—')}</span>` : '';
+    const row = d => {
+      const open = !!S.pubText[d.id], isApp = d.status === 'approved';
+      const title = d.publish_title || (open && S.pubText[d.id][0] && S.pubText[d.id][0].kind === 'heading' ? S.pubText[d.id][0].current_text : '');
+      let act = '';
+      if (canPub && isApp) {
+        act = S.pubConfirm === d.id
+          ? `<span class="meta">در سایت منتشر شده است؟</span><button type="button" class="btn primary small" data-act="publish" data-id="${d.id}">بله، ثبت شود</button><button type="button" class="btn small" data-act="pubcancel">انصراف</button>`
+          : `${wpOn ? `<button type="button" class="btn small" data-act="wpsend" data-id="${d.id}">${d.wp_post_id ? 'به‌روزرسانی در وردپرس' : 'ارسال به وردپرس'}</button>` : ''}<button type="button" class="btn primary small" data-act="pubask" data-id="${d.id}">علامت منتشر شد</button>`;
+      } else if (canPub && !isApp && S.unpub !== d.id) act = `<button type="button" class="btn small" data-act="unpask" data-id="${d.id}">بازگرداندن به آمادهٔ انتشار</button>`;
+      const menu = `<details class="moremenu"><summary class="btn quiet small" aria-label="گزینه‌های بیشتر">⋯</summary><div class="menu"><button type="button" class="btn small quiet" data-act="pubcopy" data-id="${d.id}">کپی متن انگلیسی</button><button type="button" class="btn small quiet" data-act="pubdl" data-id="${d.id}" data-title="${esc(d.title)}">دانلود فایل Word</button></div></details>`;
+      const side = `<button type="button" class="btn quiet small" data-act="pubshow" data-id="${d.id}">${open ? 'بستن' : 'پیش‌نمایش'}</button>${act}${menu}`;
+      const meta = `${kindChip(d.source_kind)}${d.senior_only ? ' <span class="chip gold">ارشد</span>' : ''} ${isApp ? starsEditOrStatic(d, canPub) : starsStatic(d.priority)} ${wpChip(d)}<span class="pm-sp"></span><span>مترجم: ${esc(nm(d.claimed_by))} · ناظر: ${esc(nm(d.supervisor_id))} · ${isApp ? fmtT(d.updated_at) : 'منتشر شد ' + fmtT(d.published_at || d.updated_at) + (d.published_by ? ' توسط ' + esc(nm(d.published_by)) : '')}</span>`;
+      const unp = S.unpub === d.id ? `<div class="callout"><b>بازگرداندن به آمادهٔ انتشار</b>${d.wp_status === 'publish' ? '<br>نوشتهٔ وردپرس هم به «پیش‌نویس» برمی‌گردد و از سایت برداشته می‌شود.' : ''}<div class="row" style="margin-top:8px"><input type="text" id="unpNote" class="plain" placeholder="دلیل (اختیاری)" style="flex:1 1 220px"><button type="button" class="btn danger small" data-act="unpublish" data-id="${d.id}">بازگردان</button><button type="button" class="btn small" data-act="unpcancel">انصراف</button></div></div>` : '';
+      const panel = open ? `<div class="pubpanel">${canPub && isApp ? `<label class="f">عنوان انگلیسی برای انتشار<input type="text" class="plain ltr" data-ptitle="${d.id}" value="${esc(title)}" placeholder="خالی: اولین تیتر ترجمه"></label>` : ''}<div class="final-text" lang="en" dir="ltr">${esc(S.pubText[d.id].map(g => g.current_text).join('\n\n'))}</div></div>` : '';
+      const err = d.wp_error ? `<div class="callout"><b>خطای وردپرس:</b> <span class="num" dir="ltr">${esc(d.wp_error)}</span></div>` : '';
+      const wl = d.wp_url ? `<a class="btn small quiet" href="${esc(d.wp_url)}" target="_blank" rel="noopener">دیدن در سایت ↗</a>` : '';
+      return irow({ id: d.id, title: d.title, source_name: '' }, { meta, side: wl + side, callout: unp + err + panel });
+    };
+    const section = (title, sub, list) => list.length ? `<section class="list"><h2>${title} <span class="chip">${fa(list.length)}</span></h2><p class="meta">${sub}</p><div class="ilist">${list.map(row).join('')}</div></section>` : '';
+    const kc = k => approvedAll.filter(d => !k || d.source_kind === k).length;
+    const filter = `<div class="inbox-tools"><input type="search" class="plain" id="qFilter" value="${esc(S.qf || '')}" placeholder="جستجوی عنوان…" aria-label="جستجو">
+      <div class="fchips" role="group" aria-label="نوع محتوا">${[['', 'همه'], ...Object.entries(DOC_KIND)].map(([k, v]) => `<button type="button" class="fchip${kf === k ? ' on' : ''}" data-act="pubkind" data-k="${k}" aria-pressed="${kf === k}">${v} <span class="num">${fa(kc(k))}</span></button>`).join('')}</div></div>`;
+    const shown = print.length + site.length + none.length;
+    return head('آماده انتشار', `ترجمه‌های تاییدشدهٔ ناظر${wpOn ? '؛ با «ارسال به وردپرس» همین‌جا به سایت فرستاده می‌شوند' : ''}. اشتباه علامت زدید؟ از بخش «منتشرشده» برگردانید.`) + filter
+      + section('نشریه', `رتبه ${fa(pm)} تا ۵، از بالاترین اولویت`, print)
+      + (pm > 1 ? section('فقط سایت', `رتبه ۱ تا ${fa(pm - 1)}`, site) : '')
+      + section('بدون رتبه', 'تاییدشده‌های قبل از رتبه‌بندی. با ستاره‌ها رتبه بدهید.', none)
+      + (shown ? '' : emptyCard('موردی در انتظار انتشار نیست.'))
+      + section('منتشرشده', 'آخرین ۴۰ مورد', published);
   };
+  const starsEditOrStatic = (d, can) => can ? starsEdit(d.id, d.priority || 0) : starsStatic(d.priority);
   async function getFinal(id) {
     if (S.pubText[id]) return S.pubText[id];
     const { data, error } = await sb.from('segments').select('kind,current_text,position').eq('document_id', id).order('position');
@@ -1842,12 +1889,13 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   // view: admin
   // ===================================================================
   VIEWS.admin = async function () {
-    const tabs = [['users', 'کاربران و نقش‌ها'], ['prompt', 'پرامپت و مدل'], ['gemini', 'سرویس هوش مصنوعی'], ['pubset', 'تنظیمات انتشار'], ['invite', 'لینک ورود اعضا'], ['writers', 'دعوت نویسندگان'], ['glossary', 'واژه‌نامه'], ['news', 'منابع خبر'], ['uploads', 'بارگذاری‌ها'], ['files', 'همه فایل‌ها']];
+    const tabs = [['users', 'کاربران و نقش‌ها'], ['prompt', 'پرامپت و مدل'], ['gemini', 'سرویس هوش مصنوعی'], ['pubset', 'تنظیمات انتشار'], ['wp', 'اتصال وردپرس'], ['invite', 'لینک ورود اعضا'], ['writers', 'دعوت نویسندگان اسکالریا'], ['glossary', 'واژه‌نامه'], ['news', 'منابع خبر'], ['uploads', 'بارگذاری‌ها'], ['files', 'همه فایل‌ها']];
     let body;
     if (S.adminTab === 'users') body = await adminUsers();
     else if (S.adminTab === 'prompt') body = await adminPrompt();
     else if (S.adminTab === 'gemini') body = await adminAI();
     else if (S.adminTab === 'pubset') body = await adminPubset();
+    else if (S.adminTab === 'wp') body = await adminWP();
     else if (S.adminTab === 'invite') body = await adminInvite();
     else if (S.adminTab === 'glossary') body = await adminGlossary();
     else if (S.adminTab === 'news') body = await adminNews();
@@ -1898,13 +1946,41 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     if (error) throw error;
     const by = {};
     data.forEach(d => { (by[d.uploaded_by || '—'] = by[d.uploaded_by || '—'] || []).push(d); });
-    Object.keys(S.roles || {}).forEach(id => { if (S.roles[id] === 'writer' && !by[id]) by[id] = []; });
+    Object.keys(S.roles || {}).forEach(id => { if (isW(S.roles[id]) && !by[id]) by[id] = []; });
     const ids = Object.keys(by).sort((a, b) => by[b].length - by[a].length || nm(a).localeCompare(nm(b), 'fa'));
     return `<section class="card"><h2>فایل‌های بارگذاری‌شده به تفکیک کاربر</h2><p class="meta">${fa(data.length)} فایل از ${fa(ids.length)} کاربر. روی نام هر کاربر بزنید تا فایل‌هایش باز شود.</p>
       ${ids.map(id => { const c = (S.contacts || {})[id] || {}, L = by[id]; return `<details class="gl"><summary><b>${esc(nm(id))}</b>
         <span class="chip">${ROLE_FA[(S.roles || {})[id]] || '—'}</span><span class="num meta" dir="ltr">${esc(c.email || '')}</span><span class="chip accent">${fa(L.length)} فایل</span>${L[0] ? `<span class="meta">آخرین: ${fmtT(L[0].created_at)}</span>` : ''}</summary>
         ${c.phone ? `<p class="meta">تلفن: <span class="num" dir="ltr">${esc(c.phone)}</span></p>` : ''}
         ${L.length ? `<div class="table-wrap"><table><thead><tr><th>فایل</th><th>وضعیت</th><th>کلمه</th><th>تاریخ</th></tr></thead><tbody>${L.map(d => `<tr><td class="wrapok">${esc(d.title)}</td><td>${chip(d.status)}</td><td class="num">${fa(d.word_count)}</td><td class="meta">${fmtT(d.created_at)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="meta">هنوز فایلی نفرستاده است.</p>'}</details>`; }).join('')}</section>`;
+  }
+  async function adminWP() {
+    const keys = ['wp_url', 'wp_user', 'wp_status', 'wp_post_type', 'wp_cat_news', 'wp_cat_scholaria', 'wp_cat_journal'];
+    let has = false, err = '';
+    try { has = await rpc('has_secret', { p_name: 'WP_APP_PASSWORD' }); } catch (e) { err = errText(e); }
+    const r = await sb.from('app_config').select('key,value').in('key', keys);
+    const c = {}; (r.data || []).forEach(x => { c[x.key] = x.value; });
+    const cats = S.wpCats || null;
+    const catSel = k => cats
+      ? `<select id="wpc_${k}"><option value="">بدون دسته (پیش‌فرض وردپرس)</option>${cats.map(x => `<option value="${x.id}"${String(c['wp_cat_' + k]) === String(x.id) ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select>`
+      : `<input class="ltr" type="text" id="wpc_${k}" value="${esc(c['wp_cat_' + k] || '')}" placeholder="شناسهٔ دسته (اختیاری)">`;
+    return `${err ? `<div class="callout">${esc(err)}</div>` : ''}
+      <section class="card"><h2>اتصال به وردپرس</h2>
+        <p class="sub">انتشار از طریق REST API استاندارد وردپرس انجام می‌شود. در وردپرس: «کاربران ← پروفایل ← Application Passwords» یک رمز برنامه برای یک کاربر با نقش «ویرایشگر» یا «نویسنده» بسازید. سایت باید با https باز شود. رمز بعد از ذخیره دیگر نمایش داده نمی‌شود.</p>
+        <form class="wpkey" id="wpKey"><label class="f">رمز برنامه (Application Password) ${has ? '<span class="chip ok">ذخیره شده</span>' : '<span class="chip">ندارد</span>'}<input class="ltr" type="password" autocomplete="off" placeholder="xxxx xxxx xxxx xxxx xxxx xxxx" aria-label="رمز برنامه وردپرس"></label>
+          <div class="row"><button class="btn primary small" type="submit">ذخیره رمز</button>${has ? '<button class="btn danger small" type="button" data-act="wpdelkey">حذف</button>' : ''}</div></form></section>
+      <form class="card" id="wpCfg"><h2>تنظیمات انتشار</h2>
+        <div class="aigrid">
+          <label class="f">آدرس سایت (https)<input class="ltr" type="text" id="wpUrl" value="${esc(c.wp_url || '')}" placeholder="https://example.com"></label>
+          <label class="f">نام کاربری وردپرس<input class="ltr" type="text" id="wpUser" value="${esc(c.wp_user || '')}" autocomplete="off"></label>
+          <label class="f">وضعیت نوشته بعد از ارسال<select id="wpStatus"><option value="draft"${c.wp_status !== 'publish' ? ' selected' : ''}>پیش‌نویس (امن‌تر؛ ویراستار سایت منتشر می‌کند)</option><option value="publish"${c.wp_status === 'publish' ? ' selected' : ''}>منتشر شود و در سامانه هم «منتشر شد» ثبت شود</option></select></label>
+          <label class="f">نوع نوشته (REST base)<input class="ltr" type="text" id="wpType" value="${esc(c.wp_post_type || 'posts')}" placeholder="posts"></label>
+        </div>
+        <h3>دستهٔ هر نوع محتوا</h3>
+        <div class="aigrid">${Object.entries(DOC_KIND).map(([k, v]) => `<label class="f">${v}${catSel(k)}</label>`).join('')}</div>
+        <div class="row"><button class="btn primary" type="submit">ذخیرهٔ تنظیمات</button><button type="button" class="btn" data-act="wptest">آزمایش اتصال</button><button type="button" class="btn" data-act="wpcats">دریافت دسته‌ها از سایت</button></div>
+        <p class="meta" id="wpT" dir="auto" style="overflow-wrap:anywhere;user-select:text">${S.wpMsg ? esc(S.wpMsg) : ''}</p>
+        <p class="meta">عنوان نوشته از اولین تیتر ترجمهٔ انگلیسی گرفته می‌شود (در صفحهٔ «آماده انتشار» قابل ویرایش است) و بقیه متن به‌صورت تیتر، بند و فهرست فرستاده می‌شود. اگر نوشته قبلاً فرستاده شده باشد، دوباره نوشتهٔ جدید نمی‌سازد و همان را به‌روز می‌کند.</p></form>`;
   }
   async function adminPubset() {
     const pm = await loadPrintMin();
@@ -1919,12 +1995,14 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     let emails = {}, fnMsg = '';
     try { const r = await fnCall('manage-users', { action: 'list' }); (r.users || []).forEach(u => { emails[u.id] = u; }); }
     catch (e) { fnMsg = 'فهرست ایمیل‌ها و ساخت کاربر جدید به تابع manage-users نیاز دارد که هنوز در دسترس نیست: ' + errText(e); }
+    const lv = {}; try { const L = await sb.from('translator_levels').select('user_id,level'); (L.data || []).forEach(x => { lv[x.user_id] = x.level; }); } catch (_) { /* table missing */ }
     const roleOpts = r => Object.keys(ROLE_FA).map(k => `<option value="${k}"${k === r ? ' selected' : ''}>${ROLE_FA[k]}</option>`).join('');
     return `${fnMsg ? `<div class="callout">${esc(fnMsg)}</div>` : ''}
-      <div class="table-wrap"><table><thead><tr><th>نام</th><th>ایمیل</th><th>نقش</th><th>اعلان</th><th>آخرین ورود</th><th>رمز جدید</th></tr></thead><tbody>
+      <div class="table-wrap"><table><thead><tr><th>نام</th><th>ایمیل</th><th>نقش</th><th>رتبهٔ مترجم</th><th>اعلان</th><th>آخرین ورود</th><th>رمز جدید</th></tr></thead><tbody>
       ${profs.map(p => { const u = emails[p.id]; return `<tr><td><input type="text" data-pname="${p.id}" value="${esc(p.full_name)}" aria-label="نام"></td>
         <td class="num" dir="ltr">${esc(u ? u.email : '—')}</td>
         <td><select data-prole="${p.id}" aria-label="نقش">${roleOpts(p.role)}</select></td>
+        <td>${p.role === 'translator' ? `<select data-plevel="${p.id}" aria-label="رتبهٔ مترجم"><option value="regular"${lv[p.id] !== 'senior' ? ' selected' : ''}>عادی</option><option value="senior"${lv[p.id] === 'senior' ? ' selected' : ''}>ارشد</option></select>` : '<span class="meta">—</span>'}</td>
         <td><input type="checkbox" data-pnotify="${p.id}" ${p.notify ? 'checked' : ''} aria-label="اعلان"></td>
         <td class="meta">${u && u.last_sign_in_at ? fmtT(u.last_sign_in_at) : '—'}</td>
         <td>${fnMsg ? '' : `<span class="row"><input type="password" class="ltr" data-ppass="${p.id}" placeholder="حداقل ۸ نویسه" autocomplete="new-password" style="width:150px"><button type="button" class="btn small" data-act="setpass" data-id="${p.id}">تنظیم</button></span>`}</td></tr>`; }).join('')}</tbody></table></div>
@@ -2031,9 +2109,10 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   });
 
   const ACT = {
-    tab(el) { S.newsEdit = null; S.newsDraft = null; S.newsNote = null; S.newsTest = null; S.newsDel = null; S.newsAdd = false; S.tab = el.dataset.tab; S.docId = null; S.qa = null; S.confirm = null; S.panel = false; setBell(); render(); },
+    tab(el) { S.qf = ''; S.pubConfirm = null; S.unpub = null; S.newsEdit = null; S.newsDraft = null; S.newsNote = null; S.newsTest = null; S.newsDel = null; S.newsAdd = false; S.tab = el.dataset.tab; S.docId = null; S.qa = null; S.confirm = null; S.panel = false; setBell(); render(); },
     back() { S.docId = null; S.confirm = null; S.sel = new Set(); render(); },
     cancelc() { S.confirm = null; render(); },
+    pickfile() { if (!S.upKind) { toast('اول نوع محتوا را انتخاب کنید.'); const s = $('#upKind'); if (s) s.focus(); return; } const i = $('#fileIn'); if (i) i.click(); },
     nav(el) { gotoDoc(el.dataset.id); },
     fs(el) { S.fs = Math.min(3, Math.max(0, (S.fs == null ? 1 : S.fs) + Number(el.dataset.d))); try { localStorage.setItem('tl_fs', String(S.fs)); } catch (_) { /* ignore */ } const v = $('.dview'); if (v) v.dataset.fs = S.fs; growAll(); },
     pedit(el) {
@@ -2095,7 +2174,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     askreject() { S.confirm = 'reject'; render(); },
     asksubmit() { S.confirm = 'submit'; const b = $('#bar'); if (b) b.innerHTML = barHtml(S.docId); },
     async approve(el) {
-      await rpc('review_decision', { p_doc: el.dataset.id, p_approve: true, p_note: null, p_priority: S.star });
+      await rpc('review_decision', { p_doc: el.dataset.id, p_approve: true, p_note: null, p_priority: S.star, p_senior: !!(($('#seniorOnly') || {}).checked) });
       goNext(el.dataset.id); toast('تایید شد. ترجمه ماشینی شروع شد.');
       render(); await startTranslation(el.dataset.id);
     },
@@ -2262,7 +2341,29 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       const a = document.createElement('a'); a.href = url; a.download = (el.dataset.title || 'translation').replace(/[\\/:*?"<>|]+/g, '_') + '.doc';
       document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
     },
-    async publish(el) { await rpc('mark_published', { p_doc: el.dataset.id }); toast('علامت‌گذاری شد.'); render(); },
+    pubask(el) { S.pubConfirm = el.dataset.id; render(); },
+    pubcancel() { S.pubConfirm = null; render(); },
+    pubkind(el) { S.pubKind = el.dataset.k || ''; render(); },
+    async publish(el) { await rpc('mark_published', { p_doc: el.dataset.id }); S.pubConfirm = null; toast('به‌عنوان منتشرشده ثبت شد. اگر اشتباه بود، از بخش «منتشرشده» برگردانید.'); render(); },
+    unpask(el) { S.unpub = el.dataset.id; render(); },
+    unpcancel() { S.unpub = null; render(); },
+    async unpublish(el) {
+      const id = el.dataset.id, note = (($('#unpNote') || {}).value || '').trim();
+      const { data: d, error } = await sb.from('documents').select('wp_post_id,wp_status').eq('id', id).single(); if (error) throw error;
+      if (d.wp_post_id && d.wp_status === 'publish') {
+        try { await fnCall('publish-wordpress', { action: 'draft', document_id: id }); }
+        catch (e) { throw new Error('نوشتهٔ وردپرس به پیش‌نویس برنگشت و چیزی تغییر نکرد: ' + errText(e)); }
+      }
+      await rpc('unpublish_document', { p_doc: id, p_note: note || null });
+      S.unpub = null; toast('به آمادهٔ انتشار برگشت.'); render();
+    },
+    async wpsend(el) {
+      const id = el.dataset.id; toast('در حال ارسال به وردپرس…');
+      const r = await fnCall('publish-wordpress', { action: 'send', document_id: id });
+      if (r && r.wp_status === 'publish') { await rpc('mark_published', { p_doc: id }); toast('در وردپرس منتشر شد و ثبت شد.'); }
+      else toast('به‌صورت پیش‌نویس در وردپرس ساخته شد. بعد از انتشار در سایت، «علامت منتشر شد» را بزنید.');
+      render();
+    },
     glask(el) { S.glDel = el.dataset.id; render(); },
     async gldel(el) { const r = await sb.from('glossary').delete().eq('id', el.dataset.id); if (r.error) throw r.error; S.glDel = null; toast('اصطلاح حذف شد.'); render(); },
     async gledit(el) { S.glEdit = el.dataset.id; await render(); setTimeout(() => { const f = $('#glFa'); if (f) { f.scrollIntoView({ block: 'center' }); f.focus(); } }, 150); },
@@ -2330,6 +2431,18 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       const b = await sb.from('prompts').update({ is_active: true }).eq('id', el.dataset.id); if (b.error) throw b.error;
       toast('فعال شد.'); render();
     },
+    async wptest() {
+      S.wpMsg = 'در حال آزمایش…'; const t = $('#wpT'); if (t) t.textContent = S.wpMsg;
+      try { const r = await fnCall('publish-wordpress', { action: 'test' }); S.wpMsg = `✓ اتصال برقرار است: «${r.site || '—'}» · کاربر ${r.user || '—'}${r.can_publish ? '' : ' · هشدار: این کاربر اجازهٔ انتشار ندارد (فقط پیش‌نویس)'}`; }
+      catch (e) { S.wpMsg = '✗ ' + errText(e); }
+      const t2 = $('#wpT'); if (t2) t2.textContent = S.wpMsg;
+    },
+    async wpcats() {
+      try { const r = await fnCall('publish-wordpress', { action: 'categories' }); S.wpCats = (r.categories || []).map(x => ({ id: x.id, name: String(x.name).replace(/&amp;/g, '&') })); S.wpMsg = `${fa(S.wpCats.length)} دسته دریافت شد. برای هر نوع یکی را انتخاب و ذخیره کنید.`; }
+      catch (e) { S.wpMsg = '✗ ' + errText(e); }
+      render();
+    },
+    async wpdelkey() { await rpc('set_secret', { p_name: 'WP_APP_PASSWORD', p_value: '' }); toast('رمز حذف شد.'); render(); },
     async delkey(el) { await rpc('set_secret', { p_name: el.dataset.name || 'GEMINI_API_KEY', p_value: '' }); toast('کلید حذف شد.'); render(); },
     async aitest(el) {
       const t = el.dataset.task, out = $('#aiT_' + t); if (out) out.textContent = 'در حال آزمایش… (تنظیمات را اول ذخیره کنید)';
@@ -2493,6 +2606,21 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         for (const [k, v] of Object.entries(vals)) { if (!(Number(v) >= 0)) throw new Error('مقدارها باید عدد باشند.'); const r = await sb.from('app_config').upsert({ key: k, value: String(Number(v)), updated_at: new Date().toISOString() }); if (r.error) throw r.error; }
         toast('محدودیت‌ها ذخیره شد.'); return render();
       }
+      if (f.id === 'wpKey') {
+        const v = f.querySelector('input').value.trim(); if (!v) throw new Error('رمز برنامه را وارد کنید.');
+        await rpc('set_secret', { p_name: 'WP_APP_PASSWORD', p_value: v }); toast('رمز ذخیره شد.'); return render();
+      }
+      if (f.id === 'wpCfg') {
+        const url = $('#wpUrl').value.trim().replace(/\/+$/, '');
+        if (url && !/^https:\/\/[^\s]+$/i.test(url)) throw new Error('آدرس سایت باید با https:// شروع شود.');
+        const type = $('#wpType').value.trim() || 'posts';
+        if (!/^[a-z0-9_-]+$/i.test(type)) throw new Error('نوع نوشته فقط حروف لاتین، عدد و خط تیره دارد.');
+        const rows = { wp_url: url, wp_user: $('#wpUser').value.trim(), wp_status: $('#wpStatus').value, wp_post_type: type };
+        Object.keys(DOC_KIND).forEach(k => { const v = ($('#wpc_' + k).value || '').trim(); if (v && !/^\d+(,\d+)*$/.test(v)) throw new Error('شناسهٔ دسته باید عدد باشد.'); rows['wp_cat_' + k] = v; });
+        const now = new Date().toISOString();
+        const u = await sb.from('app_config').upsert(Object.entries(rows).map(([key, value]) => ({ key, value, updated_at: now }))); if (u.error) throw u.error;
+        toast('تنظیمات وردپرس ذخیره شد.'); return render();
+      }
       if (f.classList.contains('aikey')) {
         const v = f.querySelector('input').value.trim(); if (!v) throw new Error('کلید را وارد کنید.');
         await rpc('set_secret', { p_name: f.dataset.name, p_value: v }); toast('کلید ذخیره شد.'); return render();
@@ -2554,7 +2682,9 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   document.addEventListener('change', async e => {
     const t = e.target;
     try {
-      if (t.id === 'fileIn') { const f = t.files && t.files[0]; if (f) await doUpload(f); t.value = ''; }
+      if (t.id === 'upKind') { S.upKind = t.value; }
+      else if (t.id === 'seniorOnly') { S.seniorOnly = t.checked; }
+      else if (t.id === 'fileIn') { const f = t.files && t.files[0]; if (f) await doUpload(f); t.value = ''; }
       else if (t.id === 'wFix') { const f = t.files && t.files[0]; t.value = ''; const rid = S.fixFor; S.fixFor = null; if (f && rid) await doWriterUpload(f, rid); }
       else if (t.id === 'wFile') { const f = t.files && t.files[0]; t.value = ''; if (f) await doWriterUpload(f); }
       else if (t.id === 'suAvatar') {
@@ -2565,6 +2695,8 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       else if (t.id === 'rwStyle') { S.rwStyle = t.value; const i = $('#rwInstr'); if (i) i.placeholder = t.value === 'custom' ? 'دستور بازنویسی (لازم است)' : 'توضیح اضافه (اختیاری)'; }
       else if (t.id === 'aiRoundsSel') { S.aiRounds = Number(t.value) || 1; }
       else if (t.matches('textarea[data-fa]')) { const { error } = await sb.from('segments').update({ source_text: t.value }).eq('id', t.dataset.fa); if (error) throw error; }
+      else if (t.matches('[data-plevel]')) { await rpc('set_translator_level', { p_user: t.dataset.plevel, p_level: t.value }); toast('رتبهٔ مترجم ذخیره شد.'); }
+      else if (t.matches('[data-ptitle]')) { await rpc('set_publish_title', { p_doc: t.dataset.ptitle, p_title: t.value }); toast('عنوان ذخیره شد.'); }
       else if (t.matches('[data-prole]')) { const { error } = await sb.from('profiles').update({ role: t.value }).eq('id', t.dataset.prole); if (error) throw error; toast('نقش ذخیره شد.'); await loadNames(); }
       else if (t.matches('[data-pname]')) { const { error } = await sb.from('profiles').update({ full_name: t.value.trim() }).eq('id', t.dataset.pname); if (error) throw error; toast('نام ذخیره شد.'); await loadNames(); }
       else if (t.matches('[data-pnotify]')) { const { error } = await sb.from('profiles').update({ notify: t.checked }).eq('id', t.dataset.pnotify); if (error) throw error; toast('ذخیره شد.'); }
