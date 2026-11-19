@@ -608,6 +608,10 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
 
   /* ===== v16: images + publish meta ===== */
   .pmeta { display: flex; flex-direction: column; gap: 12px; margin-top: 4px; }
+  .seo-box { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid var(--line, #e3e3ea); border-radius: 12px; }
+  .seo-rows { display: grid; gap: 6px; } .seo-row { display: grid; grid-template-columns: 90px 1fr auto; gap: 8px; align-items: center; } .seo-v { overflow-wrap: anywhere; font-size: 13px; }
+  .seo-checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 13px; } .seo-checks .ok { color: var(--ok, #1a7f4b); } .seo-checks .no { color: var(--bad, #b42318); }
+  .curcard summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .pm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
   .pm-img { margin: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); display: flex; flex-direction: column; }
   .pm-img.pend { border-color: color-mix(in srgb, var(--gold, #b3966f) 60%, var(--line)); }
@@ -1267,21 +1271,55 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   VIEWS.newssrc = async function () {
     return head('منابع خبر', 'سایت‌ها و خوراک‌هایی که خبر از آن‌ها گردآوری می‌شود، قواعد فیلتر و محدودیت‌ها.') + await adminNews();
   };
+
+  // ----- AI news curation -----
+  async function curCfg() {
+    const r = await sb.from('app_config').select('key,value').in('key', ['news_curate_mode', 'news_curate_threshold', 'news_criteria']);
+    const c = {}; (r.data || []).forEach(x => { c[x.key] = x.value; });
+    return { mode: ['score', 'auto'].includes(c.news_curate_mode) ? c.news_curate_mode : 'off', threshold: Number(c.news_curate_threshold) || 60, criteria: c.news_criteria || '' };
+  }
+  const curCard = (cur, uncur) => !['admin', 'news_editor'].includes(me.role) ? '' : `<details class="card curcard"${S.curOpen ? ' open' : ''} id="curBox"><summary><b>گلچین هوشمند خبر</b> <span class="chip ${cur.mode === 'off' ? '' : 'ok'}">${cur.mode === 'off' ? 'خاموش' : cur.mode === 'auto' ? 'خودکار' : 'فقط نمره‌دهی'}</span>${uncur ? ` <span class="meta">${fa(uncur)} خبر بدون نمره</span>` : ''}</summary>
+    <form id="newsCur"><p class="meta">معیارهای خودتان را آزاد بنویسید؛ هوش مصنوعی هر خبر را از ۰ تا ۱۰۰ نمره می‌دهد و دلیل کوتاه می‌نویسد. در حالت «خودکار»، خبرهای زیر آستانه از سبد کنار گذاشته می‌شوند (در فهرست خبرهای ردشدهٔ مدیر با دلیل می‌مانند).</p>
+      <label class="f">معیارهای گلچین<textarea class="plain" id="curCrit" rows="5" maxlength="4000" placeholder="مثلاً: اولویت با خبرهای حوزهٔ مطالعات اسلامی، فلسفه و کلام، فرهنگ ایران و جهان اسلام؛ خبر جنایی، ورزشی و تبلیغاتی نمره پایین بگیرد…">${esc(cur.criteria)}</textarea></label>
+      <div class="aigrid"><label class="f">حالت<select id="curMode"><option value="off"${cur.mode === 'off' ? ' selected' : ''}>خاموش</option><option value="score"${cur.mode === 'score' ? ' selected' : ''}>فقط نمره‌دهی و مرتب‌سازی</option><option value="auto"${cur.mode === 'auto' ? ' selected' : ''}>خودکار (حذف خبر زیر آستانه)</option></select></label>
+        <label class="f">آستانهٔ ماندن در سبد (۱ تا ۱۰۰)<input class="ltr" dir="ltr" type="number" id="curThr" min="1" max="100" value="${cur.threshold}"></label></div>
+      <div class="row"><button class="btn primary" type="submit">ذخیره</button><button type="button" class="btn" data-act="curnow"${S.curBusy ? ' disabled' : ''}>${S.curBusy ? 'در حال نمره‌دهی…' : 'نمره‌دهی به خبرهای جدید'}</button></div></form></details>`;
+  async function runCurate(silent) {
+    if (S.curBusy) return; S.curBusy = true; if (!silent) render();
+    let scored = 0, gone = 0, err = '';
+    try {
+      for (let i = 0; i < 6; i++) {
+        const r = await fnCall('ai-content', { action: 'curate' });
+        if (!r || r.ok === false) { err = (r && r.error) || 'خطا'; break; }
+        scored += r.scored || 0; gone += r.discarded || 0;
+        if (!r.remaining || !r.scored) break;
+      }
+    } catch (e) { err = errText(e); }
+    S.curBusy = false;
+    if (err) toast('گلچین هوشمند: ' + err); else if (scored) toast(`${fa(scored)} خبر نمره گرفت${gone ? ' و ' + fa(gone) + ' خبر کنار گذاشته شد' : ''}.`);
+    if (S.tab === 'newsed' || scored || err) render();
+  }
   VIEWS.newsed = async function () {
     if (S.docId) return vReviewDoc();
-    const sel = 'id,title,status,word_count,review_note,created_at,source_name,source_url,editor_note,news_edited_by,news_edited_at';
+    const sel = 'id,title,status,word_count,review_note,created_at,source_name,source_url,editor_note,news_edited_by,news_edited_at,news_score,news_score_reason,news_curated_at';
+    const cur = await curCfg();
     const [a, b] = await Promise.all([
       sb.from('documents').select(sel).eq('status', 'news_edit').eq('source_kind', 'news').order('created_at', { ascending: false }),
       sb.from('documents').select(sel).eq('status', 'content_review').eq('source_kind', 'news').order('news_edited_at', { ascending: false }).limit(20)]);
     if (a.error) throw a.error;
+    if (cur.mode !== 'off') a.data.sort((x, y) => (y.news_score == null ? -1 : y.news_score) - (x.news_score == null ? -1 : x.news_score));
+    const uncur = (a.data || []).filter(d => d.news_curated_at == null).length;
+    if (cur.mode !== 'off' && uncur && !S.curBusy && !S.curTried) { S.curTried = true; setTimeout(() => runCurate(true), 0); }
     const ex = await excerptsFor((a.data || []).map(d => d.id));
     const stN = await imgStats((a.data || []).map(d => d.id));
-    const rows = (a.data || []).map(d => irow(d, { open: true, ex: ex[d.id], meta: `${fa(d.word_count)} کلمه · ${ago(d.created_at)}${d.source_name ? ' · ' + esc(d.source_name) : ''}${imgChips(stN[d.id])}`,
+    const scoreChip = d => d.news_score == null ? '' : ` · <span class="chip ${d.news_score >= cur.threshold ? 'ok' : 'gold'}">نمرهٔ ${fa(d.news_score)}</span>`;
+    const rows = (a.data || []).map(d => irow(d, { open: true, ex: ex[d.id], info: d.news_score_reason ? `<span class="meta">گلچین هوشمند: ${esc(d.news_score_reason)}</span>` : '', meta: `${fa(d.word_count)} کلمه · ${ago(d.created_at)}${d.source_name ? ' · ' + esc(d.source_name) : ''}${scoreChip(d)}${imgChips(stN[d.id])}`,
       side: srcLink(d) + `<button type="button" class="btn small primary" data-act="opendoc" data-id="${d.id}">${d.review_note ? 'اصلاح' : 'بررسی'}</button>`,
       callout: d.review_note ? `<div class="callout"><b>بازبین برگرداند:</b> ${esc(d.review_note)}</div>` : '' })).join('');
     S.queue = (a.data || []).map(d => d.id);
     const sent = (b.data || []).filter(d => me.role === 'admin' || d.news_edited_by === me.id);
     return head('سبد ویراستار خبر', 'خبرها را سریع بخوانید، در صورت نیاز ویرایش کنید و برای بازبین بفرستید یا رد کنید. بعد از هر تصمیم، خبر بعدی خودکار باز می‌شود.')
+      + curCard(cur, uncur)
       + inboxTools((a.data || []).length)
       + (rows ? `<div class="ilist">${rows}</div>` : emptyCard('خبری در سبد نیست. خبرهای تازه که از منابع برسند اینجا می‌آیند.'))
       + (sent.length ? `<h2>ارسال‌شده برای بازبین <span class="chip">${fa(sent.length)}</span></h2><div class="ilist">${sent.map(d => irow(d, { meta: `${ago(d.news_edited_at)}${d.source_name ? ' · ' + esc(d.source_name) : ''}`, side: chip('content_review') })).join('')}</div>` : '');
@@ -1730,7 +1768,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         </figcaption></figure>`;
     const catOpts = (cur) => (cats && cats.length ? `<option value="">پیش‌فرض این نوع محتوا</option>${cats.map(c => `<option value="${c.id}"${String(cur || '') === String(c.id) ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}` : `<option value="">${cur ? 'دسته ' + esc(cur) : 'پیش‌فرض (وردپرس وصل نیست یا دسته‌ای نیست)'}</option>`);
     const m = (dm && dm.data) || {};
-    const fields = !withFields ? '' : `<h3>اطلاعات انتشار در سایت</h3><p class="meta">همهٔ این فیلدها اختیاری‌اند و هنگام ارسال به وردپرس استفاده می‌شوند. هر تغییر خودکار ذخیره می‌شود.</p>
+    const fields = !withFields ? '' : `<h3>اطلاعات انتشار در سایت</h3>${seoBlock(id)}<p class="meta">همهٔ این فیلدها اختیاری‌اند و هنگام ارسال به وردپرس استفاده می‌شوند. هر تغییر خودکار ذخیره می‌شود.</p>
       <div class="pm-fields">
         <label class="f">نامک (slug، انگلیسی)<input type="text" class="plain ltr" data-pmf="slug" value="${esc(m.pub_slug || '')}" placeholder="my-article-title" maxlength="190"></label>
         <label class="f">دستهٔ سایت<select data-pmf="category">${catOpts(m.pub_category)}</select></label>
@@ -1744,6 +1782,21 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     box.innerHTML = `<h2>تصویر${withFields ? ' و اطلاعات انتشار' : 'ها'}</h2>${note}
       ${imgs.length ? `<div class="pm-grid">${imgs.map(card).join('')}</div>` : '<p class="meta">هنوز تصویری اضافه نشده است.</p>'}
       ${canAtt ? `<div class="row"><label class="btn small filebtn" for="pmf-${id}">افزودن تصویر</label><input type="file" class="vh" id="pmf-${id}" data-pmup="${id}" accept="image/jpeg,image/png,image/webp" multiple><span class="meta">JPG، PNG یا WebP. اولین تصویر، تصویر شاخص می‌شود.</span></div>` : ''}${fields}`;
+  }
+
+  const SEO_FIELDS = [['seo_focus', 'focus_keyword', 'کلمهٔ کلیدی'], ['seo_title', 'seo_title', 'عنوان سئو'], ['seo_desc', 'meta_description', 'توضیح متا'], ['slug', 'slug', 'نامک'], ['excerpt', 'excerpt', 'خلاصه'], ['tags', 'tags', 'برچسب‌ها']];
+  const seoVal = (p, k) => k === 'tags' ? (p.tags || []).join(', ') : (p[k] || '');
+  function seoBlock(id) {
+    const r = (S.seo || {})[id], busy = S.seoBusy === id;
+    const btn = `<button type="button" class="btn small" data-act="pmseo" data-id="${id}"${busy ? ' disabled' : ''}>${busy ? 'در حال بررسی…' : (r ? 'پیشنهاد دوباره' : 'پیشنهاد سئو با هوش مصنوعی')}</button>`;
+    if (!r) return `<div class="row">${btn}<span class="meta">کلمهٔ کلیدی، برچسب، عنوان سئو، متا، نامک و خلاصه را از روی متن پیشنهاد می‌دهد.</span></div>`;
+    const p = r.proposal;
+    return `<div class="seo-box"><div class="row">${btn}<span class="chip ${r.score >= 80 ? 'ok' : r.score >= 55 ? 'gold' : 'bad'}">نمرهٔ سئو ${fa(r.score)} از ۱۰۰</span>${r.language === 'fa-source' ? '<span class="chip gold">بر پایهٔ متن فارسی (ترجمه هنوز نیست)</span>' : ''}<button type="button" class="btn small primary" data-act="pmapply" data-id="${id}" data-k="all">اعمال همهٔ پیشنهادها</button></div>
+      <div class="seo-rows">${SEO_FIELDS.map(f => `<div class="seo-row"><span class="meta">${f[2]}</span><span class="ltr seo-v" dir="ltr">${esc(seoVal(p, f[1])) || '—'}</span><button type="button" class="btn small quiet" data-act="pmapply" data-id="${id}" data-k="${f[0]}">اعمال</button></div>`).join('')}</div>
+      <ul class="seo-checks">${r.checks.map(c => `<li class="${c.ok ? 'ok' : 'no'}">${c.ok ? '✓' : '✗'} ${esc(c.msg)}</li>`).join('')}</ul>
+      ${(p.suggestions || []).length ? `<div class="callout"><b>راهکارهای ارتقا:</b><ul>${p.suggestions.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
+      ${(p.secondary_keywords || []).length ? `<p class="meta">کلیدواژه‌های فرعی: <span class="ltr" dir="ltr">${esc(p.secondary_keywords.join(', '))}</span></p>` : ''}
+      <p class="meta">نمره از روی بررسی‌های بالا محاسبه می‌شود، نه نظر مدل. چیزی تا «اعمال» نشود ذخیره نمی‌شود.</p></div>`;
   }
   async function hydratePmeta(force) {
     for (const box of document.querySelectorAll('[data-pmeta]')) {
@@ -2200,7 +2253,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       <p class="meta">نسخه‌های قبلی حذف نمی‌شوند. هر سند، شناسه پرامپتی را که با آن ترجمه شده نگه می‌دارد.</p></form>
       <h2>تاریخچه نسخه‌ها</h2><div class="table-wrap"><table><thead><tr><th>نسخه</th><th>مدل</th><th>تاریخ</th><th></th></tr></thead><tbody>${data.map(p => `<tr><td class="num">${fa(p.version)}</td><td class="num">${esc(p.model)}</td><td class="meta">${fmtT(p.created_at)}</td><td>${p.is_active ? '<span class="chip ok">فعال</span>' : `<button type="button" class="btn small" data-act="activateprompt" data-id="${p.id}">فعال‌سازی</button>`}</td></tr>`).join('')}</tbody></table></div>`;
   }
-  const AI_TASKS = [['translate', 'ترجمهٔ ماشینی (فارسی ← انگلیسی)'], ['review', 'بازبینی ماشینی ترجمه'], ['rewrite', 'بازنویسی ماشینی خبر فارسی']];
+  const AI_TASKS = [['translate', 'ترجمهٔ ماشینی (فارسی ← انگلیسی)'], ['review', 'بازبینی ماشینی ترجمه'], ['rewrite', 'بازنویسی ماشینی خبر فارسی'], ['curate', 'گلچین خبر (خالی: مثل بازنویسی)'], ['seo', 'پژوهش و ارتقای سئو (خالی: مثل بازنویسی)']];
   const AI_PROVIDERS = [['gemini', 'Google Gemini'], ['openai', 'OpenAI (ChatGPT)'], ['anthropic', 'Anthropic (Claude)'], ['openai_compat', 'سازگار با OpenAI (آدرس دلخواه)']];
   const AI_KEYS = [['GEMINI_API_KEY', 'Gemini', 'AIza...'], ['OPENAI_API_KEY', 'OpenAI', 'sk-...'], ['ANTHROPIC_API_KEY', 'Anthropic', 'sk-ant-...'], ['OPENAI_COMPAT_API_KEY', 'سرویس سازگار با OpenAI', 'کلید سرویس']];
   const AI_DEF = {"review": "You are a senior reviewer of Persian-to-English translations of Islamic-studies and humanities texts.\n\nYou receive a JSON array. Each element has: \"id\", \"fa\" (the Persian original) and \"en\" (the current English translation of that paragraph):\n{{PARAGRAPHS_JSON}}\n\nFor every element, check the English against the Persian and fix only real problems:\n- meaning errors, omissions, additions, wrong numbers, names or dates;\n- wrong or inconsistent terminology (follow the mandatory glossary below, if any);\n- grammar, awkward or unidiomatic English, and an inappropriate register for a scholarly publication.\nKeep transliterated names and technical terms consistent. If a paragraph is already correct, return the \"en\" text unchanged and an empty note. Do not rewrite for taste.\n\nReturn ONLY one valid JSON object, no markdown fences and no other text, exactly in this shape:\n{\"items\":[{\"id\":1,\"translation\":\"the corrected English paragraph\",\"note\":\"one short sentence IN PERSIAN saying what you changed and why, or an empty string\"}]}\nReturn exactly one item for every input element, with the same \"id\" values and in the same order.", "rewrite": "You are an experienced Persian news editor.\n\nYou receive a JSON array. Each element has \"id\" and \"text\" (one paragraph or heading of a Persian news item):\n{{PARAGRAPHS_JSON}}\n\nRewrite every text in Persian according to this instruction:\n{{INSTRUCTION}}\n\nRules:\n- Keep every fact, name, number, date, title and quotation exactly as in the original. Never add information that is not in the text.\n- Write natural, correct Persian (use the half-space ZWNJ properly); keep a heading short.\n- If a text needs no change, return it unchanged.\n\nReturn ONLY one valid JSON object, no markdown fences and no other text, exactly in this shape:\n{\"items\":[{\"id\":1,\"text\":\"the rewritten Persian text\"}]}\nReturn exactly one item for every input element, with the same \"id\" values and in the same order."};
@@ -2227,7 +2280,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         ${AI_TASKS.map(t => `<div class="aigrid"><div class="f"><b>${t[1]}</b></div>
           <label class="f">سرویس<select id="aiP_${t[0]}">${AI_PROVIDERS.map(p => `<option value="${p[0]}"${pr(t[0]) === p[0] ? ' selected' : ''}>${p[1]}</option>`).join('')}</select></label>
           <label class="f">نام مدل<input class="ltr" type="text" id="aiM_${t[0]}" value="${esc(c['ai_model_' + t[0]] || '')}" placeholder="مثلاً gpt-4o-mini / claude-sonnet / gemini-flash"></label>
-          <div class="row" style="align-self:end"><button type="button" class="btn small" data-act="aitest" data-task="${t[0]}">آزمایش اتصال</button><span class="meta" id="aiT_${t[0]}" dir="auto" style="flex-basis:100%;overflow-wrap:anywhere;user-select:text"></span></div></div>`).join('<hr style="border:0;border-top:1px solid var(--line);margin:10px 0">')}
+          <div class="row" style="align-self:end">${t[0] === 'curate' || t[0] === 'seo' ? '' : `<button type="button" class="btn small" data-act="aitest" data-task="${t[0]}">آزمایش اتصال</button>`}<span class="meta" id="aiT_${t[0]}" dir="auto" style="flex-basis:100%;overflow-wrap:anywhere;user-select:text"></span></div></div>`).join('<hr style="border:0;border-top:1px solid var(--line);margin:10px 0">')}
         <div class="aigrid" style="margin-top:12px">
           <label class="f">آدرس پایهٔ سرویس سازگار با OpenAI (https)<input class="ltr" type="text" id="aiBase" value="${esc(c.ai_base_url || '')}" placeholder="https://api.example.com/v1"></label>
           <label class="f">روش ارتباط با OpenAI و سرویس سازگار<select id="aiWire"><option value="chat"${c.ai_wire_api !== 'responses' ? ' selected' : ''}>Chat Completions (رایج‌ترین)</option><option value="responses"${c.ai_wire_api === 'responses' ? ' selected' : ''}>Responses (wire_api = "responses")</option></select></label>
@@ -2285,10 +2338,31 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   });
 
   const ACT = {
+    curnow() { return runCurate(false); },
     tab(el) { S.qf = ''; S.pubConfirm = null; S.unpub = null; S.newsEdit = null; S.newsDraft = null; S.newsNote = null; S.newsTest = null; S.newsDel = null; S.newsAdd = false; S.tab = el.dataset.tab; S.docId = null; S.qa = null; S.confirm = null; S.panel = false; setBell(); render(); },
     back() { S.docId = null; S.confirm = null; S.sel = new Set(); render(); },
     cancelc() { S.confirm = null; render(); },
     wimgclear() { S.wImgs = []; render(); },
+    async pmseo(el) {
+      const id = el.dataset.id; if (S.seoBusy) return; S.seoBusy = id;
+      const box = el.closest('[data-pmeta]'); if (box) { box.dataset.ready = '0'; await hydratePmeta(); }
+      try {
+        const r = await fnCall('ai-content', { action: 'seo', document_id: id });
+        if (!r || r.ok === false) throw new Error({ no_text: 'متنی برای بررسی نیست.' }[r && r.error] || (r && r.error) || 'خطا در پیشنهاد سئو');
+        (S.seo = S.seo || {})[id] = r;
+      } catch (e) { toast('پیشنهاد سئو: ' + errText(e)); }
+      S.seoBusy = null; if (box) { box.dataset.ready = '0'; await hydratePmeta(); }
+    },
+    async pmapply(el) {
+      const id = el.dataset.id, k = el.dataset.k, r = (S.seo || {})[id], box = el.closest('[data-pmeta]'); if (!r || !box) return;
+      const keys = k === 'all' ? SEO_FIELDS.map(f => f[0]) : [k];
+      for (const key of keys) {
+        const f = SEO_FIELDS.find(x => x[0] === key), inp = box.querySelector(`[data-pmf="${key}"]`); if (!f || !inp) continue;
+        inp.value = seoVal(r.proposal, f[1]);
+      }
+      await pmSaveMeta(box); toast('در فیلدهای انتشار ذخیره شد.');
+      box.dataset.ready = '0'; await hydratePmeta();
+    },
     pmok(el) { return pmAct(el, async () => { await rpc('review_image', { p_id: el.dataset.id, p_ok: true }); toast('تصویر تایید شد.'); }); },
     pmno(el) { return pmAct(el, async () => { const path = await rpc('review_image', { p_id: el.dataset.id, p_ok: false }); if (path) await sb.storage.from('doc-images').remove([path]); toast('تصویر رد و حذف شد.'); }); },
     pmfeat(el) { return pmAct(el, async () => { await rpc('set_featured_image', { p_id: el.dataset.id }); toast('تصویر شاخص عوض شد.'); }); },
@@ -2781,6 +2855,12 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         const kw = $('#ruKw').value.trim(); if (!kw) throw new Error('کلمه را بنویسید.');
         const r = await sb.from('news_rules').insert({ keyword: kw, kind: $('#ruKind').value, source_id: $('#ruSrc').value || null });
         if (r.error) throw r.error; toast('قاعده افزوده شد.'); return render();
+      }
+      if (f.id === 'newsCur') {
+        const thr = Math.round(Number($('#curThr').value)); if (!(thr >= 1 && thr <= 100)) throw new Error('آستانه باید بین ۱ تا ۱۰۰ باشد.');
+        const vals = { news_criteria: $('#curCrit').value.trim(), news_curate_mode: $('#curMode').value, news_curate_threshold: String(thr) };
+        for (const [k, v] of Object.entries(vals)) { const r = await sb.from('app_config').upsert({ key: k, value: v, updated_at: new Date().toISOString() }); if (r.error) throw r.error; }
+        S.curTried = false; S.curOpen = false; toast('تنظیمات گلچین ذخیره شد.'); return render();
       }
       if (f.id === 'newsCfg') {
         const vals = { news_min_words: $('#ncMin').value, news_max_words: $('#ncMax').value, news_max_per_run: $('#ncRun').value };
