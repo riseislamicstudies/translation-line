@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>سکوی رایز</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cdefs%3E%3ClinearGradient id='a' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%237c6cff'/%3E%3Cstop offset='1' stop-color='%233b82f6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M20 4 36 12 20 20 4 12Z' fill='url(%23a)'/%3E%3Cpath d='M4 19.5 20 27.5 36 19.5' fill='none' stroke='%237c6cff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round' opacity='.7'/%3E%3Cpath d='M4 27 20 35 36 27' fill='none' stroke='%237c6cff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round' opacity='.38'/%3E%3C/svg%3E">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#3347B8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="سکوی رایز">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&family=Plus+Jakarta+Sans:wght@600;700&family=Literata:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -927,7 +933,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     renderShell();
     if (me.role === 'none') return;
     S.tab = tabsFor(me.role)[0][0];
-    if (!isW(me.role)) { subscribe(); clearInterval(pollT); pollT = setInterval(soft, 20000); loadNotifs(); }
+    if (!isW(me.role)) { subscribe(); clearInterval(pollT); pollT = setInterval(soft, 20000); loadNotifs(); pushRefresh(); }
     render();
   }
   async function loadNames() {
@@ -1032,14 +1038,37 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     S.unread = S.notifs.filter(n => !n.read_at).length;
     setBell();
   }
+  // ---- installable app + web push
+  let installEv = null;
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEv = e; if (S.panel) setBell(); });
+  window.addEventListener('appinstalled', () => { installEv = null; toast('برنامه نصب شد.'); });
+  try { if ('serviceWorker' in navigator && /^https:|^http:\/\/localhost/.test(location.href)) navigator.serviceWorker.register('sw.js').catch(() => { /* ignore */ }); } catch (_) { /* ignore */ }
+  const isStandalone = () => (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const pushOK = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  const u8 = b => { const p = '='.repeat((4 - b.length % 4) % 4), r = atob((b + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(r, c => c.charCodeAt(0)); };
+  async function pushRefresh() {
+    S.pushOn = false;
+    try { if (pushOK()) { const reg = await navigator.serviceWorker.getRegistration(); const sub = reg && await reg.pushManager.getSubscription(); S.pushOn = !!sub && Notification.permission === 'granted'; } } catch (_) { /* ignore */ }
+    if (S.panel) setBell();
+  }
+  function pushBox() {
+    const bits = [];
+    if (installEv && !isStandalone()) bits.push('<button type="button" class="btn small" data-act="installapp">نصب برنامه روی این دستگاه</button>');
+    if (isIOS() && !isStandalone()) bits.push('<span class="meta">در آیفون: دکمهٔ اشتراک‌گذاری (Share) ← «Add to Home Screen»؛ بعد برنامه را از صفحهٔ اصلی باز کنید تا اعلان فعال شود.</span>');
+    if (!pushOK()) { if (!bits.length) return ''; }
+    else if (S.pushOn) bits.push('<span class="chip ok">اعلان روی این دستگاه فعال است</span><button type="button" class="btn quiet small" data-act="testpush">اعلان آزمایشی</button><button type="button" class="btn quiet small" data-act="disablepush">خاموش</button>');
+    else if (Notification.permission === 'denied') bits.push('<span class="meta">اعلان برای این سایت در تنظیمات مرورگر مسدود است.</span>');
+    else if (!(isIOS() && !isStandalone())) bits.push('<button type="button" class="btn primary small" data-act="enablepush">فعال‌سازی اعلان روی این دستگاه</button>');
+    return `<div class="panel-head pushbox" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">${bits.join('')}</div>`;
+  }
   function setBell() {
     const d = $('#bellDot'); if (!d) return;
     d.hidden = !S.unread; d.textContent = fa(S.unread);
     const panel = $('#panel'); panel.hidden = !S.panel;
     $('#bell').setAttribute('aria-expanded', String(S.panel));
     if (S.panel) {
-      const canAsk = 'Notification' in window && Notification.permission === 'default';
-      panel.innerHTML = `<div class="panel-head"><b>اعلان‌ها</b>${canAsk ? '<button type="button" class="btn quiet small" data-act="askperm">اعلان مرورگر</button>' : ''}</div>` +
+      panel.innerHTML = `<div class="panel-head"><b>اعلان‌ها</b></div>${pushBox()}` +
         (S.notifs.length ? `<ul>${S.notifs.map(n => `<li class="${n.read_at ? '' : 'unread'}">${esc(notifText(n))}<time>${fmtT(n.created_at)}</time></li>`).join('')}</ul>` : '<div class="panel-head meta">اعلانی نیست.</div>');
     }
   }
@@ -1339,7 +1368,11 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       callout: d.review_note ? `<div class="callout"><b>بازبین برگرداند:</b> ${esc(d.review_note)}</div>` : '' })).join('');
     S.queue = (a.data || []).map(d => d.id);
     const sent = (b.data || []).filter(d => me.role === 'admin' || d.news_edited_by === me.id);
+    let lastChk = null;
+    try { const ls = await sb.from('news_sources').select('last_checked_at').eq('is_active', true); (ls.data || []).forEach(x => { if (x.last_checked_at && (!lastChk || x.last_checked_at > lastChk)) lastChk = x.last_checked_at; }); } catch (_) { /* optional */ }
+    const pollBar = `<div class="card row" id="pollBar" style="align-items:center;gap:10px"><button type="button" class="btn primary" data-act="newspoll">بررسی همهٔ منابع خبری</button><span class="meta">${lastChk ? 'آخرین بررسی: ' + ago(lastChk) + ' · ' : ''}قبل از شروع کار بزنید تا مطمئن شوید آخرین خبرها دریافت شده‌اند.</span></div>`;
     return head('سبد ویراستار خبر', 'خبرها را سریع بخوانید، در صورت نیاز ویرایش کنید و برای بازبین بفرستید یا رد کنید. بعد از هر تصمیم، خبر بعدی خودکار باز می‌شود.')
+      + pollBar
       + curCard(cur, uncur)
       + inboxTools((a.data || []).length)
       + (rows ? `<div class="ilist">${rows}</div>` : emptyCard('خبری در سبد نیست. خبرهای تازه که از منابع برسند اینجا می‌آیند.'))
@@ -1755,18 +1788,26 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     try { await rpc('attach_image', { p_doc: docId, p_path: path, p_filename: file.name, p_mime: type, p_size: blob.size, p_alt: o.alt || null, p_after: o.after || null }); }
     catch (e) { await sb.storage.from('doc-images').remove([path]); throw e; }
   }
-  async function pmCats() {
-    if (S.wpCatList) return S.wpCatList;
-    try { const r = await fnCall('publish-wordpress', { action: 'categories' }); S.wpCatList = (r.categories || []).map(x => ({ id: x.id, name: String(x.name).replace(/&amp;/g, '&') })); }
-    catch (_) { S.wpCatList = []; }
-    return S.wpCatList;
+  // the category taxonomy of a kind of content: wp_catkey_<kind>, or "categories" when it is published as ordinary posts, otherwise none
+  async function catTaxFor(kind) {
+    if (!S.wpKinds) { const r = await sb.from('app_config').select('key,value').like('key', 'wp\\_%'); S.wpKinds = {}; (r.data || []).forEach(x => { S.wpKinds[x.key] = x.value; }); }
+    const k = S.wpKinds, type = k['wp_type_' + kind] || k.wp_post_type || 'posts';
+    return k['wp_catkey_' + kind] || (type === 'posts' ? 'categories' : null);
+  }
+  async function pmCats(tax) {
+    if (!tax) return [];
+    S.wpCatList = S.wpCatList || {};
+    if (S.wpCatList[tax]) return S.wpCatList[tax];
+    try { const r = await fnCall('publish-wordpress', { action: 'categories', tax }); S.wpCatList[tax] = (r.categories || []).map(x => ({ id: x.id, name: String(x.name).replace(/&amp;/g, '&') })); }
+    catch (_) { S.wpCatList[tax] = []; }
+    return S.wpCatList[tax];
   }
   const toLocalInput = iso => { if (!iso) return ''; const d = new Date(iso), z = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`; };
   async function pmLoad(box) {
     const id = box.dataset.pmeta, withFields = box.dataset.fields === '1', canAtt = box.dataset.attach === '1', isWriter = box.dataset.writer === '1';
     const canReview = ['reviewer', 'admin'].includes(me.role);
     const jobs = [sb.from('document_images').select('*').eq('document_id', id).order('created_at')];
-    if (withFields) jobs.push(sb.from('documents').select('source_kind,pub_slug,pub_excerpt,pub_tags,pub_category,pub_seo_title,pub_seo_desc,pub_seo_focus,pub_at').eq('id', id).single(), pmCats());
+    if (withFields) { const dmP = Promise.resolve(sb.from('documents').select('source_kind,pub_slug,pub_excerpt,pub_tags,pub_category,pub_seo_title,pub_seo_desc,pub_seo_focus,pub_at,pub_author,pub_author_id').eq('id', id).single()); jobs.push(dmP, dmP.then(async d => pmCats(await catTaxFor(d.data && d.data.source_kind)))); }
     const [im, dm, cats] = await Promise.all(jobs);
     if (im.error) throw im.error;
     const imgs = im.data || [], urls = {};
@@ -1795,6 +1836,9 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         <label class="f">دستهٔ سایت<select data-pmf="category">${catOpts(m.pub_category)}</select></label>
         <label class="f wide">برچسب‌ها (انگلیسی، با کاما جدا کنید)<input type="text" class="plain ltr" data-pmf="tags" value="${esc((m.pub_tags || []).join(', '))}" placeholder="islamic studies, philosophy"></label>
         <label class="f wide">خلاصهٔ مطلب (Excerpt)<textarea class="plain ltr" rows="2" data-pmf="excerpt" maxlength="600">${esc(m.pub_excerpt || '')}</textarea></label>
+        ${m.source_kind !== 'news' ? `<label class="f">نام نویسنده در سایت (انگلیسی)<input type="text" class="plain ltr" data-pmf="author" value="${esc(m.pub_author || '')}" placeholder="Mohammad Hosseini" maxlength="120"></label>
+        <label class="f">شناسهٔ نویسنده در وردپرس (اختیاری)<input type="number" min="1" class="plain ltr" data-pmf="author_id" value="${m.pub_author_id || ''}" placeholder="مثلاً ۱۲"></label>
+        <p class="meta wide" style="grid-column:1/-1">برای نویسندگانی که خودشان به سایت دسترسی ندارند: نام انگلیسی نویسنده را بنویسید تا در ابتدای مطلب به‌صورت «By …» بیاید. اگر نویسنده در وردپرس حساب دارد، شناسهٔ کاربری‌اش را هم بدهید تا نوشته به نام او ثبت شود.</p>` : ''}
         <label class="f">عنوان سئو <span class="meta pm-count" data-cnt="seo_title">${fa((m.pub_seo_title || '').length)}/۶۰</span><input type="text" class="plain ltr" data-pmf="seo_title" value="${esc(m.pub_seo_title || '')}" maxlength="120"></label>
         <label class="f">کلمهٔ کلیدی اصلی<input type="text" class="plain ltr" data-pmf="seo_focus" value="${esc(m.pub_seo_focus || '')}" maxlength="100"></label>
         <label class="f wide">توضیح متا (Meta description) <span class="meta pm-count" data-cnt="seo_desc">${fa((m.pub_seo_desc || '').length)}/۱۶۰</span><textarea class="plain ltr" rows="2" data-pmf="seo_desc" maxlength="320">${esc(m.pub_seo_desc || '')}</textarea></label>
@@ -1845,7 +1889,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   }
   async function pmSaveMeta(box) {
     const g = k => ((box.querySelector(`[data-pmf="${k}"]`) || {}).value || '').trim(), at = g('publish_at');
-    await rpc('set_publish_meta', { p_doc: box.dataset.pmeta, p_meta: { slug: g('slug'), excerpt: g('excerpt'), tags: g('tags').split(/[,،]/).map(s => s.trim()).filter(Boolean), category: g('category'), seo_title: g('seo_title'), seo_desc: g('seo_desc'), seo_focus: g('seo_focus'), publish_at: at ? new Date(at).toISOString() : '' } });
+    await rpc('set_publish_meta', { p_doc: box.dataset.pmeta, p_meta: { slug: g('slug'), excerpt: g('excerpt'), tags: g('tags').split(/[,،]/).map(s => s.trim()).filter(Boolean), category: g('category'), seo_title: g('seo_title'), seo_desc: g('seo_desc'), seo_focus: g('seo_focus'), publish_at: at ? new Date(at).toISOString() : '', ...(box.querySelector('[data-pmf="author"]') ? { author: g('author'), author_id: g('author_id') } : {}) } });
   }
   async function pmSaveImg(box, fig) {
     const v = k => { const e = fig.querySelector(`[data-pmi="${k}"]`); return e ? e.value.trim() : null; };
@@ -2199,7 +2243,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         ${L.length ? `<div class="table-wrap"><table><thead><tr><th>فایل</th><th>وضعیت</th><th>کلمه</th><th>تاریخ</th></tr></thead><tbody>${L.map(d => `<tr><td class="wrapok">${esc(d.title)}</td><td>${chip(d.status)}</td><td class="num">${fa(d.word_count)}</td><td class="meta">${fmtT(d.created_at)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="meta">هنوز فایلی نفرستاده است.</p>'}</details>`; }).join('')}</section>`;
   }
   async function adminWP() {
-    const keys = ['wp_url', 'wp_user', 'wp_status', 'wp_post_type', 'wp_cat_news', 'wp_cat_scholaria', 'wp_cat_journal', 'wp_seo_title_key', 'wp_seo_desc_key', 'wp_seo_focus_key'];
+    const keys = ['wp_url', 'wp_user', 'wp_status', 'wp_post_type', 'wp_byline', ...Object.keys(DOC_KIND).flatMap(k => ['wp_type_' + k, 'wp_catkey_' + k, 'wp_tagkey_' + k]), 'wp_cat_news', 'wp_cat_scholaria', 'wp_cat_journal', 'wp_seo_title_key', 'wp_seo_desc_key', 'wp_seo_focus_key'];
     let has = false, err = '';
     try { has = await rpc('has_secret', { p_name: 'WP_APP_PASSWORD' }); } catch (e) { err = errText(e); }
     const r = await sb.from('app_config').select('key,value').in('key', keys);
@@ -2222,6 +2266,14 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         </div>
         <h3>دستهٔ هر نوع محتوا</h3>
         <div class="aigrid">${Object.entries(DOC_KIND).map(([k, v]) => `<label class="f">${v}${catSel(k)}</label>`).join('')}</div>
+        <h3>نوع نوشتهٔ هر نوع محتوا (مثلاً مقالات اسکالریا)</h3>
+        <p class="meta">اگر مقالات اسکالریا در سایت «نوع نوشتهٔ» جدا دارند (مثلاً <span dir="ltr">blogpost</span>)، نام REST آن را برای «اسکالریا» بنویسید. خالی یعنی همان نوع پیش‌فرض بالا. دکمهٔ «دریافت نوع‌های نوشته از سایت» فهرست درست را از خود سایت می‌آورد. برای نوع‌های سفارشی اگر دسته یا برچسب جدا دارند، نام REST آن‌ها را هم بنویسید (مثلاً <span dir="ltr">blogpost_category</span>)؛ خالی یعنی برای آن نوع دسته و برچسب فرستاده نشود.</p>
+        <datalist id="wpTypeList">${(S.wpTypes || []).map(t => `<option value="${esc(t.rest_base)}">${esc(t.name)}</option>`).join('')}</datalist>
+        <div class="table-wrap"><table><thead><tr><th>نوع محتوا</th><th>نوع نوشته (REST)</th><th>دستهٔ REST</th><th>برچسب REST</th></tr></thead><tbody>${Object.entries(DOC_KIND).map(([k, v]) => `<tr><td>${v}</td>
+          <td><input class="ltr" list="wpTypeList" type="text" id="wpt_${k}" value="${esc(c['wp_type_' + k] || '')}" placeholder="پیش‌فرض"></td>
+          <td><input class="ltr" type="text" id="wpck_${k}" value="${esc(c['wp_catkey_' + k] || '')}" placeholder="خودکار"></td>
+          <td><input class="ltr" type="text" id="wpgk_${k}" value="${esc(c['wp_tagkey_' + k] || '')}" placeholder="خودکار"></td></tr>`).join('')}</tbody></table></div>
+        <label class="f">نام نویسنده در ابتدای مطلب («By …»)<select id="wpByline"><option value="on"${c.wp_byline !== 'off' ? ' selected' : ''}>نمایش داده شود (وقتی نام نویسنده در صفحهٔ انتشار پر شده)</option><option value="off"${c.wp_byline === 'off' ? ' selected' : ''}>نمایش داده نشود</option></select></label>
         <h3>فیلدهای سئو</h3>
         <p class="meta">نام فیلدهای افزونهٔ سئوی سایت که عنوان سئو، توضیح متا و کلمهٔ کلیدی در آن‌ها نوشته می‌شود. خالی بگذارید تا ارسال نشوند. برای Yoast: <span dir="ltr">_yoast_wpseo_title, _yoast_wpseo_metadesc, _yoast_wpseo_focuskw</span> و برای Rank Math: <span dir="ltr">rank_math_title, rank_math_description, rank_math_focus_keyword</span>. این فیلدها باید در وردپرس برای REST ثبت شده باشند (کد نمونه پایین همین صفحه).</p>
         <div class="aigrid">
@@ -2229,7 +2281,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
           <label class="f">فیلد توضیح متا<input class="ltr" type="text" id="wpSeoD" value="${esc(c.wp_seo_desc_key || '')}"></label>
           <label class="f">فیلد کلمهٔ کلیدی<input class="ltr" type="text" id="wpSeoF" value="${esc(c.wp_seo_focus_key || '')}"></label>
         </div>
-        <div class="row"><button class="btn primary" type="submit">ذخیرهٔ تنظیمات</button><button type="button" class="btn" data-act="wptest">آزمایش اتصال</button><button type="button" class="btn" data-act="wpcats">دریافت دسته‌ها از سایت</button></div>
+        <div class="row"><button class="btn primary" type="submit">ذخیرهٔ تنظیمات</button><button type="button" class="btn" data-act="wptest">آزمایش اتصال</button><button type="button" class="btn" data-act="wpcats">دریافت دسته‌ها از سایت</button><button type="button" class="btn" data-act="wptypes">دریافت نوع‌های نوشته از سایت</button></div>
         <p class="meta" id="wpT" dir="auto" style="overflow-wrap:anywhere;user-select:text">${S.wpMsg ? esc(S.wpMsg) : ''}</p>
         <p class="meta">عنوان نوشته از اولین تیتر ترجمهٔ انگلیسی گرفته می‌شود (در صفحهٔ «آماده انتشار» قابل ویرایش است) و بقیه متن به‌صورت تیتر، بند و فهرست فرستاده می‌شود. اگر نوشته قبلاً فرستاده شده باشد، دوباره نوشتهٔ جدید نمی‌سازد و همان را به‌روز می‌کند. تصاویر تاییدشده به کتابخانهٔ رسانهٔ وردپرس آپلود می‌شوند و تصویر شاخص ست می‌شود.</p></form>
       <section class="card"><h2>کد ثبت فیلدهای سئو در وردپرس</h2><p class="meta">این کد را در «افزونهٔ سفارشی» یا فایل <span dir="ltr">functions.php</span> قالب قرار دهید (یک بار). بدون آن وردپرس نوشتن این فیلدها را از REST نمی‌پذیرد. اگر Rank Math دارید، نام‌های بالا را به‌جای نام‌های Yoast بگذارید.</p>
@@ -2303,16 +2355,23 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   const AI_KEYS = [['GEMINI_API_KEY', 'Gemini', 'AIza...'], ['OPENAI_API_KEY', 'OpenAI', 'sk-...'], ['ANTHROPIC_API_KEY', 'Anthropic', 'sk-ant-...'], ['OPENAI_COMPAT_API_KEY', 'سرویس سازگار با OpenAI', 'کلید سرویس']];
   const AI_DEF = {"review": "You are a senior reviewer of Persian-to-English translations of Islamic-studies and humanities texts.\n\nYou receive a JSON array. Each element has: \"id\", \"fa\" (the Persian original) and \"en\" (the current English translation of that paragraph):\n{{PARAGRAPHS_JSON}}\n\nFor every element, check the English against the Persian and fix only real problems:\n- meaning errors, omissions, additions, wrong numbers, names or dates;\n- wrong or inconsistent terminology (follow the mandatory glossary below, if any);\n- grammar, awkward or unidiomatic English, and an inappropriate register for a scholarly publication.\nKeep transliterated names and technical terms consistent. If a paragraph is already correct, return the \"en\" text unchanged and an empty note. Do not rewrite for taste.\n\nReturn ONLY one valid JSON object, no markdown fences and no other text, exactly in this shape:\n{\"items\":[{\"id\":1,\"translation\":\"the corrected English paragraph\",\"note\":\"one short sentence IN PERSIAN saying what you changed and why, or an empty string\"}]}\nReturn exactly one item for every input element, with the same \"id\" values and in the same order.", "rewrite": "You are an experienced Persian news editor.\n\nYou receive a JSON array. Each element has \"id\" and \"text\" (one paragraph or heading of a Persian news item):\n{{PARAGRAPHS_JSON}}\n\nRewrite every text in Persian according to this instruction:\n{{INSTRUCTION}}\n\nRules:\n- Keep every fact, name, number, date, title and quotation exactly as in the original. Never add information that is not in the text.\n- Write natural, correct Persian (use the half-space ZWNJ properly); keep a heading short.\n- If a text needs no change, return it unchanged.\n\nReturn ONLY one valid JSON object, no markdown fences and no other text, exactly in this shape:\n{\"items\":[{\"id\":1,\"text\":\"the rewritten Persian text\"}]}\nReturn exactly one item for every input element, with the same \"id\" values and in the same order."};
   const REWRITE_STYLES = {"polish": "ویرایش و روان‌سازی", "simple": "ساده‌تر", "formal": "رسمی‌تر", "concise": "خلاصه‌تر", "news": "سبک خبری استاندارد"};
+  function aiConns(raw) { try { const j = JSON.parse(raw || '[]'); return Array.isArray(j) ? j.filter(x => x && /^[a-z0-9]{2,12}$/.test(x.id)) : []; } catch (_) { return []; } }
+  async function saveConns(list) { const u = await sb.from('app_config').upsert({ key: 'ai_conns', value: JSON.stringify(list), updated_at: new Date().toISOString() }); if (u.error) throw u.error; }
   async function adminAI() {
     const names = AI_KEYS.map(k => k[0]);
     const cfgKeys = ['ai_wire_api', 'ai_extra_headers', 'ai_base_url', 'ai_max_tokens', 'ai_review_rounds', 'ai_prompt_review', 'ai_prompt_rewrite'];
-    AI_TASKS.forEach(t => { cfgKeys.push('ai_provider_' + t[0], 'ai_model_' + t[0]); });
+    AI_TASKS.forEach(t => { cfgKeys.push('ai_provider_' + t[0], 'ai_model_' + t[0], 'ai_fallback_' + t[0]); });
+    cfgKeys.push('ai_conns');
     let err = '';
     const has = {};
     try { await Promise.all(names.map(async n => { has[n] = await rpc('has_secret', { p_name: n }); })); } catch (e) { err = 'تابع has_secret پیدا نشد. فایل schema_update_1.sql و schema_update_12.sql را اجرا کرده‌اید؟ ' + errText(e); }
     const r = await sb.from('app_config').select('key,value').in('key', cfgKeys);
     const c = {}; (r.data || []).forEach(x => { c[x.key] = x.value; });
     const pr = t => c['ai_provider_' + t] || 'gemini';
+    const conns = aiConns(c.ai_conns);
+    const connHas = {};
+    try { await Promise.all(conns.map(async x => { connHas[x.id] = await rpc('has_secret', { p_name: 'AI_KEY_' + x.id }); })); } catch (_) { /* update 17 missing */ }
+    const provName = id => (AI_PROVIDERS.find(p => p[0] === id) || [id, id])[1];
     return `${err ? `<div class="callout">${esc(err)}</div>` : ''}
       <section class="card"><h2>کلیدهای API</h2>
         <p class="sub">هر کلید بعد از ذخیره دیگر برای هیچ‌کس (حتی مدیر) نمایش داده نمی‌شود و فقط توابع سرور از آن استفاده می‌کنند. فقط کلید سرویس‌هایی را بگذارید که می‌خواهید استفاده کنید.</p>
@@ -2320,11 +2379,26 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
           <input class="ltr" type="password" autocomplete="off" placeholder="${esc(k[2])}" aria-label="کلید ${esc(k[1])}">
           <div class="row"><button class="btn primary small" type="submit">ذخیره</button>${has[k[0]] ? `<button class="btn danger small" type="button" data-act="delkey" data-name="${k[0]}">حذف</button>` : ''}</div></form>`).join('')}</div>
         <p class="meta">اگر در سطح رایگان هستید، فقط متن‌های غیرمحرمانه بفرستید.</p></section>
+      <section class="card"><h2>اتصال‌های بیشتر (چند کلید، چند حساب، سرویس‌های ایرانی)</h2>
+        <p class="sub">هر اتصال یک «سرویس + آدرس + کلید» جداست. مثلاً دو کلید Gemini از دو حساب، یا چند سرویس ایرانی سازگار با OpenAI که هرکدام آدرس خودشان را دارند. بعد در «سرویس و مدل هر کار» برای هر کار یک اتصال اصلی و چند اتصال جایگزین انتخاب می‌کنید؛ اگر اصلی خطا داد یا اعتبارش تمام شد، خودکار نوبت بعدی امتحان می‌شود و لازم نیست آدرس و کلید را عوض کنید.</p>
+        ${conns.length ? `<div class="aigrid">${conns.map(x => `<form class="aiconnkey card" data-id="${x.id}"><b>${esc(x.label || x.id)} ${connHas[x.id] ? '<span class="chip ok">کلید دارد</span>' : '<span class="chip bad">بدون کلید</span>'}</b>
+          <div class="meta">${esc(provName(x.provider))}${x.base_url ? ' · <span class="ltr" dir="ltr">' + esc(x.base_url) + '</span>' : ''}${x.model ? ' · <span class="ltr" dir="ltr">' + esc(x.model) + '</span>' : ''}</div>
+          <input class="ltr" type="password" autocomplete="off" placeholder="کلید تازه (برای تعویض)" aria-label="کلید ${esc(x.label || x.id)}">
+          <div class="row"><button class="btn primary small" type="submit">ذخیرهٔ کلید</button><button class="btn danger small" type="button" data-act="delconn" data-id="${x.id}">حذف اتصال</button></div></form>`).join('')}</div>` : '<p class="meta">هنوز اتصالی اضافه نشده است.</p>'}
+        <form id="aiConnNew" class="aigrid" style="margin-top:10px">
+          <label class="f">نام دلخواه<input type="text" id="cnLabel" placeholder="مثلاً Gemini حساب دوم / سرویس ایرانی الف" required></label>
+          <label class="f">نوع سرویس<select id="cnProv">${AI_PROVIDERS.map(p => `<option value="${p[0]}">${p[1]}</option>`).join('')}</select></label>
+          <label class="f">آدرس پایه (فقط برای «سازگار با OpenAI»)<input class="ltr" type="text" id="cnBase" placeholder="https://api.example.ir/v1"></label>
+          <label class="f">نام مدل پیش‌فرض این اتصال<input class="ltr" type="text" id="cnModel" placeholder="gemini-2.5-flash / gpt-4o-mini ..."></label>
+          <label class="f">روش ارتباط<select id="cnWire"><option value="chat">Chat Completions</option><option value="responses">Responses</option></select></label>
+          <label class="f">کلید API<input class="ltr" type="password" autocomplete="off" id="cnKey" placeholder="کلید" required></label>
+          <div class="row" style="align-self:end"><button class="btn primary" type="submit">افزودن اتصال</button></div></form></section>
       <form class="card" id="aiCfg"><h2>سرویس و مدل هر کار</h2>
         <p class="sub">برای هر کار می‌توانید سرویس و مدل جدا انتخاب کنید (مثلاً ترجمه با Gemini و بازبینی با Claude). خالی‌گذاشتن نام مدل یعنی مدل پیش‌فرض؛ برای ترجمه با Gemini مدل نسخهٔ فعال در تب «پرامپت و مدل» استفاده می‌شود.</p>
         ${AI_TASKS.map(t => `<div class="aigrid"><div class="f"><b>${t[1]}</b></div>
-          <label class="f">سرویس<select id="aiP_${t[0]}">${AI_PROVIDERS.map(p => `<option value="${p[0]}"${pr(t[0]) === p[0] ? ' selected' : ''}>${p[1]}</option>`).join('')}</select></label>
+          <label class="f">سرویس<select id="aiP_${t[0]}">${AI_PROVIDERS.map(p => `<option value="${p[0]}"${pr(t[0]) === p[0] ? ' selected' : ''}>${p[1]}</option>`).join('')}${conns.map(x => `<option value="conn:${x.id}"${pr(t[0]) === 'conn:' + x.id ? ' selected' : ''}>اتصال: ${esc(x.label || x.id)}</option>`).join('')}</select></label>
           <label class="f">نام مدل<input class="ltr" type="text" id="aiM_${t[0]}" value="${esc(c['ai_model_' + t[0]] || '')}" placeholder="مثلاً gpt-4o-mini / claude-sonnet / gemini-flash"></label>
+          ${conns.length ? `<div class="f" style="grid-column:1/-1"><span class="meta">اتصال‌های جایگزین (به این ترتیب امتحان می‌شوند؛ هر کدام باید مدل پیش‌فرض داشته باشد)</span><div class="row" style="flex-wrap:wrap;gap:10px">${conns.map(x => `<label class="row" style="gap:4px"><input type="checkbox" data-fb="${t[0]}" value="${x.id}"${(c['ai_fallback_' + t[0]] || '').split(',').includes(x.id) ? ' checked' : ''}> ${esc(x.label || x.id)}</label>`).join('')}</div></div>` : ''}
           <div class="row" style="align-self:end">${t[0] === 'curate' || t[0] === 'seo' ? '' : `<button type="button" class="btn small" data-act="aitest" data-task="${t[0]}">آزمایش اتصال</button>`}<span class="meta" id="aiT_${t[0]}" dir="auto" style="flex-basis:100%;overflow-wrap:anywhere;user-select:text"></span></div></div>`).join('<hr style="border:0;border-top:1px solid var(--line);margin:10px 0">')}
         <div class="aigrid" style="margin-top:12px">
           <label class="f">آدرس پایهٔ سرویس سازگار با OpenAI (https)<input class="ltr" type="text" id="aiBase" value="${esc(c.ai_base_url || '')}" placeholder="https://api.example.com/v1"></label>
@@ -2470,6 +2544,27 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     resetcfg() { try { localStorage.removeItem(LS); } catch (_) { /* ignore */ } cfg = null; viewSetup(); },
     async logout() { clearInterval(pollT); try { sb.removeAllChannels(); } catch (_) { /* ignore */ } await sb.auth.signOut(); me = null; viewLogin(); },
     async bell() { S.panel = !S.panel; setBell(); if (S.panel) { await markAllRead(); setTimeout(setBell, 1200); } },
+    async installapp() { if (!installEv) return; installEv.prompt(); try { await installEv.userChoice; } catch (_) { /* ignore */ } installEv = null; setBell(); },
+    async enablepush() {
+      if (!pushOK()) { toast('این مرورگر اعلان پوش را پشتیبانی نمی‌کند.'); return; }
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') { toast('اجازهٔ اعلان داده نشد.'); setBell(); return; }
+      const reg = await navigator.serviceWorker.ready;
+      const key = await rpc('push_public_key'); if (!key) throw new Error('کلید اعلان در سرور تنظیم نشده است.');
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: u8(key) });
+      const j = sub.toJSON();
+      await rpc('push_subscribe', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_ua: navigator.userAgent });
+      S.pushOn = true; toast('اعلان روی این دستگاه فعال شد.'); setBell();
+    },
+    async disablepush() {
+      try { const reg = await navigator.serviceWorker.getRegistration(); const sub = reg && await reg.pushManager.getSubscription(); if (sub) { const ep = sub.endpoint; await sub.unsubscribe(); await rpc('push_unsubscribe', { p_endpoint: ep }); } } catch (_) { /* ignore */ }
+      S.pushOn = false; toast('اعلان این دستگاه خاموش شد.'); setBell();
+    },
+    async testpush() {
+      const r = await fnCall('send-push', { action: 'test' });
+      toast(r && r.sent ? 'اعلان آزمایشی فرستاده شد.' : 'ارسال نشد: ' + ((r && r.errors && r.errors[0]) || (r && r.error) || 'دستگاهی ثبت نشده'));
+    },
     async askperm() { try { await Notification.requestPermission(); } catch (_) { /* ignore */ } setBell(); },
     opendoc(el) { S.docId = el.dataset.id; S.confirm = null; S.star = null; S.sel = new Set(); S.lastSel = null; render(); },
     askapprove() {
@@ -2716,10 +2811,11 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       } catch (e) { S.newsTest = { where, result: { error: errText(e), decisions: [] } }; }
       render();
     },
-    async newspoll() {
+    async newspoll(el) {
+      if (el) { el.disabled = true; el.textContent = 'در حال بررسی منابع…'; }
       toast('در حال بررسی منابع…');
       const r = await fnCall('news-ingest', { action: 'poll', force: true });
-      toast(`${fa(r.accepted || 0)} خبر تازه پذیرفته شد (${fa(r.checked || 0)} مورد بررسی).`); render();
+      toast(r.accepted ? `${fa(r.accepted)} خبر تازه به سبد اضافه شد (${fa(r.checked || 0)} منبع بررسی شد).` : `خبر تازه‌ای نبود؛ ${fa(r.checked || 0)} منبع بررسی شد و سبد به‌روز است.`); render();
     },
     async newspollone(el) {
       toast('در حال بررسی…');
@@ -2755,6 +2851,11 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       catch (e) { S.wpMsg = '✗ ' + errText(e); }
       const t2 = $('#wpT'); if (t2) t2.textContent = S.wpMsg;
     },
+    async wptypes() {
+      try { const r = await fnCall('publish-wordpress', { action: 'types' }); S.wpTypes = r.types || []; S.wpMsg = 'نوع‌های نوشتهٔ سایت: ' + S.wpTypes.map(t => `${t.name} ← ${t.rest_base}` + (t.taxonomies && t.taxonomies.length ? ` (طبقه‌بندی: ${t.taxonomies.join('، ')})` : '')).join(' | ') + ' — نام «REST» را در جدول بالا بنویسید.'; }
+      catch (e) { S.wpMsg = '✗ ' + errText(e); }
+      render();
+    },
     async wpcats() {
       try { const r = await fnCall('publish-wordpress', { action: 'categories' }); S.wpCats = (r.categories || []).map(x => ({ id: x.id, name: String(x.name).replace(/&amp;/g, '&') })); S.wpMsg = `${fa(S.wpCats.length)} دسته دریافت شد. برای هر نوع یکی را انتخاب و ذخیره کنید.`; }
       catch (e) { S.wpMsg = '✗ ' + errText(e); }
@@ -2768,6 +2869,20 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     },
     async gscdel() { await rpc('set_secret', { p_name: 'GSC_SERVICE_ACCOUNT', p_value: '' }); S.gscMsg = ''; toast('کلید حذف شد.'); render(); },
     async wpdelkey() { await rpc('set_secret', { p_name: 'WP_APP_PASSWORD', p_value: '' }); toast('رمز حذف شد.'); render(); },
+    async delconn(el) {
+      const id = el.dataset.id; if (!id) return;
+      const rows = await sb.from('app_config').select('key,value').or('key.like.ai_provider_%,key.like.ai_fallback_%,key.eq.ai_conns');
+      const c = {}; (rows.data || []).forEach(x => { c[x.key] = x.value; });
+      await saveConns(aiConns(c.ai_conns).filter(x => x.id !== id));
+      const up = [];
+      AI_TASKS.forEach(t => {
+        if (c['ai_provider_' + t[0]] === 'conn:' + id) up.push({ key: 'ai_provider_' + t[0], value: 'gemini', updated_at: new Date().toISOString() });
+        const fb = (c['ai_fallback_' + t[0]] || '').split(',').filter(x => x && x !== id).join(',');
+        if (fb !== (c['ai_fallback_' + t[0]] || '')) up.push({ key: 'ai_fallback_' + t[0], value: fb, updated_at: new Date().toISOString() });
+      });
+      if (up.length) await sb.from('app_config').upsert(up);
+      await rpc('set_secret', { p_name: 'AI_KEY_' + id, p_value: '' }); toast('اتصال حذف شد.'); render();
+    },
     async delkey(el) { await rpc('set_secret', { p_name: el.dataset.name || 'GEMINI_API_KEY', p_value: '' }); toast('کلید حذف شد.'); render(); },
     async aitest(el) {
       const t = el.dataset.task, out = $('#aiT_' + t); if (out) out.textContent = 'در حال آزمایش… (تنظیمات را اول ذخیره کنید)';
@@ -2961,10 +3076,31 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         const sT = $('#wpSeoT').value.trim(), sD = $('#wpSeoD').value.trim(), sF = $('#wpSeoF').value.trim();
         if (![sT, sD, sF].every(keyOk)) throw new Error('نام فیلد سئو فقط حروف لاتین، عدد، خط تیره و زیرخط دارد.');
         const rows = { wp_url: url, wp_user: $('#wpUser').value.trim(), wp_status: $('#wpStatus').value, wp_post_type: type, wp_seo_title_key: sT, wp_seo_desc_key: sD, wp_seo_focus_key: sF };
+        const restOk = v => !v || /^[a-z0-9_-]+$/i.test(v);
+        Object.keys(DOC_KIND).forEach(k => {
+          const t = $('#wpt_' + k).value.trim(), ck = $('#wpck_' + k).value.trim(), gk = $('#wpgk_' + k).value.trim();
+          if (![t, ck, gk].every(restOk)) throw new Error('نام REST فقط حروف لاتین، عدد، خط تیره و زیرخط دارد.');
+          rows['wp_type_' + k] = t; rows['wp_catkey_' + k] = ck; rows['wp_tagkey_' + k] = gk;
+        });
+        rows.wp_byline = $('#wpByline').value;
         Object.keys(DOC_KIND).forEach(k => { const v = ($('#wpc_' + k).value || '').trim(); if (v && !/^\d+(,\d+)*$/.test(v)) throw new Error('شناسهٔ دسته باید عدد باشد.'); rows['wp_cat_' + k] = v; });
         const now = new Date().toISOString();
         const u = await sb.from('app_config').upsert(Object.entries(rows).map(([key, value]) => ({ key, value, updated_at: now }))); if (u.error) throw u.error;
-        toast('تنظیمات وردپرس ذخیره شد.'); return render();
+        S.wpKinds = null; S.wpCatList = null; toast('تنظیمات وردپرس ذخیره شد.'); return render();
+      }
+      if (f.id === 'aiConnNew') {
+        const label = $('#cnLabel').value.trim(), prov = $('#cnProv').value, base = $('#cnBase').value.trim(), model = $('#cnModel').value.trim(), key = $('#cnKey').value.trim();
+        if (!label || !key) throw new Error('نام و کلید را وارد کنید.');
+        if (prov === 'openai_compat' && !/^https:\/\/[^\s]+$/i.test(base)) throw new Error('برای «سازگار با OpenAI» آدرس پایه (https://...) لازم است.');
+        const cur = aiConns((await sb.from('app_config').select('value').eq('key', 'ai_conns').maybeSingle()).data?.value);
+        let id; do { id = Math.random().toString(36).slice(2, 8).replace(/[^a-z0-9]/g, 'x'); } while (cur.some(x => x.id === id) || id.length < 4);
+        await rpc('set_secret', { p_name: 'AI_KEY_' + id, p_value: key });
+        cur.push({ id, label, provider: prov, base_url: prov === 'openai_compat' ? base : '', model, wire_api: $('#cnWire').value });
+        await saveConns(cur); toast('اتصال اضافه شد. حالا در «سرویس و مدل هر کار» انتخابش کنید.'); return render();
+      }
+      if (f.classList.contains('aiconnkey')) {
+        const v = f.querySelector('input').value.trim(); if (!v) throw new Error('کلید را وارد کنید.');
+        await rpc('set_secret', { p_name: 'AI_KEY_' + f.dataset.id, p_value: v }); toast('کلید ذخیره شد.'); return render();
       }
       if (f.classList.contains('aikey')) {
         const v = f.querySelector('input').value.trim(); if (!v) throw new Error('کلید را وارد کنید.');
@@ -2976,7 +3112,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         const mx = $('#aiMax').value.trim(); if (mx && !(Number(mx) >= 256 && Number(mx) <= 32000)) throw new Error('طول پاسخ باید بین ۲۵۶ و ۳۲۰۰۰ باشد.');
         const pr = (id, def) => { const v = $(id).value.trim(); if (!v.includes('{{PARAGRAPHS_JSON}}')) throw new Error('پرامپت باید شامل {{PARAGRAPHS_JSON}} باشد.'); return v === def.trim() ? '' : v; };
         const rows = { ai_base_url: base, ai_max_tokens: mx, ai_review_rounds: $('#aiRounds').value, ai_wire_api: $('#aiWire').value, ai_extra_headers: $('#aiHdr').value.trim(), ai_prompt_review: pr('#aiPrR', AI_DEF.review), ai_prompt_rewrite: pr('#aiPrW', AI_DEF.rewrite) };
-        AI_TASKS.forEach(t => { rows['ai_provider_' + t[0]] = $('#aiP_' + t[0]).value; rows['ai_model_' + t[0]] = $('#aiM_' + t[0]).value.trim(); });
+        AI_TASKS.forEach(t => { rows['ai_provider_' + t[0]] = $('#aiP_' + t[0]).value; rows['ai_model_' + t[0]] = $('#aiM_' + t[0]).value.trim(); rows['ai_fallback_' + t[0]] = [...document.querySelectorAll(`[data-fb="${t[0]}"]:checked`)].map(x => x.value).filter(v => v !== $('#aiP_' + t[0]).value.replace('conn:', '')).join(','); });
         const now = new Date().toISOString();
         const u = await sb.from('app_config').upsert(Object.entries(rows).map(([key, value]) => ({ key, value, updated_at: now }))); if (u.error) throw u.error;
         toast('تنظیمات ذخیره شد.'); return render();
