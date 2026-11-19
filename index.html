@@ -1123,6 +1123,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       if (!up.error) path = id + '/source.docx';
       await rpc('writer_submit', { p_id: id, p_title: title, p_filename: file.name, p_path: path, p_segments: segs.map(x => ({ kind: x.kind, text: x.text })), p_replaces: replaces || null });
       const imgs = S.wImgs || []; S.wImgs = []; let okImgs = 0;
+      try { okImgs += (await importDocImages(id, segs.docImgs)).ok; } catch (_) { /* best effort */ }
       for (const f of imgs) { try { await pmUpload(id, f); okImgs++; } catch (e) { toast(`${f.name}: ${errText(e)}`); } }
       S.wDone = { title, fixed: !!replaces, imgs: okImgs };
     } finally { S.busy = ''; render(); }
@@ -1153,17 +1154,35 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     const buf = await file.arrayBuffer();
     const res = await mammoth.convertToHtml({ arrayBuffer: buf });
     const doc = new DOMParser().parseFromString(res.value, 'text/html');
-    const segs = [];
+    const segs = [], found = [];
     const add = (kind, text) => { text = String(text).replace(/\s+/g, ' ').trim(); if (text) segs.push({ kind, text }); };
     doc.body.childNodes.forEach(n => {
       if (n.nodeType !== 1) return;
       const tag = n.tagName.toLowerCase();
+      n.querySelectorAll('img').forEach(im => found.push({ src: im.getAttribute('src') || '', alt: im.getAttribute('alt') || '', after: segs.length + (String(n.textContent).trim() ? 1 : 0) }));
       if (/^h[1-6]$/.test(tag)) add('heading', n.textContent);
       else if (tag === 'ul' || tag === 'ol') [...n.querySelectorAll('li')].forEach((li, i) => add('list_item', (tag === 'ol' ? (i + 1) + '. ' : '- ') + li.textContent));
       else if (tag === 'table') [...n.querySelectorAll('tr')].forEach(tr => add('paragraph', [...tr.children].map(c => c.textContent.trim()).join(' | ')));
       else add('paragraph', n.textContent);
     });
+    segs.docImgs = found;
     return segs;
+  }
+  // images found inside the Word file: decoded here, then attached to the document like any other picture
+  async function importDocImages(docId, found) {
+    let ok = 0, skip = 0;
+    for (const f of (found || []).slice(0, 14)) {
+      const m = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/i.exec(f.src);
+      if (!m) { skip++; continue; }
+      try {
+        const bin = atob(m[2]); if (bin.length < 4000) { skip++; continue; }
+        const u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+        const type = m[1].toLowerCase(), ext = type === 'image/png' ? 'png' : type === 'image/webp' ? 'webp' : 'jpg';
+        await pmUpload(docId, new File([u8], `word-image-${ok + 1}.${ext}`, { type }), { alt: f.alt || null, after: f.after > 0 ? f.after : null });
+        ok++;
+      } catch (e) { skip++; }
+    }
+    return { ok, skip: skip + Math.max(0, (found || []).length - 14) };
   }
   async function insertDoc(title, filename, path, segs) {
     const id = uuid();
@@ -1201,7 +1220,8 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         if (r.error) { await sb.from('documents').delete().eq('id', id); throw r.error; }
       }
       S.docId = id;
-      toast(`«${title}» بارگذاری شد: ${fa(segs.length)} بند، ${fa(wc)} کلمه`);
+      let imp = { ok: 0, skip: 0 }; try { imp = await importDocImages(id, segs.docImgs); } catch (_) { /* best effort */ }
+      toast(`«${title}» بارگذاری شد: ${fa(segs.length)} بند، ${fa(wc)} کلمه${imp.ok ? '، ' + fa(imp.ok) + ' تصویر' : ''}${imp.skip ? ' (' + fa(imp.skip) + ' تصویر قابل‌استفاده نبود)' : ''}`);
     } finally { S.busy = ''; }
     render();
   }
@@ -1381,7 +1401,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         <input type="text" id="bulkNote" placeholder="یک نظر برای همهٔ بندهای انتخاب‌شده" aria-label="نظر گروهی"><button type="button" class="btn small" data-act="bulkcm">ثبت نظر</button>
         <button type="button" class="btn small" data-act="selcopy">کپی بندها</button>${ro ? '' : '<button type="button" class="btn small danger" data-act="bulkdel">حذف بندها</button>'}<button type="button" class="btn small" data-act="selall">انتخاب همه</button><button type="button" class="btn small" data-act="selnone">لغو انتخاب</button></div></div>
       <div class="sheet" id="sheet">${s.data.map(para).join('')}</div>
-      ${pmetaSlot(id, { fields: true, attach: true })}
+      ${pmetaSlot(id, { fields: false, attach: true })}
       ${ned ? (!canEd ? '<div class="submitbar dbar"><span class="meta">این خبر در سبد ویراستار خبر است.</span></div>' : `<div class="submitbar dbar">${S.confirm === 'nsend'
         ? `<span class="row" style="flex:1 1 320px"><input type="text" id="edNote" class="plain" placeholder="یادداشت برای بازبین محتوا (اختیاری)" style="flex:1 1 220px"><button type="button" class="btn primary" data-act="nsend" data-id="${id}">ارسال برای بازبین${nextHint ? ' و بعدی' : ''}</button><button type="button" class="btn quiet" data-act="cancelc">انصراف</button></span>`
         : S.confirm === 'ndiscard'
@@ -1681,7 +1701,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     return `<div><button type="button" class="btn quiet" data-act="qaback">→ فهرست</button></div>
       <section class="page-head"><h1>${esc(doc.title)}</h1><p class="sub">مترجم: ${esc(nm(doc.claimed_by))} · ${fa(changed)} از ${fa(segs.length)} بند ویرایش شده · TER ${pct(dist / fin)} · ${fa(segs.reduce((n, g) => n + g.seconds_spent, 0) / 60 | 0)} دقیقه زمان ثبت‌شده</p></section>
       <section class="card" id="qaPrio">${qaPrioInner(doc, pm)}</section>
-      ${pmetaSlot(id, { fields: true, attach: true })}
+      ${pmetaSlot(id, { fields: false, attach: true })}
       ${ogPanel(segs, g => g.current_text)}
       ${aiBar(doc, segs, true)}
       <div class="toolbar"><div class="legend"><span>راهنما:</span><del>حذف‌شده از ترجمه ماشینی</del><ins>افزوده‌شده توسط مترجم</ins></div><span class="saved" id="saved">برای اصلاح مستقیم هر بند، «ویرایش ترجمه» را بزنید. تغییرها هنگام خروج از کادر ذخیره می‌شوند.</span></div>
@@ -1725,13 +1745,13 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       return { blob, type };
     } finally { URL.revokeObjectURL(url); }
   }
-  async function pmUpload(docId, file) {
+  async function pmUpload(docId, file, o = {}) {
     const { blob, type } = await prepImage(file);
     const ext = type === 'image/png' ? 'png' : type === 'image/webp' ? 'webp' : 'jpg';
     const path = `${docId}/${uuid()}.${ext}`;
     const up = await sb.storage.from('doc-images').upload(path, blob, { contentType: type });
     if (up.error) throw up.error;
-    try { await rpc('attach_image', { p_doc: docId, p_path: path, p_filename: file.name, p_mime: type, p_size: blob.size, p_alt: null, p_after: null }); }
+    try { await rpc('attach_image', { p_doc: docId, p_path: path, p_filename: file.name, p_mime: type, p_size: blob.size, p_alt: o.alt || null, p_after: o.after || null }); }
     catch (e) { await sb.storage.from('doc-images').remove([path]); throw e; }
   }
   async function pmCats() {
