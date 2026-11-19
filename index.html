@@ -609,6 +609,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   /* ===== v16: images + publish meta ===== */
   .pmeta { display: flex; flex-direction: column; gap: 12px; margin-top: 4px; }
   .seo-box { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid var(--line, #e3e3ea); border-radius: 12px; }
+  .seo-row.kw { grid-template-columns: 1fr 0 auto; }
   .seo-rows { display: grid; gap: 6px; } .seo-row { display: grid; grid-template-columns: 90px 1fr auto; gap: 8px; align-items: center; } .seo-v { overflow-wrap: anywhere; font-size: 13px; }
   .seo-checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 13px; } .seo-checks .ok { color: var(--ok, #1a7f4b); } .seo-checks .no { color: var(--bad, #b42318); }
   .curcard summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -1807,16 +1808,27 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   const SEO_FIELDS = [['seo_focus', 'focus_keyword', 'کلمهٔ کلیدی'], ['seo_title', 'seo_title', 'عنوان سئو'], ['seo_desc', 'meta_description', 'توضیح متا'], ['slug', 'slug', 'نامک'], ['excerpt', 'excerpt', 'خلاصه'], ['tags', 'tags', 'برچسب‌ها']];
   const seoVal = (p, k) => k === 'tags' ? (p.tags || []).join(', ') : (p[k] || '');
   function seoBlock(id) {
-    const r = (S.seo || {})[id], busy = S.seoBusy === id;
-    const btn = `<button type="button" class="btn small" data-act="pmseo" data-id="${id}"${busy ? ' disabled' : ''}>${busy ? 'در حال بررسی…' : (r ? 'پیشنهاد دوباره' : 'پیشنهاد سئو با هوش مصنوعی')}</button>`;
-    if (!r) return `<div class="row">${btn}<span class="meta">کلمهٔ کلیدی، برچسب، عنوان سئو، متا، نامک و خلاصه را از روی متن پیشنهاد می‌دهد.</span></div>`;
-    const p = r.proposal;
-    return `<div class="seo-box"><div class="row">${btn}<span class="chip ${r.score >= 80 ? 'ok' : r.score >= 55 ? 'gold' : 'bad'}">نمرهٔ سئو ${fa(r.score)} از ۱۰۰</span>${r.language === 'fa-source' ? '<span class="chip gold">بر پایهٔ متن فارسی (ترجمه هنوز نیست)</span>' : ''}<button type="button" class="btn small primary" data-act="pmapply" data-id="${id}" data-k="all">اعمال همهٔ پیشنهادها</button></div>
+    const r = (S.seo || {})[id], c = (S.seoC || {})[id], busy = S.seoBusy === id;
+    const sb1 = `<button type="button" class="btn small${c || r ? '' : ' primary'}" data-act="pmseo" data-id="${id}"${busy ? ' disabled' : ''}>${busy ? 'در حال بررسی…' : (c || r ? 'پیشنهاد کلیدواژهٔ تازه' : 'سئو: مرحلهٔ ۱ ـ پیشنهاد کلیدواژه')}</button>`;
+    if (!c && !r) return `<div class="row">${sb1}<span class="meta">اول چند کلیدواژهٔ کاندیدا با آمار واقعی گوگل (سرچ کنسول) پیشنهاد می‌شود؛ شما یکی را انتخاب می‌کنید و بعد فیلدهای سئو بر پایهٔ آن پر می‌شود.</span></div>`;
+    if (r) {
+      const p = r.proposal;
+      return `<div class="seo-box"><div class="row">${sb1}<button type="button" class="btn small" data-act="pmseoback" data-id="${id}">تغییر کلیدواژه</button><span class="chip">کلیدواژه: <span class="ltr" dir="ltr">${esc(p.focus_keyword)}</span></span><span class="chip ${r.score >= 80 ? 'ok' : r.score >= 55 ? 'gold' : 'bad'}">نمرهٔ سئو ${fa(r.score)} از ۱۰۰</span>${r.language === 'fa-source' ? '<span class="chip gold">بر پایهٔ متن فارسی (ترجمه هنوز نیست)</span>' : ''}<button type="button" class="btn small primary" data-act="pmapply" data-id="${id}" data-k="all">اعمال همهٔ پیشنهادها</button></div>
       <div class="seo-rows">${SEO_FIELDS.map(f => `<div class="seo-row"><span class="meta">${f[2]}</span><span class="ltr seo-v" dir="ltr">${esc(seoVal(p, f[1])) || '—'}</span><button type="button" class="btn small quiet" data-act="pmapply" data-id="${id}" data-k="${f[0]}">اعمال</button></div>`).join('')}</div>
-      <ul class="seo-checks">${r.checks.map(c => `<li class="${c.ok ? 'ok' : 'no'}">${c.ok ? '✓' : '✗'} ${esc(c.msg)}</li>`).join('')}</ul>
-      ${(p.suggestions || []).length ? `<div class="callout"><b>راهکارهای ارتقا:</b><ul>${p.suggestions.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
+      <ul class="seo-checks">${r.checks.map(x => `<li class="${x.ok ? 'ok' : 'no'}">${x.ok ? '✓' : '✗'} ${esc(x.msg)}</li>`).join('')}</ul>
+      ${(p.suggestions || []).length ? `<div class="callout"><b>پیشنهاد ارتقای مطلب برای سئوی بهتر:</b><ul>${p.suggestions.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
       ${(p.secondary_keywords || []).length ? `<p class="meta">کلیدواژه‌های فرعی: <span class="ltr" dir="ltr">${esc(p.secondary_keywords.join(', '))}</span></p>` : ''}
       <p class="meta">نمره از روی بررسی‌های بالا محاسبه می‌شود، نه نظر مدل. چیزی تا «اعمال» نشود ذخیره نمی‌شود.</p></div>`;
+    }
+    const g = c.gsc || {}, num = n => n == null ? '—' : fa(Math.round(n));
+    const stat = x => !g.connected ? '<span class="meta">—</span>' : !x ? '<span class="meta">—</span>' : x.impressions ? `<span class="meta">${num(x.impressions)} نمایش، ${num(x.clicks)} کلیک، رتبهٔ ${x.position == null ? '—' : fa(x.position)}</span>` : '<span class="meta">بدون آمار (جستجوی کمتر یا کلمهٔ تازه)</span>';
+    const note = g.connected ? `<p class="meta">آمار واقعی ${fa(g.days || 90)} روز گذشتهٔ سایت از Search Console (${fa(g.queries)} عبارت جستجو).</p>`
+      : g.error ? `<div class="callout">Search Console خطا داد: <span class="ltr" dir="ltr">${esc(g.error)}</span> (کلیدواژه‌ها بدون آمار نمایش داده می‌شوند)</div>`
+      : '<p class="meta">Search Console وصل نیست؛ کلیدواژه‌ها بدون آمار واقعی پیشنهاد شده‌اند. مدیر می‌تواند در «مدیریت ← اتصال وردپرس» آن را وصل کند.</p>';
+    return `<div class="seo-box"><div class="row">${sb1}<b>مرحلهٔ ۱: کلیدواژه را انتخاب کنید</b></div>${note}
+      <div class="seo-rows">${(c.candidates || []).map(k => `<div class="seo-row kw"><div><b class="ltr" dir="ltr">${esc(k.keyword)}</b><div class="meta">${esc(k.reason || '')}</div>${stat(k.gsc)}</div><span></span><button type="button" class="btn small primary" data-act="pmkw" data-id="${id}" data-kw="${esc(k.keyword)}"${busy ? ' disabled' : ''}>انتخاب</button></div>`).join('')}</div>
+      ${(c.site_top || []).length ? `<div><span class="meta">عبارت‌هایی که همین حالا برای سایت نمایش می‌گیرند (برای انتخاب بزنید):</span><div class="row" style="flex-wrap:wrap;gap:6px;margin-top:4px">${c.site_top.map(q => `<button type="button" class="chip" data-act="pmkw" data-id="${id}" data-kw="${esc(q.q)}" title="${fa(q.impressions)} نمایش · رتبهٔ ${fa(q.position)}"><span class="ltr" dir="ltr">${esc(q.q)}</span></button>`).join('')}</div></div>` : ''}
+      <div class="row"><input class="ltr" dir="ltr" type="text" data-seokw="${id}" placeholder="یا کلیدواژهٔ خودتان را بنویسید (انگلیسی)" style="flex:1;min-width:180px"><button type="button" class="btn small" data-act="pmkw" data-id="${id}" data-kw=""${busy ? ' disabled' : ''}>استفاده از این</button></div></div>`;
   }
   async function hydratePmeta(force) {
     for (const box of document.querySelectorAll('[data-pmeta]')) {
@@ -2229,7 +2241,20 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       'auth_callback' => function () { return current_user_can('edit_posts'); },
     ]);
   }
-});</pre></section>`;
+});</pre></section>${await gscCard()}`;
+  }
+  async function gscCard() {
+    let has = false;
+    try { has = await rpc('has_secret', { p_name: 'GSC_SERVICE_ACCOUNT' }); } catch (_) { /* ignore */ }
+    const r = await sb.from('app_config').select('value').eq('key', 'gsc_site').maybeSingle();
+    const site = (r.data && r.data.value) || '';
+    return `<form class="card" id="gscCfg"><h2>Google Search Console (آمار واقعی برای سئو)</h2>
+      <p class="sub">اختیاری. با وصل شدن، در مرحلهٔ اول سئو کنار هر کلیدواژه نمایش، کلیک و رتبهٔ واقعی ۹۰ روز گذشتهٔ سایت دیده می‌شود. فقط خواندنی است.</p>
+      <ol class="meta"><li>در <span dir="ltr">console.cloud.google.com</span> یک پروژه بسازید و «Google Search Console API» را فعال کنید.</li><li>در «IAM ← Service Accounts» یک حساب سرویس بسازید و از تب Keys یک کلید JSON بگیرید.</li><li>در Search Console، «Settings ← Users and permissions» ایمیل حساب سرویس (<span dir="ltr">…@….iam.gserviceaccount.com</span>) را با دسترسی «Restricted» (فقط‌خواندنی) اضافه کنید.</li><li>پایین، نام property را (مثل <span dir="ltr">sc-domain:riseislamicstudies.com</span> یا <span dir="ltr">https://riseislamicstudies.com/</span>) و محتوای فایل JSON را وارد کنید.</li></ol>
+      <label class="f">Property ${has ? '<span class="chip ok">کلید ذخیره شده</span>' : '<span class="chip">کلید ندارد</span>'}<input class="ltr" type="text" id="gscSite" value="${esc(site)}" placeholder="sc-domain:riseislamicstudies.com"></label>
+      <label class="f">محتوای فایل JSON حساب سرویس (بعد از ذخیره دیگر نمایش داده نمی‌شود)<textarea class="ltr" id="gscJson" rows="4" dir="ltr" autocomplete="off" placeholder='{"type":"service_account", …}'></textarea></label>
+      <div class="row"><button class="btn primary" type="submit">ذخیره</button><button type="button" class="btn" data-act="gsctest">آزمایش اتصال</button>${has ? '<button type="button" class="btn danger" data-act="gscdel">حذف کلید</button>' : ''}</div>
+      <p class="meta" id="gscT" dir="auto" style="overflow-wrap:anywhere;user-select:text">${S.gscMsg ? esc(S.gscMsg) : ''}</p></form>`;
   }
   async function adminPubset() {
     const pm = await loadPrintMin();
@@ -2367,11 +2392,29 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       const id = el.dataset.id; if (S.seoBusy) return; S.seoBusy = id;
       const box = el.closest('[data-pmeta]'); if (box) { box.dataset.ready = '0'; await hydratePmeta(); }
       try {
-        const r = await fnCall('ai-content', { action: 'seo', document_id: id });
+        const r = await fnCall('ai-content', { action: 'seo_candidates', document_id: id });
+        if (!r || r.ok === false) throw new Error({ no_text: 'متنی برای بررسی نیست.' }[r && r.error] || (r && r.error) || 'خطا در پیشنهاد کلیدواژه');
+        (S.seoC = S.seoC || {})[id] = r; if (S.seo) delete S.seo[id];
+      } catch (e) { toast('پیشنهاد کلیدواژه: ' + errText(e)); }
+      S.seoBusy = null; if (box) { box.dataset.ready = '0'; await hydratePmeta(); }
+    },
+    async pmkw(el) {
+      const id = el.dataset.id; if (S.seoBusy) return;
+      const box = el.closest('[data-pmeta]');
+      let kw = (el.dataset.kw || '').trim();
+      if (!kw && box) { const i = box.querySelector(`[data-seokw="${id}"]`); kw = i ? i.value.trim() : ''; }
+      if (!kw) { toast('کلیدواژه را انتخاب یا وارد کنید.'); return; }
+      S.seoBusy = id; if (box) { box.dataset.ready = '0'; await hydratePmeta(); }
+      try {
+        const r = await fnCall('ai-content', { action: 'seo', document_id: id, keyword: kw });
         if (!r || r.ok === false) throw new Error({ no_text: 'متنی برای بررسی نیست.' }[r && r.error] || (r && r.error) || 'خطا در پیشنهاد سئو');
         (S.seo = S.seo || {})[id] = r;
       } catch (e) { toast('پیشنهاد سئو: ' + errText(e)); }
       S.seoBusy = null; if (box) { box.dataset.ready = '0'; await hydratePmeta(); }
+    },
+    async pmseoback(el) {
+      const id = el.dataset.id, box = el.closest('[data-pmeta]'); if (S.seo) delete S.seo[id];
+      if (box) { box.dataset.ready = '0'; await hydratePmeta(); }
     },
     async pmapply(el) {
       const id = el.dataset.id, k = el.dataset.k, r = (S.seo || {})[id], box = el.closest('[data-pmeta]'); if (!r || !box) return;
@@ -2717,6 +2760,13 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       catch (e) { S.wpMsg = '✗ ' + errText(e); }
       render();
     },
+    async gsctest() {
+      S.gscMsg = 'در حال آزمایش…'; const t = $('#gscT'); if (t) t.textContent = S.gscMsg;
+      try { const r = await fnCall('ai-content', { action: 'gsc_test' }); S.gscMsg = r.ok ? `✓ وصل است: ${r.site} · ${fa(r.queries)} عبارت جستجو${(r.top || []).length ? ' · مثلاً: ' + r.top.join('، ') : ''}` : '✗ ' + ({ not_connected: 'هنوز property یا کلید ذخیره نشده.', service_account_json_invalid: 'فایل JSON معتبر نیست.' }[r.error] || r.error) + (/gsc_403/.test(r.error || '') ? ' (ایمیل حساب سرویس را در Search Console به‌عنوان کاربر اضافه کرده‌اید؟)' : ''); }
+      catch (e) { S.gscMsg = '✗ ' + errText(e); }
+      const t2 = $('#gscT'); if (t2) t2.textContent = S.gscMsg;
+    },
+    async gscdel() { await rpc('set_secret', { p_name: 'GSC_SERVICE_ACCOUNT', p_value: '' }); S.gscMsg = ''; toast('کلید حذف شد.'); render(); },
     async wpdelkey() { await rpc('set_secret', { p_name: 'WP_APP_PASSWORD', p_value: '' }); toast('رمز حذف شد.'); render(); },
     async delkey(el) { await rpc('set_secret', { p_name: el.dataset.name || 'GEMINI_API_KEY', p_value: '' }); toast('کلید حذف شد.'); render(); },
     async aitest(el) {
@@ -2890,6 +2940,17 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       if (f.id === 'wpKey') {
         const v = f.querySelector('input').value.trim(); if (!v) throw new Error('رمز برنامه را وارد کنید.');
         await rpc('set_secret', { p_name: 'WP_APP_PASSWORD', p_value: v }); toast('رمز ذخیره شد.'); return render();
+      }
+      if (f.id === 'gscCfg') {
+        const site = $('#gscSite').value.trim(), js = $('#gscJson').value.trim();
+        if (!site) throw new Error('نام property را وارد کنید.');
+        if (js) {
+          let o; try { o = JSON.parse(js); } catch (_) { throw new Error('محتوای JSON معتبر نیست؛ کل فایل را کپی کنید.'); }
+          if (!o.client_email || !o.private_key) throw new Error('این JSON کلید حساب سرویس نیست (client_email یا private_key ندارد).');
+          await rpc('set_secret', { p_name: 'GSC_SERVICE_ACCOUNT', p_value: JSON.stringify(o) });
+        }
+        const u = await sb.from('app_config').upsert({ key: 'gsc_site', value: site, updated_at: new Date().toISOString() }); if (u.error) throw u.error;
+        S.gscMsg = ''; toast('تنظیمات Search Console ذخیره شد. «آزمایش اتصال» را بزنید.'); return render();
       }
       if (f.id === 'wpCfg') {
         const url = $('#wpUrl').value.trim().replace(/\/+$/, '');
