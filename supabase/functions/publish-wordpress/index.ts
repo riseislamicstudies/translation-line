@@ -181,6 +181,16 @@ Deno.serve(async (req) => {
       // users with the scholar role (configurable: wp_author_role); scholars have an intro card on the site, so no byline is added
       const roleSlug = /^[a-z0-9_-]+$/i.test(c.wp_author_role || "") ? c.wp_author_role : "scholar";
       const all: { id: number; name: string; slug: string }[] = [];
+      // 1) the site's own small route (functions.php snippet, path rise/v1/scholars): immune to firewalls that block /wp/v2/users
+      let custom: any = null;
+      for (const p of [`/rise/v1/scholars?role=${roleSlug}`, `@/rise/v1/scholars?role=${roleSlug}`]) {
+        try { custom = await wp(base, auth, p); if (Array.isArray(custom)) break; custom = null; } catch { /* try the next route */ }
+      }
+      if (Array.isArray(custom)) {
+        all.push(...custom.map((x: any) => ({ id: Number(x.id), name: String(x.name), slug: String(x.slug ?? "") })));
+        all.sort((a, b) => a.name.localeCompare(b.name));
+        return json({ ok: true, role: roleSlug, authors: all, via: "custom" });
+      }
       for (let page = 1; page <= 10; page++) {
         const q = `/wp/v2/users?roles=${roleSlug}&per_page=100&page=${page}&_fields=id,name,slug`;
         let us: any = null, lastErr: unknown = null;
