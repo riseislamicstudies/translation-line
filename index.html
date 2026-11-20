@@ -2341,14 +2341,16 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     const lv = {}; try { const L = await sb.from('translator_levels').select('user_id,level'); (L.data || []).forEach(x => { lv[x.user_id] = x.level; }); } catch (_) { /* table missing */ }
     const roleOpts = r => Object.keys(ROLE_FA).map(k => `<option value="${k}"${k === r ? ' selected' : ''}>${ROLE_FA[k]}</option>`).join('');
     return `${fnMsg ? `<div class="callout">${esc(fnMsg)}</div>` : ''}
-      <div class="table-wrap"><table><thead><tr><th>نام</th><th>ایمیل</th><th>نقش</th><th>رتبهٔ مترجم</th><th>اعلان</th><th>آخرین ورود</th><th>رمز جدید</th></tr></thead><tbody>
+      <div class="table-wrap"><table><thead><tr><th>نام</th><th>ایمیل</th><th>نقش</th><th>رتبهٔ مترجم</th><th>تلفن</th><th>اعلان</th><th>آخرین ورود</th><th>رمز جدید</th><th>حساب</th></tr></thead><tbody>
       ${profs.map(p => { const u = emails[p.id]; return `<tr><td><input type="text" data-pname="${p.id}" value="${esc(p.full_name)}" aria-label="نام"></td>
-        <td class="num" dir="ltr">${esc(u ? u.email : '—')}</td>
+        <td class="num" dir="ltr">${fnMsg || !u ? esc(u ? u.email : '—') : `<span class="row"><input type="email" class="ltr" data-pemail="${p.id}" data-orig="${esc(u.email || '')}" value="${esc(u.email || '')}" aria-label="ایمیل" style="width:200px"><button type="button" class="btn small" data-act="setemail" data-id="${p.id}">ذخیره</button></span>`}${u && u.banned_until && new Date(u.banned_until) > new Date() ? ' <span class="chip bad">غیرفعال</span>' : ''}</td>
         <td><select data-prole="${p.id}" aria-label="نقش">${roleOpts(p.role)}</select></td>
         <td>${p.role === 'translator' ? `<select data-plevel="${p.id}" aria-label="رتبهٔ مترجم"><option value="regular"${lv[p.id] !== 'senior' ? ' selected' : ''}>عادی</option><option value="senior"${lv[p.id] === 'senior' ? ' selected' : ''}>ارشد</option></select>` : '<span class="meta">—</span>'}</td>
+        <td><input type="tel" class="ltr" data-pphone="${p.id}" value="${esc((S.contacts[p.id] || {}).phone || '')}" aria-label="تلفن" style="width:130px"></td>
         <td><input type="checkbox" data-pnotify="${p.id}" ${p.notify ? 'checked' : ''} aria-label="اعلان"></td>
         <td class="meta">${u && u.last_sign_in_at ? fmtT(u.last_sign_in_at) : '—'}</td>
-        <td>${fnMsg ? '' : `<span class="row"><input type="password" class="ltr" data-ppass="${p.id}" placeholder="حداقل ۸ نویسه" autocomplete="new-password" style="width:150px"><button type="button" class="btn small" data-act="setpass" data-id="${p.id}">تنظیم</button></span>`}</td></tr>`; }).join('')}</tbody></table></div>
+        <td>${fnMsg ? '' : `<span class="row"><input type="password" class="ltr" data-ppass="${p.id}" placeholder="حداقل ۸ نویسه" autocomplete="new-password" style="width:150px"><button type="button" class="btn small" data-act="setpass" data-id="${p.id}">تنظیم</button></span>`}</td>
+        <td>${fnMsg || p.id === (me && me.id) ? '<span class="meta">—</span>' : S.userDel === p.id ? `<span class="row"><span class="meta">حذف دائمی؟</span><button type="button" class="btn small danger" data-act="deluser" data-id="${p.id}">بله، حذف شود</button><button type="button" class="btn small" data-act="canceluser">انصراف</button></span>` : `<span class="row">${u && u.banned_until && new Date(u.banned_until) > new Date() ? `<button type="button" class="btn small" data-act="enableuser" data-id="${p.id}">فعال‌سازی</button>` : `<button type="button" class="btn small" data-act="disableuser" data-id="${p.id}">غیرفعال</button>`}<button type="button" class="btn small quiet danger" data-act="askdeluser" data-id="${p.id}">حذف</button></span>`}</td></tr>`; }).join('')}</tbody></table></div>
       ${fnMsg ? '' : `<form class="card" id="newUser"><h2>افزودن کاربر</h2>
         <div class="grid2"><label class="f">ایمیل<input class="ltr" type="email" id="nuEmail" required></label><label class="f">نام کامل<input type="text" id="nuName"></label>
         <label class="f">رمز اولیه (حداقل ۸ نویسه)<input class="ltr" type="text" id="nuPass" minlength="8" required></label>
@@ -2856,6 +2858,25 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       await fnCall('manage-users', { action: 'set_password', user_id: el.dataset.id, password: i.value });
       i.value = ''; toast('رمز تغییر کرد.');
     },
+    async setemail(el) {
+      const i = document.querySelector(`[data-pemail="${el.dataset.id}"]`); const v = i.value.trim();
+      if (!v || v.toLowerCase() === (i.dataset.orig || '').toLowerCase()) { toast('ایمیل تغییری نکرده است.'); return; }
+      await fnCall('manage-users', { action: 'update_email', user_id: el.dataset.id, email: v });
+      toast('ایمیل تغییر کرد.'); render();
+    },
+    async disableuser(el) { await fnCall('manage-users', { action: 'disable', user_id: el.dataset.id }); toast('حساب غیرفعال شد و دیگر نمی‌تواند وارد شود.'); render(); },
+    async enableuser(el) { await fnCall('manage-users', { action: 'enable', user_id: el.dataset.id }); toast('ورود دوباره مجاز شد. نقش را در ستون «نقش» تعیین کنید.'); render(); },
+    askdeluser(el) { S.userDel = el.dataset.id; render(); },
+    canceluser() { S.userDel = null; render(); },
+    async deluser(el) {
+      try { await fnCall('manage-users', { action: 'delete', user_id: el.dataset.id }); S.userDel = null; toast('کاربر حذف شد.'); render(); }
+      catch (e) {
+        S.userDel = null; const m = errText(e);
+        if (/has_history/.test(m) || /foreign key/i.test(m)) { toast('این کاربر سابقهٔ کار (فایل، نظر یا ترجمه) دارد و حذفش ممکن نیست. به‌جای آن «غیرفعال» را بزنید.'); render(); }
+        else if (/last_admin/.test(m)) { toast('این تنها مدیر است و حذف نمی‌شود.'); render(); }
+        else throw e;
+      }
+    },
     genpass() { const c = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'; const b = crypto.getRandomValues(new Uint8Array(12)); $('#nuPass').value = [...b].map(x => c[x % c.length]).join(''); },
     async activateprompt(el) {
       const a = await sb.from('prompts').update({ is_active: false }).eq('is_active', true); if (a.error) throw a.error;
@@ -3207,6 +3228,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       else if (t.matches('[data-plevel]')) { await rpc('set_translator_level', { p_user: t.dataset.plevel, p_level: t.value }); toast('رتبهٔ مترجم ذخیره شد.'); }
       else if (t.matches('[data-ptitle]')) { await rpc('set_publish_title', { p_doc: t.dataset.ptitle, p_title: t.value }); toast('عنوان ذخیره شد.'); }
       else if (t.matches('[data-prole]')) { const { error } = await sb.from('profiles').update({ role: t.value }).eq('id', t.dataset.prole); if (error) throw error; toast('نقش ذخیره شد.'); await loadNames(); }
+      else if (t.matches('[data-pphone]')) { const v = t.value.trim(); if (v && !/^[+\d\s()-]{6,20}$/.test(v)) throw new Error('شمارهٔ تماس معتبر نیست.'); const { error } = await sb.from('profile_contacts').upsert({ id: t.dataset.pphone, phone: v || null }); if (error) throw error; toast('تلفن ذخیره شد.'); await loadNames(); }
       else if (t.matches('[data-pname]')) { const { error } = await sb.from('profiles').update({ full_name: t.value.trim() }).eq('id', t.dataset.pname); if (error) throw error; toast('نام ذخیره شد.'); await loadNames(); }
       else if (t.matches('[data-pnotify]')) { const { error } = await sb.from('profiles').update({ notify: t.checked }).eq('id', t.dataset.pnotify); if (error) throw error; toast('ذخیره شد.'); }
     } catch (err) { toast(errText(err)); S.busy = ''; if (me) render(); }
