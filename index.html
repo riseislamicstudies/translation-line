@@ -13,7 +13,7 @@
 <meta name="apple-mobile-web-app-title" content="سکوی رایز">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&family=Plus+Jakarta+Sans:wght@600;700&family=Literata:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&family=Plus+Jakarta+Sans:wght@600;700&family=Literata:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <script>
 try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'light') _t = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light'; document.documentElement.setAttribute('data-theme', _t); } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); }
 </script>
@@ -640,8 +640,25 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
 <div id="root"></div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
+<script>
+// Loads a library from several places at once (a copy next to this page first, then CDNs) and resolves when any works.
+// A copy on your own host (supabase.min.js / mammoth.browser.min.js) makes the app start fast even when CDNs are slow or blocked.
+window.__loadJs = function (urls, test, ms) {
+  return new Promise(function (res) {
+    if (test()) return res(true);
+    var left = urls.length, done = false;
+    function fin(ok) { if (!done) { done = true; res(ok); } }
+    urls.forEach(function (u) {
+      var s = document.createElement('script'); s.src = u; s.async = true;
+      var t = setTimeout(function () { left--; if (!left) fin(test()); }, ms || 15000);
+      s.onload = function () { clearTimeout(t); if (test()) fin(true); else { left--; if (!left) fin(false); } };
+      s.onerror = function () { clearTimeout(t); left--; if (!left) fin(test()); };
+      document.head.appendChild(s);
+    });
+  });
+};
+window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js', 'https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js'], function () { return !!window.supabase; }, 20000);
+</script>
 <script>
 (function () {
   'use strict';
@@ -757,15 +774,34 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     for (const k of Object.keys(ERR)) if (String(m).includes(k)) return ERR[k];
     return String(m);
   }
-  async function fnCall(name, body) {
-    const { data, error } = await sb.functions.invoke(name, { body });
+  // Safe (read-only) calls get a timeout and are retried when the network drops, so a stalled connection does not hang the page.
+  const SAFE_ACT = ['list', 'authors', 'categories', 'types', 'test'];
+  async function fnOnce(name, body, tmo) {
+    const call = sb.functions.invoke(name, { body });
+    let r;
+    if (tmo) {
+      let t; const to = new Promise(ok => { t = setTimeout(() => ok({ __timeout: true }), tmo); });
+      r = await Promise.race([call, to]); clearTimeout(t);
+      if (r && r.__timeout) { const e = new Error('پاسخی از سرور نیامد (اتصال کند یا قطع است).'); e.net = true; throw e; }
+    } else r = await call;
+    const { data, error } = r;
     if (error) {
       let detail = error.message;
       try { if (error.context && error.context.json) { const j = await error.context.json(); detail = (j.error || '') + (j.detail ? ': ' + j.detail : ''); } } catch (_) { /* keep message */ }
-      if (/not found|404/i.test(detail) || /relay|fetch/i.test(detail)) detail += ' (آیا تابع «' + name + '» دیپلوی شده و VPN روشن است؟)';
-      throw new Error(detail);
+      const net = /Failed to send|Failed to fetch|NetworkError|relay|fetch/i.test(error.message || '') && !(error.context && error.context.status);
+      if (/not found|404/i.test(detail) || net) detail += ' (آیا تابع «' + name + '» دیپلوی شده و VPN روشن است؟)';
+      const e = new Error(detail); e.net = net; throw e;
     }
     return data;
+  }
+  async function fnCall(name, body, opt) {
+    const safe = !!(opt && opt.retry) || !!(body && SAFE_ACT.includes(body.action));
+    const tmo = [12000, 15000, 25000]; let last;
+    for (let i = 0; i < (safe ? 3 : 1); i++) {
+      try { return await fnOnce(name, body, safe ? tmo[i] : 0); }
+      catch (e) { last = e; if (!e.net) throw e; }
+    }
+    throw last;
   }
   async function rpc(name, args) {
     const { data, error } = await sb.rpc(name, args || {});
@@ -915,6 +951,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   // ===================================================================
   async function boot() {
     if (!cfg || !cfg.url || !cfg.key) return viewSetup();
+    await window.__supaReady;
     if (!window.supabase) return viewSetup('کتابخانه Supabase بارگذاری نشد. اینترنت/VPN را بررسی و صفحه را دوباره باز کنید.');
     sb = window.supabase.createClient(cfg.url, cfg.key, { auth: { persistSession: true, autoRefreshToken: true } });
     let session = null;
@@ -929,24 +966,26 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     me = data;
     if (!isW(data.role)) await loadNames();
     else { const c = await sb.from('profile_contacts').select('last_name').eq('id', user.id).maybeSingle(); me.last_name = (c.data && c.data.last_name) || ''; }
-    S.tab = null; S.docId = null; S.qa = null;
+    S.tab = null; S.docId = null; S.qa = null; S.restored = false;
     renderShell();
     if (me.role === 'none') return;
     S.tab = tabsFor(me.role)[0][0];
-    if (!isW(me.role)) { subscribe(); clearInterval(pollT); pollT = setInterval(soft, 20000); loadNotifs(); pushRefresh(); }
+    try {
+      const nv = JSON.parse(localStorage.getItem('tl_nav') || 'null');
+      if (nv && nv.uid === me.id && tabsFor(me.role).some(t => t[0] === nv.tab)) { S.tab = nv.tab; if (nv.adminTab) S.adminTab = nv.adminTab; if (nv.docId) { S.docId = nv.docId; S.restored = true; } }
+    } catch (_) { /* no saved place */ }
+    if (!isW(me.role)) { subscribe(); clearInterval(pollT); pollT = setInterval(soft, 20000); loadNotifs(); pushRefresh(); if (['admin', 'supervisor'].includes(me.role)) setTimeout(() => loadAuthors(), 2500); }
     render();
   }
   async function loadNames() {
-    const { data } = await sb.from('profiles').select('id,full_name,role');
+    const needC = me && ['admin', 'reviewer'].includes(me.role);
+    const [{ data }, cRes] = await Promise.all([sb.from('profiles').select('id,full_name,role'), needC ? sb.from('profile_contacts').select('*') : Promise.resolve(null)]);
     S.names = {}; S.roles = {}; S.dupNames = {};
     const seen = {};
     (data || []).forEach(p => { S.names[p.id] = p.full_name || '—'; S.roles[p.id] = p.role; seen[p.full_name] = (seen[p.full_name] || 0) + 1; });
     Object.keys(seen).forEach(k => { if (seen[k] > 1) S.dupNames[k] = true; });
     S.contacts = {};
-    if (me && ['admin', 'reviewer'].includes(me.role)) {
-      const c = await sb.from('profile_contacts').select('*');
-      (c.data || []).forEach(x => { S.contacts[x.id] = x; });
-    }
+    if (cRes) (cRes.data || []).forEach(x => { S.contacts[x.id] = x; });
   }
   const nm = id => (id && S.names[id]) || '—';
   // name, plus the email when two people share the same name (HTML-safe)
@@ -1089,7 +1128,9 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     const tok = ++renderTok;
     setTabs();
     let html;
-    try { html = await VIEWS[S.tab](); } catch (e) { html = `<div class="card err"><b>خطا</b><p>${esc(errText(e))}</p></div>`; }
+    try { localStorage.setItem('tl_nav', JSON.stringify({ uid: me.id, tab: S.tab, adminTab: S.adminTab || null, docId: S.docId || null })); } catch (_) { /* ignore */ }
+    try { html = await VIEWS[S.tab](); } catch (e) {
+      if (S.restored && S.docId) { S.docId = null; S.restored = false; return render(); } html = `<div class="card err"><b>خطا</b><p>${esc(errText(e))}</p></div>`; }
     if (tok !== renderTok) return;
     if (still === true && html === lastHtml) { refreshCounts(); return; }
     lastHtml = html;
@@ -1182,6 +1223,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   // ===================================================================
   async function parseDocx(file) {
     const buf = await file.arrayBuffer();
+    if (!(await window.__loadJs(['mammoth.browser.min.js', 'https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js', 'https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js'], () => !!window.mammoth, 20000))) throw new Error('کتابخانهٔ خواندن Word بارگذاری نشد. اینترنت/VPN را بررسی و دوباره تلاش کنید.');
     const res = await mammoth.convertToHtml({ arrayBuffer: buf });
     const doc = new DOMParser().parseFromString(res.value, 'text/html');
     const segs = [], found = [];
@@ -1894,15 +1936,25 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     if (S.wpAuthors && S.wpAuthors.length) throw new Error('نویسنده باید از فهرست اسکالرهای سایت انتخاب شود.');
     return { author: name, author_id: (hid && hid.value) || '' };
   }
+  function paintAuthors() {
+    const list = S.wpAuthors, dl = document.getElementById('pmAuthList');
+    if (dl && list) dl.innerHTML = list.map(a => `<option value="${esc(a.name)}"></option>`).join('');
+    const inp = document.querySelector('[data-pmf="author"]'); if (inp && list) inp.placeholder = list.length ? 'تایپ کنید تا فهرست فیلتر شود…' : 'اسکالری پیدا نشد';
+    const nt = document.getElementById('pmAuthNote'); if (!nt) return;
+    if (S.wpAuthBusy && !list) nt.textContent = 'در حال دریافت فهرست…';
+    else if (!S.wpAuthMsg) nt.textContent = 'نویسنده را از فهرست اسکالرهای سایت انتخاب کنید تا نوشته به نام او ثبت شود (کارت معرفی نویسنده روی سایت نشان داده می‌شود). خالی بگذارید تا به نام حساب اتصال ثبت شود.';
+    else if (S.wpAuthMsg) nt.innerHTML = (list && list.length ? '⚠ اتصال برقرار نشد؛ فهرست ذخیره‌شدهٔ قبلی نمایش داده می‌شود. ' : '✗ دریافت فهرست اسکالرها ناموفق بود: ' + esc(S.wpAuthMsg) + ' (می‌توانید نام را دستی بنویسید.) ') + '<button type="button" class="btn small" data-act="authretry">دریافت دوباره</button>';
+  }
   async function loadAuthors(force) {
-    if (S.wpAuthors && !force) return;
-    if (S.wpAuthBusy) return; S.wpAuthBusy = true;
-    try { const r = await fnCall('publish-wordpress', { action: 'authors' }); S.wpAuthors = r.authors || []; S.wpAuthMsg = ''; }
-    catch (e) { S.wpAuthors = null; S.wpAuthMsg = errText(e); }
-    S.wpAuthBusy = false;
-    const dl = document.getElementById('pmAuthList'); if (dl && S.wpAuthors) dl.innerHTML = S.wpAuthors.map(a => `<option value="${esc(a.name)}"></option>`).join('');
-    const inp = document.querySelector('[data-pmf="author"]'); if (inp && S.wpAuthors) inp.placeholder = S.wpAuthors.length ? 'تایپ کنید تا فهرست فیلتر شود…' : 'اسکالری پیدا نشد';
-    const nt = document.getElementById('pmAuthNote'); if (nt && S.wpAuthMsg) nt.innerHTML = '✗ دریافت فهرست اسکالرها ناموفق بود: ' + esc(S.wpAuthMsg) + ' (می‌توانید نام را دستی بنویسید.) <button type="button" class="btn small" data-act="authretry">دریافت دوباره</button>';
+    if (!S.wpAuthors) { try { const c = JSON.parse(localStorage.getItem('tl_wp_authors') || 'null'); if (c && Array.isArray(c.list)) S.wpAuthors = c.list; } catch (_) { /* no cache */ } paintAuthors(); }
+    if (S.wpAuthFresh && !force) return;
+    if (S.wpAuthBusy) return; S.wpAuthBusy = true; paintAuthors();
+    try {
+      const r = await fnCall('publish-wordpress', { action: 'authors' });
+      S.wpAuthors = r.authors || []; S.wpAuthFresh = true; S.wpAuthMsg = '';
+      try { localStorage.setItem('tl_wp_authors', JSON.stringify({ t: Date.now(), list: S.wpAuthors })); } catch (_) { /* ignore */ }
+    } catch (e) { S.wpAuthMsg = errText(e); }
+    S.wpAuthBusy = false; paintAuthors();
   }
   async function pmSaveMeta(box) {
     const g = k => ((box.querySelector(`[data-pmf="${k}"]`) || {}).value || '').trim(), at = g('publish_at');
@@ -2868,7 +2920,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     async disableuser(el) { await fnCall('manage-users', { action: 'disable', user_id: el.dataset.id }); toast('حساب غیرفعال شد و دیگر نمی‌تواند وارد شود.'); render(); },
     async enableuser(el) { await fnCall('manage-users', { action: 'enable', user_id: el.dataset.id }); toast('ورود دوباره مجاز شد. نقش را در ستون «نقش» تعیین کنید.'); render(); },
     async rmavatar(el) { await fnCall('manage-users', { action: 'set_avatar', user_id: el.dataset.id, avatar: '' }); toast('عکس پروفایل حذف شد.'); render(); },
-    authretry() { S.wpAuthors = null; const nt = document.getElementById('pmAuthNote'); if (nt) nt.textContent = 'در حال دریافت فهرست…'; loadAuthors(true); },
+    authretry() { S.wpAuthMsg = ''; loadAuthors(true); },
     askdeluser(el) { S.userDel = el.dataset.id; render(); },
     canceluser() { S.userDel = null; render(); },
     async deluser(el) {
@@ -3123,7 +3175,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
           if (![t, ck, gk].every(restOk)) throw new Error('نام REST فقط حروف لاتین، عدد، خط تیره و زیرخط دارد.');
           rows['wp_type_' + k] = t; rows['wp_catkey_' + k] = ck; rows['wp_tagkey_' + k] = gk;
         });
-        rows.wp_author_role = $('#wpAuthRole').value.trim() || 'scholar'; if (!restOk(rows.wp_author_role)) throw new Error('نام نقش فقط حروف لاتین، عدد، خط تیره و زیرخط دارد.'); S.wpAuthors = null;
+        rows.wp_author_role = $('#wpAuthRole').value.trim() || 'scholar'; if (!restOk(rows.wp_author_role)) throw new Error('نام نقش فقط حروف لاتین، عدد، خط تیره و زیرخط دارد.'); S.wpAuthors = null; S.wpAuthFresh = false; try { localStorage.removeItem('tl_wp_authors'); } catch (_) { /* ignore */ }
         Object.keys(DOC_KIND).forEach(k => { const v = ($('#wpc_' + k).value || '').trim(); if (v && !/^\d+(,\d+)*$/.test(v)) throw new Error('شناسهٔ دسته باید عدد باشد.'); rows['wp_cat_' + k] = v; });
         const now = new Date().toISOString();
         const u = await sb.from('app_config').upsert(Object.entries(rows).map(([key, value]) => ({ key, value, updated_at: now }))); if (u.error) throw u.error;
