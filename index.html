@@ -1902,7 +1902,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     S.wpAuthBusy = false;
     const dl = document.getElementById('pmAuthList'); if (dl && S.wpAuthors) dl.innerHTML = S.wpAuthors.map(a => `<option value="${esc(a.name)}"></option>`).join('');
     const inp = document.querySelector('[data-pmf="author"]'); if (inp && S.wpAuthors) inp.placeholder = S.wpAuthors.length ? 'تایپ کنید تا فهرست فیلتر شود…' : 'اسکالری پیدا نشد';
-    const nt = document.getElementById('pmAuthNote'); if (nt && S.wpAuthMsg) nt.textContent = '✗ دریافت فهرست اسکالرها ناموفق بود: ' + S.wpAuthMsg + ' (می‌توانید نام را دستی بنویسید.)';
+    const nt = document.getElementById('pmAuthNote'); if (nt && S.wpAuthMsg) nt.innerHTML = '✗ دریافت فهرست اسکالرها ناموفق بود: ' + esc(S.wpAuthMsg) + ' (می‌توانید نام را دستی بنویسید.) <button type="button" class="btn small" data-act="authretry">دریافت دوباره</button>';
   }
   async function pmSaveMeta(box) {
     const g = k => ((box.querySelector(`[data-pmf="${k}"]`) || {}).value || '').trim(), at = g('publish_at');
@@ -2342,7 +2342,8 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     const roleOpts = r => Object.keys(ROLE_FA).map(k => `<option value="${k}"${k === r ? ' selected' : ''}>${ROLE_FA[k]}</option>`).join('');
     return `${fnMsg ? `<div class="callout">${esc(fnMsg)}</div>` : ''}
       <div class="table-wrap"><table><thead><tr><th>نام</th><th>ایمیل</th><th>نقش</th><th>رتبهٔ مترجم</th><th>تلفن</th><th>اعلان</th><th>آخرین ورود</th><th>رمز جدید</th><th>حساب</th></tr></thead><tbody>
-      ${profs.map(p => { const u = emails[p.id]; return `<tr><td><input type="text" data-pname="${p.id}" value="${esc(p.full_name)}" aria-label="نام"></td>
+      ${profs.map(p => { const u = emails[p.id]; return `<tr><td><span class="row" style="flex-wrap:nowrap"><span class="avatar" aria-hidden="true">${p.avatar_url ? `<img src="${esc(p.avatar_url)}" alt="">` : esc((p.full_name || '?').trim().charAt(0))}</span><input type="text" data-pname="${p.id}" value="${esc(p.full_name)}" aria-label="نام"></span>
+          ${fnMsg ? '' : `<span class="row"><label class="btn small quiet" style="cursor:pointer">عکس<input type="file" accept="image/*" data-pavatar="${p.id}" hidden></label>${p.avatar_url ? `<button type="button" class="btn small quiet danger" data-act="rmavatar" data-id="${p.id}">حذف عکس</button>` : ''}</span>`}</td>
         <td class="num" dir="ltr">${fnMsg || !u ? esc(u ? u.email : '—') : `<span class="row"><input type="email" class="ltr" data-pemail="${p.id}" data-orig="${esc(u.email || '')}" value="${esc(u.email || '')}" aria-label="ایمیل" style="width:200px"><button type="button" class="btn small" data-act="setemail" data-id="${p.id}">ذخیره</button></span>`}${u && u.banned_until && new Date(u.banned_until) > new Date() ? ' <span class="chip bad">غیرفعال</span>' : ''}</td>
         <td><select data-prole="${p.id}" aria-label="نقش">${roleOpts(p.role)}</select></td>
         <td>${p.role === 'translator' ? `<select data-plevel="${p.id}" aria-label="رتبهٔ مترجم"><option value="regular"${lv[p.id] !== 'senior' ? ' selected' : ''}>عادی</option><option value="senior"${lv[p.id] === 'senior' ? ' selected' : ''}>ارشد</option></select>` : '<span class="meta">—</span>'}</td>
@@ -2866,6 +2867,8 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     },
     async disableuser(el) { await fnCall('manage-users', { action: 'disable', user_id: el.dataset.id }); toast('حساب غیرفعال شد و دیگر نمی‌تواند وارد شود.'); render(); },
     async enableuser(el) { await fnCall('manage-users', { action: 'enable', user_id: el.dataset.id }); toast('ورود دوباره مجاز شد. نقش را در ستون «نقش» تعیین کنید.'); render(); },
+    async rmavatar(el) { await fnCall('manage-users', { action: 'set_avatar', user_id: el.dataset.id, avatar: '' }); toast('عکس پروفایل حذف شد.'); render(); },
+    authretry() { S.wpAuthors = null; const nt = document.getElementById('pmAuthNote'); if (nt) nt.textContent = 'در حال دریافت فهرست…'; loadAuthors(true); },
     askdeluser(el) { S.userDel = el.dataset.id; render(); },
     canceluser() { S.userDel = null; render(); },
     async deluser(el) {
@@ -3202,6 +3205,12 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   document.addEventListener('change', async e => {
     const t = e.target;
     try {
+      if (t.matches && t.matches('[data-pavatar]')) {
+        const f = (t.files || [])[0]; if (!f) return; const id = t.dataset.pavatar; t.value = '';
+        try { const av = await resizeAvatar(f); await fnCall('manage-users', { action: 'set_avatar', user_id: id, avatar: av }); toast('عکس پروفایل تغییر کرد.'); await loadNames(); if (me && me.id === id) { const r = await sb.from('profiles').select('avatar_url').eq('id', id).single(); if (r.data) me.avatar_url = r.data.avatar_url; } render(); }
+        catch (e) { toast(errText(e)); }
+        return;
+      }
       if (t.matches && t.matches('[data-pmup]')) {
         const files = [...(t.files || [])], id = t.dataset.pmup, box = t.closest('[data-pmeta]'); t.value = '';
         let ok = 0; for (const f of files) { try { await pmUpload(id, f); ok++; } catch (e) { toast(`${f.name}: ${errText(e)}`); } }
