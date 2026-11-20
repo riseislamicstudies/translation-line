@@ -1836,9 +1836,8 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         <label class="f">دستهٔ سایت<select data-pmf="category">${catOpts(m.pub_category)}</select></label>
         <label class="f wide">برچسب‌ها (انگلیسی، با کاما جدا کنید)<input type="text" class="plain ltr" data-pmf="tags" value="${esc((m.pub_tags || []).join(', '))}" placeholder="islamic studies, philosophy"></label>
         <label class="f wide">خلاصهٔ مطلب (Excerpt)<textarea class="plain ltr" rows="2" data-pmf="excerpt" maxlength="600">${esc(m.pub_excerpt || '')}</textarea></label>
-        ${m.source_kind !== 'news' ? `<label class="f">نام نویسنده در سایت (انگلیسی)<input type="text" class="plain ltr" data-pmf="author" value="${esc(m.pub_author || '')}" placeholder="Mohammad Hosseini" maxlength="120"></label>
-        <label class="f">شناسهٔ نویسنده در وردپرس (اختیاری)<input type="number" min="1" class="plain ltr" data-pmf="author_id" value="${m.pub_author_id || ''}" placeholder="مثلاً ۱۲"></label>
-        <p class="meta wide" style="grid-column:1/-1">برای نویسندگانی که خودشان به سایت دسترسی ندارند: نام انگلیسی نویسنده را بنویسید تا در ابتدای مطلب به‌صورت «By …» بیاید. اگر نویسنده در وردپرس حساب دارد، شناسهٔ کاربری‌اش را هم بدهید تا نوشته به نام او ثبت شود.</p>` : ''}
+        ${m.source_kind !== 'news' ? `<label class="f wide">نویسنده (اسکالر سایت)<input type="text" class="plain" data-pmf="author" list="pmAuthList" autocomplete="off" value="${esc(m.pub_author || '')}" placeholder="${S.wpAuthors ? 'تایپ کنید تا فهرست فیلتر شود…' : 'در حال دریافت فهرست…'}" maxlength="120"><datalist id="pmAuthList">${(S.wpAuthors || []).map(a => `<option value="${esc(a.name)}"></option>`).join('')}</datalist><input type="hidden" data-pmf="author_id" value="${m.pub_author_id || ''}"></label>
+        <p class="meta wide" style="grid-column:1/-1" id="pmAuthNote">نویسنده را از فهرست اسکالرهای سایت انتخاب کنید تا نوشته به نام او ثبت شود (کارت معرفی نویسنده روی سایت نشان داده می‌شود). خالی بگذارید تا به نام حساب اتصال ثبت شود.</p>` : ''}
         <label class="f">عنوان سئو <span class="meta pm-count" data-cnt="seo_title">${fa((m.pub_seo_title || '').length)}/۶۰</span><input type="text" class="plain ltr" data-pmf="seo_title" value="${esc(m.pub_seo_title || '')}" maxlength="120"></label>
         <label class="f">کلمهٔ کلیدی اصلی<input type="text" class="plain ltr" data-pmf="seo_focus" value="${esc(m.pub_seo_focus || '')}" maxlength="100"></label>
         <label class="f wide">توضیح متا (Meta description) <span class="meta pm-count" data-cnt="seo_desc">${fa((m.pub_seo_desc || '').length)}/۱۶۰</span><textarea class="plain ltr" rows="2" data-pmf="seo_desc" maxlength="320">${esc(m.pub_seo_desc || '')}</textarea></label>
@@ -1879,7 +1878,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
       if (box.closest('details:not([open])')) continue;
       if (box.dataset.ready === '1' && !force) continue;
       box.dataset.ready = '1';
-      try { await pmLoad(box); } catch (e) { box.innerHTML = `<p class="meta">تصاویر بارگذاری نشد: ${esc(errText(e))}</p>`; }
+      try { await pmLoad(box); if (box.querySelector('[data-pmf="author"]')) loadAuthors(); } catch (e) { box.innerHTML = `<p class="meta">تصاویر بارگذاری نشد: ${esc(errText(e))}</p>`; }
     }
   }
   async function pmAct(btn, fn) {
@@ -1887,9 +1886,27 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
     try { await fn(box); } catch (e) { toast(errText(e)); }
     if (box) { box.dataset.ready = '0'; await hydratePmeta(); }
   }
+  function pmAuthor(box, name) {
+    const a = (S.wpAuthors || []).find(x => x.name.trim().toLowerCase() === name.toLowerCase());
+    const hid = box.querySelector('[data-pmf="author_id"]');
+    if (!name) { if (hid) hid.value = ''; return { author: '', author_id: '' }; }
+    if (a) { if (hid) hid.value = a.id; return { author: a.name, author_id: String(a.id) }; }
+    if (S.wpAuthors && S.wpAuthors.length) throw new Error('نویسنده باید از فهرست اسکالرهای سایت انتخاب شود.');
+    return { author: name, author_id: (hid && hid.value) || '' };
+  }
+  async function loadAuthors(force) {
+    if (S.wpAuthors && !force) return;
+    if (S.wpAuthBusy) return; S.wpAuthBusy = true;
+    try { const r = await fnCall('publish-wordpress', { action: 'authors' }); S.wpAuthors = r.authors || []; S.wpAuthMsg = ''; }
+    catch (e) { S.wpAuthors = null; S.wpAuthMsg = errText(e); }
+    S.wpAuthBusy = false;
+    const dl = document.getElementById('pmAuthList'); if (dl && S.wpAuthors) dl.innerHTML = S.wpAuthors.map(a => `<option value="${esc(a.name)}"></option>`).join('');
+    const inp = document.querySelector('[data-pmf="author"]'); if (inp && S.wpAuthors) inp.placeholder = S.wpAuthors.length ? 'تایپ کنید تا فهرست فیلتر شود…' : 'اسکالری پیدا نشد';
+    const nt = document.getElementById('pmAuthNote'); if (nt && S.wpAuthMsg) nt.textContent = '✗ دریافت فهرست اسکالرها ناموفق بود: ' + S.wpAuthMsg + ' (می‌توانید نام را دستی بنویسید.)';
+  }
   async function pmSaveMeta(box) {
     const g = k => ((box.querySelector(`[data-pmf="${k}"]`) || {}).value || '').trim(), at = g('publish_at');
-    await rpc('set_publish_meta', { p_doc: box.dataset.pmeta, p_meta: { slug: g('slug'), excerpt: g('excerpt'), tags: g('tags').split(/[,،]/).map(s => s.trim()).filter(Boolean), category: g('category'), seo_title: g('seo_title'), seo_desc: g('seo_desc'), seo_focus: g('seo_focus'), publish_at: at ? new Date(at).toISOString() : '', ...(box.querySelector('[data-pmf="author"]') ? { author: g('author'), author_id: g('author_id') } : {}) } });
+    await rpc('set_publish_meta', { p_doc: box.dataset.pmeta, p_meta: { slug: g('slug'), excerpt: g('excerpt'), tags: g('tags').split(/[,،]/).map(s => s.trim()).filter(Boolean), category: g('category'), seo_title: g('seo_title'), seo_desc: g('seo_desc'), seo_focus: g('seo_focus'), publish_at: at ? new Date(at).toISOString() : '', ...(box.querySelector('[data-pmf="author"]') ? pmAuthor(box, g('author')) : {}) } });
   }
   async function pmSaveImg(box, fig) {
     const v = k => { const e = fig.querySelector(`[data-pmi="${k}"]`); return e ? e.value.trim() : null; };
@@ -2243,7 +2260,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
         ${L.length ? `<div class="table-wrap"><table><thead><tr><th>فایل</th><th>وضعیت</th><th>کلمه</th><th>تاریخ</th></tr></thead><tbody>${L.map(d => `<tr><td class="wrapok">${esc(d.title)}</td><td>${chip(d.status)}</td><td class="num">${fa(d.word_count)}</td><td class="meta">${fmtT(d.created_at)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="meta">هنوز فایلی نفرستاده است.</p>'}</details>`; }).join('')}</section>`;
   }
   async function adminWP() {
-    const keys = ['wp_url', 'wp_user', 'wp_status', 'wp_post_type', 'wp_byline', ...Object.keys(DOC_KIND).flatMap(k => ['wp_type_' + k, 'wp_catkey_' + k, 'wp_tagkey_' + k]), 'wp_cat_news', 'wp_cat_scholaria', 'wp_cat_journal', 'wp_seo_title_key', 'wp_seo_desc_key', 'wp_seo_focus_key'];
+    const keys = ['wp_url', 'wp_user', 'wp_status', 'wp_post_type', 'wp_author_role', ...Object.keys(DOC_KIND).flatMap(k => ['wp_type_' + k, 'wp_catkey_' + k, 'wp_tagkey_' + k]), 'wp_cat_news', 'wp_cat_scholaria', 'wp_cat_journal', 'wp_seo_title_key', 'wp_seo_desc_key', 'wp_seo_focus_key'];
     let has = false, err = '';
     try { has = await rpc('has_secret', { p_name: 'WP_APP_PASSWORD' }); } catch (e) { err = errText(e); }
     const r = await sb.from('app_config').select('key,value').in('key', keys);
@@ -2273,7 +2290,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
           <td><input class="ltr" list="wpTypeList" type="text" id="wpt_${k}" value="${esc(c['wp_type_' + k] || '')}" placeholder="پیش‌فرض"></td>
           <td><input class="ltr" type="text" id="wpck_${k}" value="${esc(c['wp_catkey_' + k] || '')}" placeholder="خودکار"></td>
           <td><input class="ltr" type="text" id="wpgk_${k}" value="${esc(c['wp_tagkey_' + k] || '')}" placeholder="خودکار"></td></tr>`).join('')}</tbody></table></div>
-        <label class="f">نام نویسنده در ابتدای مطلب («By …»)<select id="wpByline"><option value="on"${c.wp_byline !== 'off' ? ' selected' : ''}>نمایش داده شود (وقتی نام نویسنده در صفحهٔ انتشار پر شده)</option><option value="off"${c.wp_byline === 'off' ? ' selected' : ''}>نمایش داده نشود</option></select></label>
+        <label class="f">نقش کاربران نویسنده در وردپرس (برای فهرست نویسندهٔ صفحهٔ انتشار)<input class="ltr" type="text" id="wpAuthRole" value="${esc(c.wp_author_role || 'scholar')}" placeholder="scholar"></label>
         <h3>فیلدهای سئو</h3>
         <p class="meta">نام فیلدهای افزونهٔ سئوی سایت که عنوان سئو، توضیح متا و کلمهٔ کلیدی در آن‌ها نوشته می‌شود. خالی بگذارید تا ارسال نشوند. برای Yoast: <span dir="ltr">_yoast_wpseo_title, _yoast_wpseo_metadesc, _yoast_wpseo_focuskw</span> و برای Rank Math: <span dir="ltr">rank_math_title, rank_math_description, rank_math_focus_keyword</span>. این فیلدها باید در وردپرس برای REST ثبت شده باشند (کد نمونه پایین همین صفحه).</p>
         <div class="aigrid">
@@ -3082,7 +3099,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
           if (![t, ck, gk].every(restOk)) throw new Error('نام REST فقط حروف لاتین، عدد، خط تیره و زیرخط دارد.');
           rows['wp_type_' + k] = t; rows['wp_catkey_' + k] = ck; rows['wp_tagkey_' + k] = gk;
         });
-        rows.wp_byline = $('#wpByline').value;
+        rows.wp_author_role = $('#wpAuthRole').value.trim() || 'scholar'; if (!restOk(rows.wp_author_role)) throw new Error('نام نقش فقط حروف لاتین، عدد، خط تیره و زیرخط دارد.'); S.wpAuthors = null;
         Object.keys(DOC_KIND).forEach(k => { const v = ($('#wpc_' + k).value || '').trim(); if (v && !/^\d+(,\d+)*$/.test(v)) throw new Error('شناسهٔ دسته باید عدد باشد.'); rows['wp_cat_' + k] = v; });
         const now = new Date().toISOString();
         const u = await sb.from('app_config').upsert(Object.entries(rows).map(([key, value]) => ({ key, value, updated_at: now }))); if (u.error) throw u.error;
