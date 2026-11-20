@@ -65,7 +65,9 @@ class WpError extends Error {}
 async function wp(base: string, auth: string, path: string, method = "GET", body?: unknown) {
   let res: Response;
   try {
-    res = await fetch(`${base}/wp-json${path}`, {
+    // path starting with "@" uses the ?rest_route= form, which some host firewalls let through when /wp-json/... is blocked
+    const url = path.startsWith("@") ? `${base}/?rest_route=${path.slice(1).replace("?", "&")}` : `${base}/wp-json${path}`;
+    res = await fetch(url, {
       method,
       headers: { Authorization: auth, "Content-Type": "application/json", Accept: "application/json", "User-Agent": UA },
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -180,7 +182,12 @@ Deno.serve(async (req) => {
       const roleSlug = /^[a-z0-9_-]+$/i.test(c.wp_author_role || "") ? c.wp_author_role : "scholar";
       const all: { id: number; name: string; slug: string }[] = [];
       for (let page = 1; page <= 10; page++) {
-        const us = await wp(base, auth, `/wp/v2/users?roles=${roleSlug}&per_page=100&page=${page}&context=edit&_fields=id,name,slug`).catch((e) => { if (page > 1) return []; throw e; });
+        const q = `/wp/v2/users?roles=${roleSlug}&per_page=100&page=${page}&_fields=id,name,slug`;
+        let us: any = null, lastErr: unknown = null;
+        for (const p of [q + "&context=edit", "@" + q + "&context=edit", "@" + q, q]) {
+          try { us = await wp(base, auth, p); break; } catch (e) { lastErr = e; }
+        }
+        if (us === null) { if (page > 1) break; throw lastErr; }
         if (!Array.isArray(us)) break;
         all.push(...us.map((x: any) => ({ id: x.id, name: x.name, slug: x.slug })));
         if (us.length < 100) break;
