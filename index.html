@@ -897,7 +897,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
     </form></div>`;
   }
   const SVG_USER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
-  let AVATAR = null;
+  let AVATAR = null; let AVATAR_FILE = null;
   async function viewSignup(msg) {
     $('#root').innerHTML = `${themeBtn('float')}<div class="center"><div class="box card wide"><span class="spin"></span> در حال بررسی لینک دعوت…</div></div>`;
     let valid = false;
@@ -926,6 +926,19 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
   }
   function clearInvite() { INVITE = null; try { sessionStorage.removeItem('tl_invite'); } catch (_) { /* ignore */ } }
   // resize to a 256px square JPEG in the browser (also strips camera metadata)
+  // The ORIGINAL photo is uploaded untouched (full quality) straight to Storage; the app shows a small copy made by resizeAvatar().
+  const AV_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
+  function checkAvatarFile(file) {
+    if (!AV_MIMES.includes(file.type)) throw new Error('فقط عکس JPEG، PNG یا WebP پذیرفته می‌شود.');
+    if (file.size > 15 * 1024 * 1024) throw new Error('حجم عکس باید کمتر از ۱۵ مگابایت باشد.');
+  }
+  async function uploadAvatarOriginal(file, askUrl) {
+    checkAvatarFile(file);
+    const up = await askUrl(file.type);
+    const r = await sb.storage.from('avatars').uploadToSignedUrl(up.path, up.token, file, { contentType: file.type });
+    if (r.error) throw new Error('آپلود عکس اصلی ناموفق بود: ' + (r.error.message || r.error));
+    return up.path;
+  }
   async function resizeAvatar(file) {
     if (!/^image\//.test(file.type)) throw new Error('invalid_avatar');
     if (file.size > 15 * 1024 * 1024) throw new Error('invalid_avatar');
@@ -940,13 +953,14 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
   async function doSignup() {
     const first = $('#suFirst').value.trim(), last = $('#suLast').value.trim();
     const pass = $('#suPass').value;
-    if (!AVATAR) throw new Error('عکس پروفایل الزامی است. لطفاً یک عکس انتخاب کنید.');
+    if (!AVATAR || !AVATAR_FILE) throw new Error('عکس پروفایل الزامی است. لطفاً یک عکس انتخاب کنید.');
     if (pass !== $('#suPass2').value) throw new Error('رمز و تکرار آن یکی نیست.');
     const email = $('#suEmail').value.trim();
-    await fnCall('writer-signup', { action: 'signup', token: INVITE, first_name: first, last_name: last, phone: $('#suPhone').value.trim(), email, password: pass, avatar: AVATAR });
+    const origPath = await uploadAvatarOriginal(AVATAR_FILE, mime => fnCall('writer-signup', { action: 'avatar_upload_url', token: INVITE, mime }));
+    await fnCall('writer-signup', { action: 'signup', token: INVITE, first_name: first, last_name: last, phone: $('#suPhone').value.trim(), email, password: pass, avatar: AVATAR, orig_path: origPath });
     const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
     if (error) return viewLogin('حساب ساخته شد. با همان ایمیل و رمز وارد شوید.');
-    clearInvite(); AVATAR = null;
+    clearInvite(); AVATAR = null; AVATAR_FILE = null;
     await enter(data.user);
   }
   async function doLogin() {
@@ -2405,7 +2419,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
     return `${fnMsg ? `<div class="callout">${esc(fnMsg)}</div>` : ''}
       <div class="table-wrap"><table><thead><tr><th>نام</th><th>ایمیل</th><th>نقش</th><th>رتبهٔ مترجم</th><th>تلفن</th><th>اعلان</th><th>آخرین ورود</th><th>رمز جدید</th><th>حساب</th></tr></thead><tbody>
       ${profs.map(p => { const u = emails[p.id]; return `<tr><td><span class="row" style="flex-wrap:nowrap"><span class="avatar" aria-hidden="true">${p.avatar_url ? `<img src="${esc(p.avatar_url)}" alt="">` : esc((p.full_name || '?').trim().charAt(0))}</span><input type="text" data-pname="${p.id}" value="${esc(p.full_name)}" aria-label="نام"></span>
-          ${fnMsg ? '' : `<span class="row"><label class="btn small quiet" style="cursor:pointer">عکس<input type="file" accept="image/*" data-pavatar="${p.id}" hidden></label>${p.avatar_url ? `<button type="button" class="btn small quiet danger" data-act="rmavatar" data-id="${p.id}">حذف عکس</button>` : ''}</span>`}</td>
+          ${fnMsg ? '' : `<span class="row"><label class="btn small quiet" style="cursor:pointer">عکس<input type="file" accept="image/*" data-pavatar="${p.id}" hidden></label>${p.avatar_original_url ? `<a class="btn small quiet" href="${esc(p.avatar_original_url)}" target="_blank" rel="noopener" title="نسخهٔ اصلی با کیفیت کامل">اصلی ↗</a>` : (p.avatar_url ? '<span class="meta" title="این عکس قبل از ذخیرهٔ نسخهٔ اصلی بارگذاری شده">فقط کوچک</span>' : '')}${p.avatar_url ? `<button type="button" class="btn small quiet danger" data-act="rmavatar" data-id="${p.id}">حذف عکس</button>` : ''}</span>`}</td>
         <td class="num" dir="ltr">${fnMsg || !u ? esc(u ? u.email : '—') : `<span class="row"><input type="email" class="ltr" data-pemail="${p.id}" data-orig="${esc(u.email || '')}" value="${esc(u.email || '')}" aria-label="ایمیل" style="width:200px"><button type="button" class="btn small" data-act="setemail" data-id="${p.id}">ذخیره</button></span>`}${u && u.banned_until && new Date(u.banned_until) > new Date() ? ' <span class="chip bad">غیرفعال</span>' : ''}</td>
         <td><select data-prole="${p.id}" aria-label="نقش">${roleOpts(p.role)}</select></td>
         <td>${p.role === 'translator' ? `<select data-plevel="${p.id}" aria-label="رتبهٔ مترجم"><option value="regular"${lv[p.id] !== 'senior' ? ' selected' : ''}>عادی</option><option value="senior"${lv[p.id] === 'senior' ? ' selected' : ''}>ارشد</option></select>` : '<span class="meta">—</span>'}</td>
@@ -3307,7 +3321,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
     try {
       if (t.matches && t.matches('[data-pavatar]')) {
         const f = (t.files || [])[0]; if (!f) return; const id = t.dataset.pavatar; t.value = '';
-        try { const av = await resizeAvatar(f); await fnCall('manage-users', { action: 'set_avatar', user_id: id, avatar: av }); toast('عکس پروفایل تغییر کرد.'); await loadNames(); if (me && me.id === id) { const r = await sb.from('profiles').select('avatar_url').eq('id', id).single(); if (r.data) me.avatar_url = r.data.avatar_url; } render(); }
+        try { checkAvatarFile(f); toast('در حال ارسال عکس…'); const av = await resizeAvatar(f); const orig = await uploadAvatarOriginal(f, mime => fnCall('manage-users', { action: 'avatar_upload_url', user_id: id, mime })); await fnCall('manage-users', { action: 'set_avatar', user_id: id, avatar: av, orig_path: orig }); toast('عکس پروفایل تغییر کرد.'); await loadNames(); if (me && me.id === id) { const r = await sb.from('profiles').select('avatar_url').eq('id', id).single(); if (r.data) me.avatar_url = r.data.avatar_url; } render(); }
         catch (e) { toast(errText(e)); }
         return;
       }
@@ -3328,7 +3342,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
       else if (t.id === 'wFile') { const f = t.files && t.files[0]; t.value = ''; if (f) await doWriterUpload(f); }
       else if (t.id === 'suAvatar') {
         const f = t.files && t.files[0]; t.value = ''; if (!f) return;
-        AVATAR = await resizeAvatar(f);
+        checkAvatarFile(f); AVATAR = await resizeAvatar(f); AVATAR_FILE = f;
         const pv = $('#suPrev'); pv.style.backgroundImage = `url(${AVATAR})`; pv.classList.add('has'); pv.innerHTML = '';
       }
       else if (t.id === 'rwStyle') { S.rwStyle = t.value; const i = $('#rwInstr'); if (i) i.placeholder = t.value === 'custom' ? 'دستور بازنویسی (لازم است)' : 'توضیح اضافه (اختیاری)'; }
