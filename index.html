@@ -193,6 +193,16 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   .rwbox { margin-top: 6px; border: 1px dashed var(--accent); background: var(--accent-soft); border-radius: 10px; padding: 8px 12px; display: grid; gap: 6px; }
   .rwbox .ah { font-size: 12px; font-weight: 700; color: var(--accent); }
   .rwbox .rwt { line-height: 1.9; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .aiconn { display: grid; grid-template-columns: minmax(0, 1.4fr) auto minmax(0, 1.6fr) auto; gap: 8px 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+  .aiconn:first-of-type { border-top: 0; }
+  .aiconn .nm b { display: block; }
+  .aiconn.off .nm b { color: var(--muted); font-weight: 500; }
+  .aitask { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr); gap: 8px 12px; align-items: end; padding: 12px 0; border-top: 1px solid var(--line); }
+  .aitask:first-of-type { border-top: 0; }
+  .aitask .why { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .aitask .full { grid-column: 1 / -1; }
+  .stepno { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 13px; margin-inline-end: 8px; }
+  @media (max-width: 760px) { .aiconn, .aitask { grid-template-columns: 1fr; } }
   .aigrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
   .mnote { font-size: 13px; background: var(--accent-soft); color: var(--accent); border-radius: 8px; padding: 6px 12px; direction: ltr; text-align: left; }
   .submitbar { position: sticky; bottom: 0; z-index: 10; background: var(--bar); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; }
@@ -2246,7 +2256,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
   // view: admin
   // ===================================================================
   VIEWS.admin = async function () {
-    const tabs = [['users', 'کاربران و نقش‌ها'], ['prompt', 'پرامپت و مدل'], ['gemini', 'سرویس هوش مصنوعی'], ['pubset', 'تنظیمات انتشار'], ['wp', 'اتصال وردپرس'], ['invite', 'لینک ورود اعضا'], ['writers', 'دعوت نویسندگان اسکالریا'], ['glossary', 'واژه‌نامه'], ['news', 'منابع خبر'], ['uploads', 'بارگذاری‌ها'], ['files', 'همه فایل‌ها']];
+    const tabs = [['users', 'کاربران و نقش‌ها'], ['prompt', 'پرامپت‌ها'], ['gemini', 'سرویس هوش مصنوعی'], ['pubset', 'تنظیمات انتشار'], ['wp', 'اتصال وردپرس'], ['invite', 'لینک ورود اعضا'], ['writers', 'دعوت نویسندگان اسکالریا'], ['glossary', 'واژه‌نامه'], ['news', 'منابع خبر'], ['uploads', 'بارگذاری‌ها'], ['files', 'همه فایل‌ها']];
     let body;
     if (S.adminTab === 'users') body = await adminUsers();
     else if (S.adminTab === 'prompt') body = await adminPrompt();
@@ -2415,12 +2425,26 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
     const { data, error } = await sb.from('prompts').select('*').order('version', { ascending: false });
     if (error) throw error;
     const act = data.find(p => p.is_active);
-    return `<form class="card" id="promptForm"><h2>پرامپت فعال ${act ? `<span class="chip ok">نسخه ${fa(act.version)}</span>` : '<span class="chip bad">هیچ نسخه‌ای فعال نیست</span>'}</h2>
-      <label class="f">نام مدل Gemini<input class="ltr" type="text" id="pModel" list="models" value="${esc(act ? act.model : 'gemini-3.8-flash')}"><datalist id="models"><option value="gemini-3.8-flash"><option value="gemini-3.8-pro"><option value="gemini-3.8-flash-lite"></datalist></label>
-      <label class="f">متن پرامپت (باید شامل <span class="num">{{PARAGRAPHS_JSON}}</span> باشد)<textarea class="plain ltr" id="pBody" rows="18">${esc(act ? act.body : '')}</textarea></label>
-      <div class="row"><button class="btn primary" type="submit">ذخیره به‌عنوان نسخه جدید و فعال‌سازی</button></div>
-      <p class="meta">نسخه‌های قبلی حذف نمی‌شوند. هر سند، شناسه پرامپتی را که با آن ترجمه شده نگه می‌دارد.</p></form>
-      <h2>تاریخچه نسخه‌ها</h2><div class="table-wrap"><table><thead><tr><th>نسخه</th><th>مدل</th><th>تاریخ</th><th></th></tr></thead><tbody>${data.map(p => `<tr><td class="num">${fa(p.version)}</td><td class="num">${esc(p.model)}</td><td class="meta">${fmtT(p.created_at)}</td><td>${p.is_active ? '<span class="chip ok">فعال</span>' : `<button type="button" class="btn small" data-act="activateprompt" data-id="${p.id}">فعال‌سازی</button>`}</td></tr>`).join('')}</tbody></table></div>`;
+    const ar = await sb.from('app_config').select('key,value').in('key', ['ai_prompt_review', 'ai_prompt_rewrite', 'ai_provider_translate', 'ai_model_translate']);
+    const c = {}; (ar.data || []).forEach(x => { c[x.key] = x.value; });
+    const taskModel = (c.ai_model_translate || '').trim();
+    const aux = (kind, title, why, def, extra) => `<form class="card" data-aux="${kind}"><h2>${title} ${c['ai_prompt_' + kind] ? '<span class="chip">سفارشی</span>' : '<span class="chip ok">پیش‌فرض</span>'}</h2>
+      <p class="sub">${why}</p>
+      <label class="f">متن پرامپت (باید شامل <span class="num">{{PARAGRAPHS_JSON}}</span> باشد${extra})<textarea class="plain ltr" id="aux_${kind}" rows="12">${esc(c['ai_prompt_' + kind] || def)}</textarea></label>
+      <div class="row"><button class="btn primary" type="submit">ذخیره</button><button type="button" class="btn quiet" data-act="auxreset" data-kind="${kind}">بازگرداندن به پیش‌فرض</button></div></form>`;
+    return `<section class="card"><h2>راهنما: پرامپت‌ها کجا استفاده می‌شوند؟</h2>
+      <p class="sub">سرویس و مدل هر کار را در تب «سرویس هوش مصنوعی» انتخاب می‌کنید؛ متن دستور هر کار را اینجا. پرامپت ترجمه نسخه‌دار است (هر سند نسخه‌ای را که با آن ترجمه شده نگه می‌دارد). پرامپت بازبینی و بازنویسی فقط یک نسخه دارد و تغییرشان روی کارهای بعدی اثر می‌گذارد. «گلچین خبر» و «سئو» پرامپت ثابت دارند و از مدل و سرویس تنظیم‌شده برای خودشان استفاده می‌کنند.</p></section>
+      <form class="card" id="promptForm"><h2><span class="stepno">۱</span>پرامپت ترجمه ${act ? `<span class="chip ok">نسخهٔ ${fa(act.version)} فعال</span>` : '<span class="chip bad">هیچ نسخه‌ای فعال نیست</span>'}</h2>
+        <label class="f">مدل پیش‌فرض ترجمه<input class="ltr" type="text" id="pModel" list="models" value="${esc(act ? act.model : 'gemini-3.8-flash')}"><datalist id="models"><option value="gemini-3.8-flash"><option value="gemini-3.8-pro"><option value="gemini-3.8-flash-lite"></datalist></label>
+        <p class="meta">${taskModel ? `⚠ در تب «سرویس هوش مصنوعی» برای ترجمه مدل <span class="num" dir="ltr">${esc(taskModel)}</span> نوشته شده و بر این فیلد مقدم است.` : 'این مدل فقط وقتی استفاده می‌شود که در «سرویس هوش مصنوعی» برای ترجمه نام مدل جدا ننوشته باشید (و سرویس انتخابی Gemini باشد).'}</p>
+        <label class="f">متن پرامپت (باید شامل <span class="num">{{PARAGRAPHS_JSON}}</span> باشد)<textarea class="plain ltr" id="pBody" rows="18">${esc(act ? act.body : '')}</textarea></label>
+        <div class="row"><button class="btn primary" type="submit">ذخیره به‌عنوان نسخهٔ جدید و فعال‌سازی</button></div>
+        <p class="meta">نسخه‌های قبلی حذف نمی‌شوند. اگر پرامپت واژه‌نامه سازمان را لازم دارد لازم نیست خودتان بنویسید؛ واژه‌های موجود در متن خودکار به پرامپت اضافه می‌شوند.</p></form>
+      <section class="card"><h2>تاریخچهٔ نسخه‌ها</h2><div class="table-wrap"><table><thead><tr><th>نسخه</th><th>مدل</th><th>تاریخ</th><th></th></tr></thead><tbody>${data.map(p => `<tr><td class="num">${fa(p.version)}</td><td class="num" dir="ltr">${esc(p.model)}</td><td class="meta">${fmtT(p.created_at)}</td><td><span class="row">${p.is_active ? '<span class="chip ok">فعال</span>' : `<button type="button" class="btn small" data-act="activateprompt" data-id="${p.id}">فعال‌سازی</button>`}<button type="button" class="btn small quiet" data-act="loadprompt" data-id="${p.id}" data-model="${esc(p.model)}">بارگذاری در ویرایشگر</button></span></td></tr>`).join('')}</tbody></table></div>
+        <p class="meta">«بارگذاری در ویرایشگر» متن آن نسخه را در کادر بالا می‌گذارد تا با تغییر، نسخهٔ جدید بسازید؛ چیزی ذخیره نمی‌شود تا دکمهٔ ذخیره را بزنید.</p></section>
+      <h2 style="margin:18px 0 6px"><span class="stepno">۲</span>پرامپت‌های دیگر</h2>
+      ${aux('review', 'پرامپت بازبینی ماشینی ترجمه', 'به‌صورت خودکار بعد از ترجمه (دورهای تنظیم‌شده در «سرویس هوش مصنوعی») و با درخواست دستی مترجم و ناظر اجرا می‌شود.', AI_DEF.review, '')}
+      ${aux('rewrite', 'پرامپت بازنویسی خبر فارسی', 'برای دکمه‌های بازنویسی ویراستار خبر. دستور هر سبک (ساده‌تر، رسمی‌تر …) خودکار جایگزین <span class="num">{{INSTRUCTION}}</span> می‌شود.', AI_DEF.rewrite, ' و <span class="num">{{INSTRUCTION}}</span>')}`;
   }
   const AI_TASKS = [['translate', 'ترجمهٔ ماشینی (فارسی ← انگلیسی)'], ['review', 'بازبینی ماشینی ترجمه'], ['rewrite', 'بازنویسی ماشینی خبر فارسی'], ['curate', 'گلچین خبر (خالی: مثل بازنویسی)'], ['seo', 'پژوهش و ارتقای سئو (خالی: مثل بازنویسی)']];
   const AI_PROVIDERS = [['gemini', 'Google Gemini'], ['openai', 'OpenAI (ChatGPT)'], ['anthropic', 'Anthropic (Claude)'], ['openai_compat', 'سازگار با OpenAI (آدرس دلخواه)']];
@@ -2431,9 +2455,8 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
   async function saveConns(list) { const u = await sb.from('app_config').upsert({ key: 'ai_conns', value: JSON.stringify(list), updated_at: new Date().toISOString() }); if (u.error) throw u.error; }
   async function adminAI() {
     const names = AI_KEYS.map(k => k[0]);
-    const cfgKeys = ['ai_wire_api', 'ai_extra_headers', 'ai_base_url', 'ai_max_tokens', 'ai_review_rounds', 'ai_prompt_review', 'ai_prompt_rewrite'];
+    const cfgKeys = ['ai_wire_api', 'ai_extra_headers', 'ai_base_url', 'ai_max_tokens', 'ai_review_rounds', 'ai_conns'];
     AI_TASKS.forEach(t => { cfgKeys.push('ai_provider_' + t[0], 'ai_model_' + t[0], 'ai_fallback_' + t[0]); });
-    cfgKeys.push('ai_conns');
     let err = '';
     const has = {};
     try { await Promise.all(names.map(async n => { has[n] = await rpc('has_secret', { p_name: n }); })); } catch (e) { err = 'تابع has_secret پیدا نشد. فایل schema_update_1.sql و schema_update_12.sql را اجرا کرده‌اید؟ ' + errText(e); }
@@ -2444,45 +2467,60 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
     const connHas = {};
     try { await Promise.all(conns.map(async x => { connHas[x.id] = await rpc('has_secret', { p_name: 'AI_KEY_' + x.id }); })); } catch (_) { /* update 17 missing */ }
     const provName = id => (AI_PROVIDERS.find(p => p[0] === id) || [id, id])[1];
+    const bkey = { gemini: 'GEMINI_API_KEY', openai: 'OPENAI_API_KEY', anthropic: 'ANTHROPIC_API_KEY', openai_compat: 'OPENAI_COMPAT_API_KEY' };
+    const ready = sel => sel.startsWith('conn:') ? !!connHas[sel.slice(5)] : !!has[bkey[sel]];
+    const selName = sel => sel.startsWith('conn:') ? ((conns.find(x => x.id === sel.slice(5)) || {}).label || sel) : provName(sel);
+    const nReady = AI_TASKS.filter(t => ready(pr(t[0]))).length;
+    const WHY = { translate: 'پس از تأیید بازبین محتوا، متن فارسی را انگلیسی می‌کند.', review: 'پیشنهاد اصلاح ترجمه (خودکار بعد از ترجمه و با درخواست مترجم/ناظر).', rewrite: 'دکمه‌های بازنویسی در ویراستار خبر.', curate: 'انتخاب و رتبه‌دهی خبرهای واردشده. اگر خالی بماند مثل بازنویسی.', seo: 'پیشنهاد عنوان، توضیح و کلیدواژهٔ سئو. اگر خالی بماند مثل بازنویسی.' };
+    const row = (nm, sub, ok, cls, dataAttr, extraBtns, off) => `<form class="aiconn ${cls} ${off ? 'off' : ''}" ${dataAttr}><div class="nm"><b>${esc(nm)}</b><span class="meta">${sub}</span></div>
+        <span>${ok ? '<span class="chip ok">کلید دارد</span>' : '<span class="chip bad">بدون کلید</span>'}</span>
+        <input class="ltr" type="password" autocomplete="off" placeholder="${ok ? 'کلید تازه (برای تعویض)' : 'کلید را اینجا بچسبانید'}" aria-label="کلید ${esc(nm)}">
+        <span class="row"><button class="btn primary small" type="submit">${ok ? 'تعویض' : 'ذخیرهٔ کلید'}</button>${extraBtns}</span></form>`;
+    const builtin = AI_KEYS.map((k, i) => row(k[1], 'سرویس پیش‌فرض (آدرس رسمی)', !!has[k[0]], 'aikey', `data-name="${k[0]}"`, has[k[0]] ? `<button class="btn quiet danger small" type="button" data-act="delkey" data-name="${k[0]}">حذف کلید</button>` : '', !has[k[0]])).join('');
+    const custom = conns.map(x => row(x.label || x.id, `${esc(provName(x.provider))}${x.base_url ? ' · <span class="ltr" dir="ltr">' + esc(x.base_url) + '</span>' : ''}${x.model ? ' · مدل <span class="ltr" dir="ltr">' + esc(x.model) + '</span>' : ''}`, !!connHas[x.id], 'aiconnkey', `data-id="${x.id}"`, `<button class="btn quiet danger small" type="button" data-act="delconn" data-id="${x.id}">حذف اتصال</button>`, false)).join('');
     return `${err ? `<div class="callout">${esc(err)}</div>` : ''}
-      <section class="card"><h2>کلیدهای API</h2>
-        <p class="sub">هر کلید بعد از ذخیره دیگر برای هیچ‌کس (حتی مدیر) نمایش داده نمی‌شود و فقط توابع سرور از آن استفاده می‌کنند. فقط کلید سرویس‌هایی را بگذارید که می‌خواهید استفاده کنید.</p>
-        <div class="aigrid">${AI_KEYS.map(k => `<form class="aikey card" data-name="${k[0]}"><b>${esc(k[1])} ${has[k[0]] ? '<span class="chip ok">ذخیره شده</span>' : '<span class="chip">ندارد</span>'}</b>
-          <input class="ltr" type="password" autocomplete="off" placeholder="${esc(k[2])}" aria-label="کلید ${esc(k[1])}">
-          <div class="row"><button class="btn primary small" type="submit">ذخیره</button>${has[k[0]] ? `<button class="btn danger small" type="button" data-act="delkey" data-name="${k[0]}">حذف</button>` : ''}</div></form>`).join('')}</div>
+      <section class="card"><h2>وضعیت</h2>
+        <p class="sub">${nReady === AI_TASKS.length ? '<span class="chip ok">همهٔ کارها آماده‌اند</span>' : `<span class="chip bad">${fa(AI_TASKS.length - nReady)} کار کلید ندارد</span>`} هر کار ماشینی با یک اتصال انجام می‌شود (و در صورت خطا با اتصال‌های جایگزین). مراحل: ۱) کلید بگذارید، ۲) هر کار را به یک اتصال بدهید، ۳) «آزمایش اتصال» بزنید.</p>
+        <div class="row" style="flex-wrap:wrap">${AI_TASKS.map(t => `<span class="chip ${ready(pr(t[0])) ? 'ok' : 'bad'}">${esc(t[1].split('(')[0].trim())}: ${esc(selName(pr(t[0])))}</span>`).join('')}</div></section>
+
+      <section class="card"><h2><span class="stepno">۱</span>اتصال‌ها و کلیدها</h2>
+        <p class="sub">هر کلید بعد از ذخیره دیگر برای هیچ‌کس (حتی مدیر) نمایش داده نمی‌شود و فقط توابع سرور از آن استفاده می‌کنند. چند کلید از یک سرویس یا چند سرویس ایرانی را با «افزودن اتصال» بگذارید.</p>
+        ${custom}${builtin}
+        <details class="gl" style="margin-top:10px"><summary>＋ افزودن اتصال تازه (کلید دوم، حساب دیگر، سرویس ایرانی)</summary>
+          <form id="aiConnNew" class="aigrid" style="margin-top:10px">
+            <label class="f">نام دلخواه<input type="text" id="cnLabel" placeholder="مثلاً سرویس ایرانی الف" required></label>
+            <label class="f">نوع سرویس<select id="cnProv">${AI_PROVIDERS.map(p => `<option value="${p[0]}">${p[1]}</option>`).join('')}</select></label>
+            <label class="f">آدرس پایه (برای «سازگار با OpenAI»)<input class="ltr" type="text" id="cnBase" placeholder="https://api.example.ir/v1"></label>
+            <label class="f">مدل پیش‌فرض این اتصال<input class="ltr" type="text" id="cnModel" placeholder="مثلاً gpt-4o-mini"></label>
+            <label class="f">روش ارتباط<select id="cnWire"><option value="chat">Chat Completions (رایج)</option><option value="responses">Responses</option></select></label>
+            <label class="f">کلید API<input class="ltr" type="password" autocomplete="off" id="cnKey" placeholder="کلید" required></label>
+            <div class="row" style="align-self:end"><button class="btn primary" type="submit">افزودن اتصال</button></div></form></details>
         <p class="meta">اگر در سطح رایگان هستید، فقط متن‌های غیرمحرمانه بفرستید.</p></section>
-      <section class="card"><h2>اتصال‌های بیشتر (چند کلید، چند حساب، سرویس‌های ایرانی)</h2>
-        <p class="sub">هر اتصال یک «سرویس + آدرس + کلید» جداست. مثلاً دو کلید Gemini از دو حساب، یا چند سرویس ایرانی سازگار با OpenAI که هرکدام آدرس خودشان را دارند. بعد در «سرویس و مدل هر کار» برای هر کار یک اتصال اصلی و چند اتصال جایگزین انتخاب می‌کنید؛ اگر اصلی خطا داد یا اعتبارش تمام شد، خودکار نوبت بعدی امتحان می‌شود و لازم نیست آدرس و کلید را عوض کنید.</p>
-        ${conns.length ? `<div class="aigrid">${conns.map(x => `<form class="aiconnkey card" data-id="${x.id}"><b>${esc(x.label || x.id)} ${connHas[x.id] ? '<span class="chip ok">کلید دارد</span>' : '<span class="chip bad">بدون کلید</span>'}</b>
-          <div class="meta">${esc(provName(x.provider))}${x.base_url ? ' · <span class="ltr" dir="ltr">' + esc(x.base_url) + '</span>' : ''}${x.model ? ' · <span class="ltr" dir="ltr">' + esc(x.model) + '</span>' : ''}</div>
-          <input class="ltr" type="password" autocomplete="off" placeholder="کلید تازه (برای تعویض)" aria-label="کلید ${esc(x.label || x.id)}">
-          <div class="row"><button class="btn primary small" type="submit">ذخیرهٔ کلید</button><button class="btn danger small" type="button" data-act="delconn" data-id="${x.id}">حذف اتصال</button></div></form>`).join('')}</div>` : '<p class="meta">هنوز اتصالی اضافه نشده است.</p>'}
-        <form id="aiConnNew" class="aigrid" style="margin-top:10px">
-          <label class="f">نام دلخواه<input type="text" id="cnLabel" placeholder="مثلاً Gemini حساب دوم / سرویس ایرانی الف" required></label>
-          <label class="f">نوع سرویس<select id="cnProv">${AI_PROVIDERS.map(p => `<option value="${p[0]}">${p[1]}</option>`).join('')}</select></label>
-          <label class="f">آدرس پایه (فقط برای «سازگار با OpenAI»)<input class="ltr" type="text" id="cnBase" placeholder="https://api.example.ir/v1"></label>
-          <label class="f">نام مدل پیش‌فرض این اتصال<input class="ltr" type="text" id="cnModel" placeholder="gemini-2.5-flash / gpt-4o-mini ..."></label>
-          <label class="f">روش ارتباط<select id="cnWire"><option value="chat">Chat Completions</option><option value="responses">Responses</option></select></label>
-          <label class="f">کلید API<input class="ltr" type="password" autocomplete="off" id="cnKey" placeholder="کلید" required></label>
-          <div class="row" style="align-self:end"><button class="btn primary" type="submit">افزودن اتصال</button></div></form></section>
-      <form class="card" id="aiCfg"><h2>سرویس و مدل هر کار</h2>
-        <p class="sub">برای هر کار می‌توانید سرویس و مدل جدا انتخاب کنید (مثلاً ترجمه با Gemini و بازبینی با Claude). خالی‌گذاشتن نام مدل یعنی مدل پیش‌فرض؛ برای ترجمه با Gemini مدل نسخهٔ فعال در تب «پرامپت و مدل» استفاده می‌شود.</p>
-        ${AI_TASKS.map(t => `<div class="aigrid"><div class="f"><b>${t[1]}</b></div>
-          <label class="f">سرویس<select id="aiP_${t[0]}">${AI_PROVIDERS.map(p => `<option value="${p[0]}"${pr(t[0]) === p[0] ? ' selected' : ''}>${p[1]}</option>`).join('')}${conns.map(x => `<option value="conn:${x.id}"${pr(t[0]) === 'conn:' + x.id ? ' selected' : ''}>اتصال: ${esc(x.label || x.id)}</option>`).join('')}</select></label>
-          <label class="f">نام مدل<input class="ltr" type="text" id="aiM_${t[0]}" value="${esc(c['ai_model_' + t[0]] || '')}" placeholder="مثلاً gpt-4o-mini / claude-sonnet / gemini-flash"></label>
-          ${conns.length ? `<div class="f" style="grid-column:1/-1"><span class="meta">اتصال‌های جایگزین (به این ترتیب امتحان می‌شوند؛ هر کدام باید مدل پیش‌فرض داشته باشد)</span><div class="row" style="flex-wrap:wrap;gap:10px">${conns.map(x => `<label class="row" style="gap:4px"><input type="checkbox" data-fb="${t[0]}" value="${x.id}"${(c['ai_fallback_' + t[0]] || '').split(',').includes(x.id) ? ' checked' : ''}> ${esc(x.label || x.id)}</label>`).join('')}</div></div>` : ''}
-          <div class="row" style="align-self:end">${t[0] === 'curate' || t[0] === 'seo' ? '' : `<button type="button" class="btn small" data-act="aitest" data-task="${t[0]}">آزمایش اتصال</button>`}<span class="meta" id="aiT_${t[0]}" dir="auto" style="flex-basis:100%;overflow-wrap:anywhere;user-select:text"></span></div></div>`).join('<hr style="border:0;border-top:1px solid var(--line);margin:10px 0">')}
-        <div class="aigrid" style="margin-top:12px">
-          <label class="f">آدرس پایهٔ سرویس سازگار با OpenAI (https)<input class="ltr" type="text" id="aiBase" value="${esc(c.ai_base_url || '')}" placeholder="https://api.example.com/v1"></label>
-          <label class="f">روش ارتباط با OpenAI و سرویس سازگار<select id="aiWire"><option value="chat"${c.ai_wire_api !== 'responses' ? ' selected' : ''}>Chat Completions (رایج‌ترین)</option><option value="responses"${c.ai_wire_api === 'responses' ? ' selected' : ''}>Responses (wire_api = "responses")</option></select></label>
-          <label class="f">حداکثر طول پاسخ (توکن)<input type="number" min="256" max="32000" id="aiMax" value="${esc(c.ai_max_tokens || '')}" placeholder="مثلاً ۸۰۰۰"></label>
-          <label class="f">دورهای بازبینی خودکار بعد از ترجمه<select id="aiRounds">${[0, 1, 2, 3].map(n => `<option value="${n}"${String(c.ai_review_rounds || '0') === String(n) ? ' selected' : ''}>${n === 0 ? 'خاموش' : fa(n) + ' دور'}</option>`).join('')}</select></label></div>
-        <label class="f">سرآیندهای اضافی سرویس سازگار (اختیاری، هر خط «نام: مقدار»)<textarea class="plain ltr" id="aiHdr" rows="2" placeholder="x-example-header: value">${esc(c.ai_extra_headers || '')}</textarea></label>
-        <p class="meta">بازبینی ماشینی فقط «پیشنهاد» می‌دهد؛ مترجم یا ناظر تصمیم می‌گیرد. هر دور یک بار هزینهٔ درخواست دارد. مترجم و ناظر هم می‌توانند دستی بازبینی بخواهند.</p>
-        <details class="gl"><summary>پرامپت بازبینی ترجمه</summary><label class="f">باید شامل <span class="num">{{PARAGRAPHS_JSON}}</span> باشد؛ خالی یا پیش‌فرض یعنی متن استاندارد<textarea class="plain ltr" id="aiPrR" rows="12">${esc(c.ai_prompt_review || AI_DEF.review)}</textarea></label></details>
-        <details class="gl"><summary>پرامپت بازنویسی خبر</summary><label class="f">باید شامل <span class="num">{{PARAGRAPHS_JSON}}</span> باشد؛ دستور سبک در <span class="num">{{INSTRUCTION}}</span> جایگزین می‌شود<textarea class="plain ltr" id="aiPrW" rows="12">${esc(c.ai_prompt_rewrite || AI_DEF.rewrite)}</textarea></label></details>
-        <div class="row"><button class="btn primary" type="submit">ذخیرهٔ تنظیمات</button><button type="button" class="btn quiet" data-act="airesetprompts">بازگرداندن پرامپت‌ها به پیش‌فرض</button></div></form>
-      <div class="card"><h2>آزمایش سریع</h2><p class="sub">یک فایل آزمایشی کوچک می‌سازد. بعد در تب «بازبین محتوا» آن را تایید کنید تا ترجمه ماشینی اجرا شود و در سبد ظاهر شود.</p>
+
+      <form class="card" id="aiCfg"><h2><span class="stepno">۲</span>هر کار با کدام اتصال و مدل انجام شود؟</h2>
+        <p class="sub">نام مدل خالی یعنی مدل پیش‌فرض همان اتصال (برای ترجمه با Gemini: مدل نسخهٔ فعال در تب «پرامپت‌ها»). ترجمه و بازبینی را می‌توانید به دو سرویس جدا بدهید.</p>
+        ${AI_TASKS.map(t => { const sel = pr(t[0]); const fbs = (c['ai_fallback_' + t[0]] || '').split(',').filter(Boolean); return `<div class="aitask"><div><b>${t[1].split('(')[0].trim()}</b><div class="why">${WHY[t[0]]}</div></div>
+          <label class="f">اتصال<select id="aiP_${t[0]}">${AI_PROVIDERS.map(p => `<option value="${p[0]}"${sel === p[0] ? ' selected' : ''}>${p[1]}</option>`).join('')}${conns.map(x => `<option value="conn:${x.id}"${sel === 'conn:' + x.id ? ' selected' : ''}>${esc(x.label || x.id)}</option>`).join('')}</select></label>
+          <label class="f">مدل (اختیاری)<input class="ltr" type="text" id="aiM_${t[0]}" value="${esc(c['ai_model_' + t[0]] || '')}" placeholder="پیش‌فرض"></label>
+          <div class="full row" style="flex-wrap:wrap;gap:8px">${ready(sel) ? '' : '<span class="chip bad">کلید این اتصال ذخیره نشده</span>'}
+            ${conns.length ? `<details class="gl" style="flex:1 1 260px"><summary>جایگزین‌ها${fbs.length ? ' (' + fa(fbs.length) + ')' : ''}</summary><div class="row" style="flex-wrap:wrap;gap:10px;padding:6px 0"><span class="meta" style="flex-basis:100%">اگر اتصال اصلی خطا داد، به این ترتیب امتحان می‌شوند (هرکدام باید مدل پیش‌فرض داشته باشد):</span>${conns.map(x => `<label class="row" style="gap:4px"><input type="checkbox" data-fb="${t[0]}" value="${x.id}"${fbs.includes(x.id) ? ' checked' : ''}> ${esc(x.label || x.id)}</label>`).join('')}</div></details>` : ''}
+            ${t[0] === 'curate' || t[0] === 'seo' ? '' : `<button type="button" class="btn small" data-act="aitest" data-task="${t[0]}">آزمایش اتصال</button>`}<span class="meta" id="aiT_${t[0]}" dir="auto" style="flex-basis:100%;overflow-wrap:anywhere;user-select:text"></span></div></div>`; }).join('')}
+
+        <h2 style="margin-top:18px"><span class="stepno">۳</span>رفتار خودکار</h2>
+        <div class="aigrid">
+          <label class="f">دورهای بازبینی خودکار بعد از ترجمه<select id="aiRounds">${[0, 1, 2, 3].map(n => `<option value="${n}"${String(c.ai_review_rounds || '0') === String(n) ? ' selected' : ''}>${n === 0 ? 'خاموش' : fa(n) + ' دور'}</option>`).join('')}</select></label>
+          <label class="f">حداکثر طول پاسخ (توکن)<input type="number" min="256" max="32000" id="aiMax" value="${esc(c.ai_max_tokens || '')}" placeholder="پیش‌فرض ۳۲٬۷۶۸"></label></div>
+        <p class="meta">بازبینی ماشینی فقط «پیشنهاد» می‌دهد؛ مترجم یا ناظر تصمیم می‌گیرد. هر دور یک بار هزینهٔ درخواست دارد. اگر پاسخ‌ها نیمه‌کاره قطع می‌شوند، حداکثر طول پاسخ را بیشتر کنید.</p>
+
+        <details class="gl" style="margin-top:10px"><summary>تنظیمات پیشرفته (فقط برای سرویس «سازگار با OpenAI»)</summary>
+          <div class="aigrid" style="margin-top:8px">
+            <label class="f">آدرس پایه (https)<input class="ltr" type="text" id="aiBase" value="${esc(c.ai_base_url || '')}" placeholder="https://api.example.com/v1"></label>
+            <label class="f">روش ارتباط<select id="aiWire"><option value="chat"${c.ai_wire_api !== 'responses' ? ' selected' : ''}>Chat Completions (رایج‌ترین)</option><option value="responses"${c.ai_wire_api === 'responses' ? ' selected' : ''}>Responses</option></select></label></div>
+          <label class="f">سرآیندهای اضافی (اختیاری، هر خط «نام: مقدار»)<textarea class="plain ltr" id="aiHdr" rows="2" placeholder="x-example-header: value">${esc(c.ai_extra_headers || '')}</textarea></label>
+          <p class="meta">این‌ها برای سرویس «سازگار با OpenAI» داخل ردیف اتصال‌های بالا هم جدا تنظیم می‌شوند؛ این بخش فقط برای ردیف ثابتِ «سازگار با OpenAI» است.</p></details>
+        <div class="submitbar"><button class="btn primary" type="submit">ذخیرهٔ تنظیمات</button><span class="meta">پرامپت‌ها در تب «پرامپت‌ها» هستند.</span></div></form>
+
+      <div class="card"><h2><span class="stepno">۴</span>آزمایش سریع</h2><p class="sub">یک فایل آزمایشی کوچک می‌سازد. بعد در تب «بازبین محتوا» آن را تایید کنید تا ترجمهٔ ماشینی اجرا شود و در سبد ظاهر شود.</p>
         <div class="row"><button type="button" class="btn" data-act="sampledoc">ساخت فایل آزمایشی</button></div></div>`;
   }
   async function adminFiles() {
@@ -2985,7 +3023,11 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
         else if (out) out.textContent = '✗ ' + String((r && r.error) || 'نامشخص');
       } catch (e) { if (out) out.textContent = '✗ ' + String(e && e.message || e); }
     },
-    airesetprompts() { $('#aiPrR').value = AI_DEF.review; $('#aiPrW').value = AI_DEF.rewrite; toast('پیش‌فرض گذاشته شد؛ برای اعمال «ذخیرهٔ تنظیمات» را بزنید.'); },
+    auxreset(el) { const t = $('#aux_' + el.dataset.kind); if (t) { t.value = AI_DEF[el.dataset.kind]; toast('پیش‌فرض گذاشته شد؛ برای اعمال «ذخیره» را بزنید.'); } },
+    async loadprompt(el) {
+      const r = await sb.from('prompts').select('body,model').eq('id', el.dataset.id).single(); if (r.error) throw r.error;
+      $('#pBody').value = r.data.body; $('#pModel').value = r.data.model; const f = $('#promptForm'); if (f) f.scrollIntoView({ behavior: 'smooth', block: 'start' }); toast('متن آن نسخه در ویرایشگر گذاشته شد؛ بعد از تغییر، ذخیره کنید.');
+    },
     async aireview() {
       const id = S.qa || S.docId; if (!id) return;
       S.aiRounds = Number(($('#aiRoundsSel') || {}).value) || 1;
@@ -3199,12 +3241,18 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
         const v = f.querySelector('input').value.trim(); if (!v) throw new Error('کلید را وارد کنید.');
         await rpc('set_secret', { p_name: f.dataset.name, p_value: v }); toast('کلید ذخیره شد.'); return render();
       }
+      if (f.dataset && f.dataset.aux) {
+        const k = f.dataset.aux, v = $('#aux_' + k).value.trim();
+        if (!v.includes('{{PARAGRAPHS_JSON}}')) throw new Error('پرامپت باید شامل {{PARAGRAPHS_JSON}} باشد.');
+        if (k === 'rewrite' && !v.includes('{{INSTRUCTION}}')) throw new Error('پرامپت بازنویسی باید شامل {{INSTRUCTION}} باشد.');
+        const u = await sb.from('app_config').upsert({ key: 'ai_prompt_' + k, value: v === AI_DEF[k].trim() ? '' : v, updated_at: new Date().toISOString() }); if (u.error) throw u.error;
+        toast('پرامپت ذخیره شد.'); return render();
+      }
       if (f.id === 'aiCfg') {
         const base = $('#aiBase').value.trim();
         if (base && !/^https:\/\/[^\s]+$/i.test(base)) throw new Error('آدرس پایه باید با https:// شروع شود.');
         const mx = $('#aiMax').value.trim(); if (mx && !(Number(mx) >= 256 && Number(mx) <= 32000)) throw new Error('طول پاسخ باید بین ۲۵۶ و ۳۲۰۰۰ باشد.');
-        const pr = (id, def) => { const v = $(id).value.trim(); if (!v.includes('{{PARAGRAPHS_JSON}}')) throw new Error('پرامپت باید شامل {{PARAGRAPHS_JSON}} باشد.'); return v === def.trim() ? '' : v; };
-        const rows = { ai_base_url: base, ai_max_tokens: mx, ai_review_rounds: $('#aiRounds').value, ai_wire_api: $('#aiWire').value, ai_extra_headers: $('#aiHdr').value.trim(), ai_prompt_review: pr('#aiPrR', AI_DEF.review), ai_prompt_rewrite: pr('#aiPrW', AI_DEF.rewrite) };
+        const rows = { ai_base_url: base, ai_max_tokens: mx, ai_review_rounds: $('#aiRounds').value, ai_wire_api: $('#aiWire').value, ai_extra_headers: $('#aiHdr').value.trim() };
         AI_TASKS.forEach(t => { rows['ai_provider_' + t[0]] = $('#aiP_' + t[0]).value; rows['ai_model_' + t[0]] = $('#aiM_' + t[0]).value.trim(); rows['ai_fallback_' + t[0]] = [...document.querySelectorAll(`[data-fb="${t[0]}"]:checked`)].map(x => x.value).filter(v => v !== $('#aiP_' + t[0]).value.replace('conn:', '')).join(','); });
         const now = new Date().toISOString();
         const u = await sb.from('app_config').upsert(Object.entries(rows).map(([key, value]) => ({ key, value, updated_at: now }))); if (u.error) throw u.error;
