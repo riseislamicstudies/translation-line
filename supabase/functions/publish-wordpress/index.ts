@@ -317,10 +317,21 @@ Deno.serve(async (req) => {
       await admin.from("documents").update({ wp_error: m.slice(0, 500) }).eq("id", id);
       throw e;
     }
+    // The chosen scholar must be the post's author. Some post types do not accept the author through the REST API (no "author"
+    // support), in which case WordPress silently keeps the API account. Check the answer and, if needed, use the plugin route.
+    let authorWarning: string | null = null;
+    const wantAuthor = doc.pub_author_id ? Number(doc.pub_author_id) : 0;
+    if (wantAuthor && Number(r.author) !== wantAuthor) {
+      let fixed = false;
+      for (const path of ["/rise/v1/set-author", "@/rise/v1/set-author"]) {
+        try { const x = await wp(base, auth, path, "POST", { post_id: r.id, author: wantAuthor }); if (x?.ok) { fixed = true; break; } } catch { /* try the next route */ }
+      }
+      if (!fixed) authorWarning = "\u0646\u0648\u06cc\u0633\u0646\u062f\u0647\u0654 \u0627\u0646\u062a\u062e\u0627\u0628\u200c\u0634\u062f\u0647 \u062b\u0628\u062a \u0646\u0634\u062f \u0648 \u0646\u0648\u0634\u062a\u0647 \u0628\u0627 \u062d\u0633\u0627\u0628 \u0627\u062a\u0635\u0627\u0644 \u062b\u0628\u062a \u0634\u062f. \u0627\u0641\u0632\u0648\u0646\u0647\u0654 Rise Scholars Route \u0631\u0627 \u0628\u0647 \u0646\u0633\u062e\u0647\u0654 \u06f1.\u06f1 \u0628\u0647\u200c\u0631\u0648\u0632 \u06a9\u0646\u06cc\u062f.";
+    }
     await admin.from("documents").update({
       wp_post_id: r.id, wp_url: r.link ?? null, wp_status: r.status ?? status, wp_error: null, wp_sent_at: new Date().toISOString(),
     }).eq("id", id);
-    return json({ ok: true, post_id: r.id, url: r.link ?? null, wp_status: r.status ?? status, images_sent: approvedImgs.length, images_skipped: skipped, has_featured: !!featured });
+    return json({ ok: true, post_id: r.id, url: r.link ?? null, wp_status: r.status ?? status, images_sent: approvedImgs.length, images_skipped: skipped, has_featured: !!featured, author_warning: authorWarning, author: r.author ?? null });
   } catch (e) {
     const m = e instanceof Error ? e.message : String(e);
     return json({ error: "wordpress_failed", detail: m }, e instanceof WpError ? 502 : 500);

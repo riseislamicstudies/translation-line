@@ -1,7 +1,7 @@
 // Edge Function: manage-users  (admin only)
 //
 // The browser cannot create auth users or read their emails (that needs the
-// service-role key), so the Admin > Users page calls this function.
+// service-role key), so the Admin > Users page calls this function (admin only, except own profile photo).
 //
 // POST { action: "list" }
 // POST { action: "create", email, password, full_name?, role? }
@@ -12,6 +12,7 @@
 // POST { action: "set_avatar", user_id, avatar, orig_path? }  avatar = small jpeg data URL (display copy); orig_path = the uploaded original; avatar "" removes both
 // POST { action: "delete", user_id }               delete the account; refused when the user has work history (use disable)
 //
+// avatar_upload_url and set_avatar are also allowed for any signed-in user on their own account.
 // Role changes and name edits do not need this function: an admin can update
 // public.profiles directly (RLS allows it).
 
@@ -58,10 +59,15 @@ Deno.serve(async (req) => {
     .select("role")
     .eq("id", userData.user.id)
     .single();
-  if (!profile || profile.role !== "admin") return json({ error: "forbidden" }, 403);
+  if (!profile || profile.role === "none") return json({ error: "forbidden" }, 403);
 
   const body = await req.json().catch(() => null);
   const action = body?.action;
+  // everybody may change or remove their OWN profile photo; every other action is for admins only
+  if (profile.role !== "admin") {
+    const own = ["avatar_upload_url", "set_avatar"].includes(action) && String(body?.user_id ?? "") === userData.user.id;
+    if (!own) return json({ error: "forbidden" }, 403);
+  }
   const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
   if (action === "list") {

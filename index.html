@@ -626,8 +626,21 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   }
 
   /* ===== v14: kinds, publish page ===== */
-  .chip.kind-news { background: color-mix(in srgb, #0e7490 14%, var(--surface)); color: #0e7490; }
-  .chip.kind-journal { background: color-mix(in srgb, #9333ea 13%, var(--surface)); color: #7e22ce; }
+  /* kind colours: news = light blue, Scholaria = light green, main journal article = gold; cards get the same tint */
+  :root { --k-news: #2f7fc4; --k-scholaria: #2e9e5b; --k-journal: #c9962b; }
+  .chip.kind-news { background: color-mix(in srgb, var(--k-news) 18%, var(--surface)); color: #1f64a3; }
+  .chip.kind-scholaria { background: color-mix(in srgb, var(--k-scholaria) 18%, var(--surface)); color: #1f7a45; }
+  .chip.kind-journal { background: color-mix(in srgb, var(--k-journal) 22%, var(--surface)); color: #8a6212; }
+  [data-kind="news"] { background: color-mix(in srgb, var(--k-news) 9%, var(--surface)); box-shadow: inset 3px 0 0 var(--k-news); }
+  [data-kind="scholaria"] { background: color-mix(in srgb, var(--k-scholaria) 9%, var(--surface)); box-shadow: inset 3px 0 0 var(--k-scholaria); }
+  [data-kind="journal"] { background: color-mix(in srgb, var(--k-journal) 12%, var(--surface)); box-shadow: inset 3px 0 0 var(--k-journal); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .chip.kind-news { color: #8cc3f2; } :root:not([data-theme="light"]) .chip.kind-scholaria { color: #7fd6a2; } :root:not([data-theme="light"]) .chip.kind-journal { color: #e6c168; } }
+  :root[data-theme="dark"] .chip.kind-news { color: #8cc3f2; } :root[data-theme="dark"] .chip.kind-scholaria { color: #7fd6a2; } :root[data-theme="dark"] .chip.kind-journal { color: #e6c168; }
+  /* my-profile menu */
+  .memenu { position: fixed; z-index: 60; top: calc(env(safe-area-inset-top, 0px) + 58px); inset-inline-end: max(12px, env(safe-area-inset-right, 0px)); width: min(300px, calc(100vw - 24px)); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 12px 36px rgba(0,0,0,.22); padding: 16px; display: grid; gap: 10px; justify-items: center; text-align: center; }
+  .memenu .avatar.big { width: 96px; height: 96px; font-size: 34px; }
+  .memenu .row { justify-content: center; }
+  button.avatar { border: 0; padding: 0; cursor: pointer; font: inherit; }
   .chk { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; cursor: pointer; }
   .chk input { width: 18px; height: 18px; }
   .fchips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -1106,7 +1119,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
         <div class="brand">${RISE_LOGO}<b class="wm">سکوی رایز</b></div>
         <nav class="tabs" id="tabs" role="tablist">${tabs.map(([k, l]) => `<button type="button" class="tab" role="tab" data-act="tab" data-tab="${k}" aria-selected="${S.tab === k}">${svgI(k)}<span>${l}</span><span class="count" data-count="${k}" hidden></span></button>`).join('')}</nav>
         <div class="actions">${writer ? '' : `<div class="bellwrap"><button class="bell" id="bell" type="button" data-act="bell" aria-haspopup="true" aria-expanded="false" aria-label="اعلان‌ها"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="bt">اعلان‌ها</span> <span class="dot" id="bellDot" hidden></span></button><div class="panel" id="panel" hidden></div></div>`}
-        <div class="who">${themeBtn()}<span class="avatar" title="${esc(me.full_name || '')}" aria-hidden="true">${me.avatar_url ? `<img src="${esc(me.avatar_url)}" alt="">` : esc((me.full_name || '?').trim().charAt(0))}</span><span class="who-t"><b>${esc(me.full_name || '')}</b><small class="meta">${ROLE_FA[me.role]}</small></span><button class="btn quiet small" type="button" data-act="logout">خروج</button></div></div>
+        <div class="who">${themeBtn()}<button type="button" class="avatar" data-act="memenu" title="عکس و پروفایل من" aria-label="عکس پروفایل من">${me.avatar_url ? `<img src="${esc(me.avatar_url)}" alt="">` : esc((me.full_name || '?').trim().charAt(0))}</button><span class="who-t"><b>${esc(me.full_name || '')}</b><small class="meta">${ROLE_FA[me.role]}</small></span><button class="btn quiet small" type="button" data-act="logout">خروج</button></div></div>
       </div></header>
       <div class="wrap"><main id="main">${me.role === 'none' ? `<div class="card"><h2>حساب شما هنوز نقشی ندارد</h2><p class="sub">مدیر باید نقش «مترجم»، «بازبین محتوا» یا «ناظر» را به حساب شما بدهد. بعد از آن صفحه را تازه کنید.</p><div class="row"><button class="btn" data-act="reload">تازه‌سازی</button></div></div>` : ''}</main></div>`;
     setBell();
@@ -1214,6 +1227,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
     lastHtml = html;
     $('#main').classList.toggle('still', still === true);
     $('#main').innerHTML = html;
+    document.querySelectorAll('#main .chip[class*="kind-"]').forEach(c => { const r = c.closest('.irow,.item,.card'); const m = /kind-(\w+)/.exec(c.className); if (r && m && !r.dataset.kind && !r.matches('#pollBar')) r.dataset.kind = m[1]; });
     growAll();
     refreshCounts();
     aiWatch();
@@ -1448,7 +1462,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
   }
   function irow(d, o) {
     const body = `<span class="irow-t">${esc(d.title)}</span>${o.ex ? `<span class="irow-x" dir="rtl">${esc(o.ex)}</span>` : ''}<span class="irow-m">${o.meta || ''}</span>`;
-    return `<article class="irow" data-q="${esc(normFa([d.title, o.ex, d.source_name].join(' ')))}">${o.open ? `<button type="button" class="irow-main" data-act="opendoc" data-id="${d.id}">${body}</button>` : `<div class="irow-main">${body}</div>`}<div class="irow-side">${o.side || ''}</div>${o.info ? `<div class="irow-info">${o.info}</div>` : ''}${o.callout || ''}</article>`;
+    return `<article class="irow" data-kind="${esc(d.source_kind || '')}" data-q="${esc(normFa([d.title, o.ex, d.source_name].join(' ')))}">${o.open ? `<button type="button" class="irow-main" data-act="opendoc" data-id="${d.id}">${body}</button>` : `<div class="irow-main">${body}</div>`}<div class="irow-side">${o.side || ''}</div>${o.info ? `<div class="irow-info">${o.info}</div>` : ''}${o.callout || ''}</article>`;
   }
   const inboxTools = n => n > 6 ? `<div class="inbox-tools"><input type="search" class="plain" id="qFilter" value="${esc(S.qf || '')}" placeholder="جستجو در عنوان، متن و منبع…" aria-label="جستجو در فهرست"></div>` : '';
   function applyQf() {
@@ -3025,9 +3039,22 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
       await rpc('unpublish_document', { p_doc: id, p_note: note || null });
       S.unpub = null; toast('به آمادهٔ انتشار برگشت.'); render();
     },
+    memenu() {
+      const old = document.getElementById('meMenu'); if (old) { old.remove(); return; }
+      const m = document.createElement('div'); m.id = 'meMenu'; m.className = 'memenu'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-label', 'عکس پروفایل من');
+      m.innerHTML = `<span class="avatar big">${me.avatar_url ? `<img src="${esc(me.avatar_url)}" alt="">` : esc((me.full_name || '?').trim().charAt(0))}</span><b>${esc(me.full_name || '')}</b>
+        <span class="row"><label class="btn small primary" style="cursor:pointer">${me.avatar_url ? 'تغییر عکس' : 'افزودن عکس'}<input type="file" accept="image/jpeg,image/png,image/webp" data-myavatar hidden></label>${me.avatar_url ? '<button type="button" class="btn small quiet" data-act="myavdel">حذف عکس</button>' : ''}</span>
+        <small class="meta">JPEG، PNG یا WebP تا ۱۵ مگابایت. نسخهٔ اصلی با کیفیت کامل نگه‌داری می‌شود.</small>`;
+      document.body.appendChild(m);
+    },
+    async myavdel() {
+      await fnCall('manage-users', { action: 'set_avatar', user_id: me.id, avatar: '' });
+      me.avatar_url = null; const m = document.getElementById('meMenu'); if (m) m.remove(); toast('عکس پروفایل حذف شد.'); renderShell(); render(true);
+    },
     async wpsend(el) {
       const id = el.dataset.id; toast('در حال ارسال به وردپرس…');
       const r = await fnCall('publish-wordpress', { action: 'send', document_id: id });
+      if (r && r.author_warning) toast(r.author_warning);
       if (r && r.wp_status === 'publish') { await rpc('mark_published', { p_doc: id }); toast('در وردپرس منتشر شد و ثبت شد.'); }
       else toast('به‌صورت پیش‌نویس در وردپرس ساخته شد. بعد از انتشار در سایت، «علامت منتشر شد» را بزنید.');
       render();
@@ -3251,6 +3278,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
   }
 
   document.addEventListener('click', async e => {
+    { const mm = document.getElementById('meMenu'); if (mm && !mm.contains(e.target) && !(e.target.closest && e.target.closest('[data-act="memenu"]'))) mm.remove(); }
     const bell = e.target.closest('.bellwrap');
     if (S.panel && !bell) { S.panel = false; setBell(); }
     const el = e.target.closest('[data-act]'); if (!el) return;
@@ -3451,6 +3479,16 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
   document.addEventListener('change', async e => {
     const t = e.target;
     try {
+      if (t.matches && t.matches('[data-myavatar]')) {
+        const f = (t.files || [])[0]; if (!f) return; t.value = '';
+        try {
+          checkAvatarFile(f); toast('در حال ارسال عکس…'); const av = await resizeAvatar(f);
+          const orig = await uploadAvatarOriginal(f, mime => fnCall('manage-users', { action: 'avatar_upload_url', user_id: me.id, mime }));
+          const r = await fnCall('manage-users', { action: 'set_avatar', user_id: me.id, avatar: av, orig_path: orig });
+          me.avatar_url = (r && r.avatar_url) || av; const m = document.getElementById('meMenu'); if (m) m.remove(); toast('عکس پروفایل تغییر کرد.'); renderShell(); render(true);
+        } catch (e) { toast(errText(e)); }
+        return;
+      }
       if (t.matches && t.matches('[data-pavatar]')) {
         const f = (t.files || [])[0]; if (!f) return; const id = t.dataset.pavatar; t.value = '';
         try { checkAvatarFile(f); toast('در حال ارسال عکس…'); const av = await resizeAvatar(f); const orig = await uploadAvatarOriginal(f, mime => fnCall('manage-users', { action: 'avatar_upload_url', user_id: id, mime })); await fnCall('manage-users', { action: 'set_avatar', user_id: id, avatar: av, orig_path: orig }); toast('عکس پروفایل تغییر کرد.'); await loadNames(); if (me && me.id === id) { const r = await sb.from('profiles').select('avatar_url').eq('id', id).single(); if (r.data) me.avatar_url = r.data.avatar_url; } render(); }
