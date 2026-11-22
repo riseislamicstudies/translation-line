@@ -183,7 +183,7 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   .airev .at { font-family: var(--f-en); direction: ltr; text-align: left; font-size: 16px; line-height: 1.7; overflow-wrap: anywhere; color: var(--fg); }
   .airev ins { text-decoration: none; background: var(--ok-soft); color: var(--ok); border-radius: 3px; padding: 0 2px; }
   .airev del { background: var(--bad-soft); color: var(--bad); border-radius: 3px; padding: 0 2px; }
-  .airev .an { font-size: 13px; color: var(--muted, var(--fg)); }
+  .airev .an { white-space: pre-line; font-size: 13px; color: var(--muted, var(--fg)); }
   .aibar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; background: var(--bar); }
   .aibar select, .rwbar select { width: auto; flex: 0 0 auto; max-width: 100%; }
   .aibar .grow1 { flex: 1 1 220px; }
@@ -557,10 +557,29 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   .ptxt.head { font-weight: 700; font-size: calc(var(--pfs) * 1.12); }
   .ptxt.li::before { content: '• '; color: var(--accent); }
   .ptxt.emp { color: var(--muted); }
+  /* Word formatting markers */
+  .ptxt b, .final-text b, .fa b, .diff b { font-weight: 700; } .ptxt i, .fa i, .diff i { font-style: italic; }
+  sup.fnr { font-size: .72em; color: var(--accent); font-weight: 700; margin-inline: 1px; }
+  .ptxt.h1 { font-size: calc(var(--pfs) * 1.45); } .ptxt.h2 { font-size: calc(var(--pfs) * 1.28); } .ptxt.h3 { font-size: calc(var(--pfs) * 1.14); } .ptxt.h4, .ptxt.h5, .ptxt.h6 { font-size: var(--pfs); }
+  .fa.h1 { font-size: 1.35em; } .fa.h2 { font-size: 1.2em; } .fa.h3 { font-size: 1.08em; }
+  .ptxt.l2 { padding-inline-start: 28px; } .ptxt.l3 { padding-inline-start: 46px; } .ptxt.li.l2::before, .ptxt.li.l3::before { content: '◦ '; }
+  .ptxt.fn, .fa.fn { font-size: .88em; color: var(--muted); border-inline-start: 3px solid var(--line, #ccc); padding-inline-start: 10px; }
+  .fbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 6px; }
+  .fbar .btn { min-width: 34px; padding-inline: 8px; } .fbar select { font: inherit; font-size: 13px; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line, #ccc); background: var(--surface, transparent); color: inherit; }
+  .inimg { margin: 10px 0; text-align: center; } .inimg img { max-width: min(100%, 520px); max-height: 340px; border-radius: 8px; border: 1px solid var(--line, #ddd); }
+  .inimg figcaption { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .hh { display: grid; gap: 6px; } .hh .hd { font-size: 14px; line-height: 1.9; padding: 6px 10px; border-radius: 8px; background: var(--sunk); direction: ltr; text-align: left; overflow-wrap: anywhere; }
+  .hh .hd[data-t] { cursor: help; } .hh ins, .hh del { text-decoration: none; border-radius: 3px; padding: 0 2px; } .hh ins { background: color-mix(in srgb, #2e9e5b 22%, transparent); } .hh del { background: color-mix(in srgb, #d44 20%, transparent); text-decoration: line-through; }
+  .hh ins[data-tip], .hh del[data-tip] { position: relative; cursor: help; }
+  .hh [data-tip]:hover::after, .hh [data-tip]:focus::after { content: attr(data-tip); position: absolute; z-index: 20; bottom: calc(100% + 4px); inset-inline-start: 0; white-space: nowrap; direction: rtl; font-size: 12px; line-height: 1.5; padding: 4px 8px; border-radius: 6px; background: var(--fg); color: var(--bg); box-shadow: 0 2px 8px rgba(0,0,0,.25); pointer-events: none; text-decoration: none; }
+  .hh .gap { color: var(--muted); } .hh .hd0 { background: transparent; color: var(--muted); padding-inline: 0; font-size: 13px; }
+  .hh li { display: flex; flex-direction: column; gap: 4px; }
+  .hh .hm { font-size: 12px; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; direction: rtl; }
   .para.ro .ptxt { cursor: default; }
   .dview textarea.fa-edit { font-size: var(--pfs); line-height: 2.1; display: none; border-color: var(--accent); background: var(--surface); }
   .dview .para.editing textarea.fa-edit { display: block; }
   .dview .para.editing .ptxt { display: none; }
+  .dview .para .fbar { display: none; } .dview .para.editing .fbar { display: flex; }
   .pact { display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 8px 8px 8px 6px; opacity: 0; transition: opacity .15s; }
   .para:hover .pact, .para:focus-within .pact, .para.editing .pact, .para.hascm .pact { opacity: 1; }
   @media (hover: none) { .pact { opacity: 1; } }
@@ -678,6 +697,41 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
   // ===================================================================
   const $ = s => document.querySelector(s);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  // inline formatting markers -> safe HTML:  **bold**  *italic*  [text](https://url)  [^n] (footnote ref)  \* (literal star)
+  const fmt = t => esc(t == null ? '' : t).replace(/\\\*/g, '\u0001').replace(/\\\[\^/g, '\u0002')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (m, a, u) => `<a href="${u}" target="_blank" rel="noopener noreferrer">${a}</a>`)
+    .replace(/\*\*([^*]+?)\*\*/g, '<b>$1</b>').replace(/\*([^*\n]+?)\*/g, '<i>$1</i>')
+    .replace(/\[\^(\d+)\]/g, '<sup class="fnr">$1</sup>').replace(/\u0001/g, '*').replace(/\u0002/g, '[^');
+  const plain = t => String(t == null ? '' : t).replace(/\\\*/g, '\u0001').replace(/\[([^\]]+)\]\(https?:\/\/[^\s)]+\)/g, '$1').replace(/\*\*?/g, '').replace(/\u0001/g, '*');
+  const kcls = g => g.kind === 'heading' ? ` head h${g.level || 2}` : g.kind === 'list_item' ? ` li l${Math.min(g.level || 1, 3)}` : g.kind === 'footnote' ? ' fn' : '';
+  const KIND_OPTS = [['paragraph', 'پاراگراف'], ['heading:1', 'تیتر اصلی'], ['heading:2', 'تیتر فرعی ۱'], ['heading:3', 'تیتر فرعی ۲'], ['heading:4', 'تیتر فرعی ۳'], ['list_item', 'فهرست'], ['footnote', 'پاورقی']];
+  const kindVal = g => g.kind === 'heading' ? 'heading:' + (g.level || 2) : g.kind;
+  const kindSel = g => `<select data-kindsel="${g.id}" aria-label="نوع بند">${KIND_OPTS.map(([v, l]) => `<option value="${v}"${kindVal(g) === v ? ' selected' : ''}>${l}</option>`).join('')}</select>`;
+  const fbar = (g, tid, withKind) => `<div class="fbar" role="toolbar" aria-label="قالب‌بندی"><button type="button" class="btn small" data-act="fmtb" data-t="${tid}" title="پررنگ (Ctrl+B)"><b>B</b></button><button type="button" class="btn small" data-act="fmti" data-t="${tid}" title="کج (Ctrl+I)"><i>I</i></button>${withKind ? kindSel(g) : ''}</div>`;
+  // pictures that sit between paragraphs in the Word file (document_images.after_position); returns {position: html}
+  async function inlineImgs(docId) {
+    const out = {};
+    try {
+      const { data } = await sb.from('document_images').select('path,alt_text,caption,after_position,kind,approved').eq('document_id', docId).eq('kind', 'inline').order('created_at');
+      const rows = data || []; if (!rows.length) return out;
+      const r = await sb.storage.from('doc-images').createSignedUrls(rows.map(x => x.path), 3600), u = {};
+      (r.data || []).forEach(x => { if (x.signedUrl) u[x.path] = x.signedUrl; });
+      rows.forEach(x => { if (!u[x.path]) return; const k = x.after_position || 'end'; (out[k] = out[k] || []).push(`<figure class="inimg"><img src="${esc(u[x.path])}" alt="${esc(x.alt_text || '')}" loading="lazy">${x.caption ? `<figcaption>${esc(x.caption)}</figcaption>` : ''}</figure>`); });
+    } catch (_) { /* pictures are optional */ }
+    for (const k of Object.keys(out)) out[k] = out[k].join('');
+    return out;
+  }
+  function wrapSel(tid, m) {
+    const ta = document.getElementById(tid); if (!ta || ta.readOnly) return;
+    const a = ta.selectionStart, b = ta.selectionEnd, v = ta.value, sel = v.slice(a, b);
+    let nv, ns, ne;
+    if (sel.startsWith(m) && sel.endsWith(m) && sel.length >= 2 * m.length && !(m === '*' && sel.startsWith('**'))) { nv = v.slice(0, a) + sel.slice(m.length, sel.length - m.length) + v.slice(b); ns = a; ne = b - 2 * m.length; }
+    else if (!sel) { nv = v.slice(0, a) + m + m + v.slice(b); ns = ne = a + m.length; }
+    else { const lead = /^\s*/.exec(sel)[0].length, trail = /\s*$/.exec(sel)[0].length, core = sel.slice(lead, sel.length - trail); if (!core) return; nv = v.slice(0, a + lead) + m + core + m + v.slice(b - trail); ns = a + lead + m.length; ne = ns + core.length; }
+    ta.value = nv; ta.setSelectionRange(ns, ne); ta.focus();
+    ta.dispatchEvent(new Event('input', { bubbles: true })); ta.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  const imgAt = (m, g) => (m && m[g.position]) || '';
   const fa = n => Number(n).toLocaleString('fa-IR');
   const pct = x => fa(Math.round(x * 100)) + '٪';
   const clock = () => new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
@@ -1216,7 +1270,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
       let path = null;
       const up = await sb.storage.from('source-files').upload(id + '/source.docx', file, { contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
       if (!up.error) path = id + '/source.docx';
-      await rpc('writer_submit', { p_id: id, p_title: title, p_filename: file.name, p_path: path, p_segments: segs.map(x => ({ kind: x.kind, text: x.text })), p_replaces: replaces || null });
+      await rpc('writer_submit', { p_id: id, p_title: title, p_filename: file.name, p_path: path, p_segments: segs.map(x => ({ kind: x.kind, text: x.text, level: x.level || null })), p_replaces: replaces || null });
       const imgs = S.wImgs || []; S.wImgs = []; let okImgs = 0;
       try { okImgs += (await importDocImages(id, segs.docImgs)).ok; } catch (_) { /* best effort */ }
       for (const f of imgs) { try { await pmUpload(id, f); okImgs++; } catch (e) { toast(`${f.name}: ${errText(e)}`); } }
@@ -1245,22 +1299,73 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
   // ===================================================================
   // DOCX parsing
   // ===================================================================
+  // Word -> segments. Inline formatting is kept as light markers inside the text so it survives every step
+  // (translation, review, editing, publishing):  **bold**  *italic*  [text](url)  [^n] footnote reference  \* literal star
+  // heading level -> segments.level (1-6); list nesting depth -> level; footnotes -> their own segments "[^n] text" at the end.
   async function parseDocx(file) {
     const buf = await file.arrayBuffer();
     if (!(await window.__loadJs(['mammoth.browser.min.js', 'https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js', 'https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js'], () => !!window.mammoth, 20000))) throw new Error('کتابخانهٔ خواندن Word بارگذاری نشد. اینترنت/VPN را بررسی و دوباره تلاش کنید.');
     const res = await mammoth.convertToHtml({ arrayBuffer: buf });
     const doc = new DOMParser().parseFromString(res.value, 'text/html');
-    const segs = [], found = [];
-    const add = (kind, text) => { text = String(text).replace(/\s+/g, ' ').trim(); if (text) segs.push({ kind, text }); };
+    const segs = [], found = [], notes = {}, order = [];
+    const isNoteLi = li => /^(foot|end)note-\d+$/.test(li.id || '');
+    const noteId = a => { const m = /^#(?:foot|end)note-(\d+)$/.exec(a.getAttribute('href') || ''); return m ? 'n' + m[1] + (/endnote/.test(a.getAttribute('href')) ? 'e' : 'f') : null; };
+    const wrap = (s, m) => { const mm = /^(\s*)([\s\S]*?)(\s*)$/.exec(s); return mm[2] ? mm[1] + m + mm[2] + m + mm[3] : s; };
+    const inline = (n, skipLists) => {
+      let out = '';
+      n.childNodes.forEach(c => {
+        if (c.nodeType === 3) { out += c.nodeValue.replace(/\*/g, '\\*').replace(/\[\^/g, '\\[^'); return; }
+        if (c.nodeType !== 1) return;
+        const t = c.tagName.toLowerCase();
+        if (skipLists && (t === 'ul' || t === 'ol')) return;
+        if (t === 'img') return;
+        if (t === 'br') { out += ' '; return; }
+        if (t === 'sup') {
+          const a = c.querySelector('a'), id = a && noteId(a);
+          if (id) { if (!order.includes(id)) order.push(id); out += `[^${order.indexOf(id) + 1}]`; return; }
+        }
+        if (t === 'a') {
+          const href = c.getAttribute('href') || '', inner = inline(c);
+          if (/^#(?:foot|end)note-ref/.test(href)) return;               // back-link inside a footnote
+          if (/^https?:\/\//i.test(href) && inner.trim()) { out += `[${inner.replace(/[\[\]]/g, '')}](${href.replace(/[()\s]/g, encodeURIComponent)})`; return; }
+          out += inner; return;
+        }
+        const inner = inline(c, skipLists);
+        if (t === 'strong' || t === 'b') out += wrap(inner, '**');
+        else if (t === 'em' || t === 'i') out += wrap(inner, '*');
+        else out += inner;
+      });
+      return out;
+    };
+    const clean = s => String(s).replace(/\s+/g, ' ').replace(/\*\*\s*\*\*/g, '').trim();
+    const add = (kind, text, level) => { text = clean(text); if (text) segs.push({ kind, text, level: level || null }); };
+    // footnote bodies first (they sit in a trailing <ol>)
+    doc.body.querySelectorAll('li').forEach(li => { if (isNoteLi(li)) { const b = li.cloneNode(true); b.querySelectorAll('a[href^="#footnote-ref"],a[href^="#endnote-ref"]').forEach(a => a.remove()); notes[(/^end/.test(li.id) ? 'n' + li.id.replace(/\D/g, '') + 'e' : 'n' + li.id.replace(/\D/g, '') + 'f')] = inline(b); } });
+    const list = (el, depth, ordered) => {
+      [...el.children].forEach((li, i) => {
+        if (li.tagName.toLowerCase() !== 'li') return;
+        li.querySelectorAll('img').forEach(im => found.push({ src: im.getAttribute('src') || '', alt: im.getAttribute('alt') || '', after: segs.length + 1 }));
+        add('list_item', (ordered ? (i + 1) + '. ' : '- ') + inline(li, true), Math.min(depth, 6));
+        [...li.children].forEach(ch => { const t = ch.tagName.toLowerCase(); if (t === 'ul' || t === 'ol') list(ch, depth + 1, t === 'ol'); });
+      });
+    };
     doc.body.childNodes.forEach(n => {
       if (n.nodeType !== 1) return;
       const tag = n.tagName.toLowerCase();
-      n.querySelectorAll('img').forEach(im => found.push({ src: im.getAttribute('src') || '', alt: im.getAttribute('alt') || '', after: segs.length + (String(n.textContent).trim() ? 1 : 0) }));
-      if (/^h[1-6]$/.test(tag)) add('heading', n.textContent);
-      else if (tag === 'ul' || tag === 'ol') [...n.querySelectorAll('li')].forEach((li, i) => add('list_item', (tag === 'ol' ? (i + 1) + '. ' : '- ') + li.textContent));
-      else if (tag === 'table') [...n.querySelectorAll('tr')].forEach(tr => add('paragraph', [...tr.children].map(c => c.textContent.trim()).join(' | ')));
-      else add('paragraph', n.textContent);
+      if (tag === 'ol' && [...n.children].some(isNoteLi)) return;
+      const txt = inline(n);
+      n.querySelectorAll('img').forEach(im => found.push({ src: im.getAttribute('src') || '', alt: im.getAttribute('alt') || '', after: segs.length + (clean(txt) ? 1 : 0) }));
+      if (/^h[1-6]$/.test(tag)) add('heading', txt.replace(/^\*\*(.*)\*\*$/, '$1'), +tag[1]);
+      else if (tag === 'ul' || tag === 'ol') list(n, 1, tag === 'ol');
+      else if (tag === 'table') [...n.querySelectorAll('tr')].forEach(tr => add('paragraph', [...tr.children].map(c => inline(c).trim()).join(' | ')));
+      else if (tag === 'blockquote') add('paragraph', txt);
+      else add('paragraph', txt);
     });
+    // footnotes: renumbered in order of appearance; a reference without a body is dropped, a body without a reference is appended last
+    const used = order.filter(id => notes[id] != null);
+    const keep = new Map(used.map((id, i) => [order.indexOf(id) + 1, i + 1]));
+    segs.forEach(s => { s.text = s.text.replace(/\[\^(\d+)\]/g, (m, d) => keep.has(+d) ? `[^${keep.get(+d)}]` : ''); });
+    used.forEach((id, i) => segs.push({ kind: 'footnote', text: `[^${i + 1}] ` + clean(notes[id]), level: null }));
     segs.docImgs = found;
     return segs;
   }
@@ -1285,7 +1390,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
     const wc = segs.reduce((n, s) => n + words(s.text).length, 0);
     const ins = await sb.from('documents').insert({ id, title, source_filename: filename, source_path: path ? path(id) : null, word_count: wc, uploaded_by: me.id });
     if (ins.error) throw ins.error;
-    const rows = segs.map((s, i) => ({ document_id: id, position: i + 1, kind: s.kind, source_text: s.text }));
+    const rows = segs.map((s, i) => ({ document_id: id, position: i + 1, kind: s.kind, source_text: s.text, level: s.level || null }));
     for (let i = 0; i < rows.length; i += 200) {
       const r = await sb.from('segments').insert(rows.slice(i, i + 200));
       if (r.error) { await sb.from('documents').delete().eq('id', id); throw r.error; }
@@ -1310,7 +1415,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
       const wc = segs.reduce((n, s) => n + words(s.text).length, 0);
       const ins = await sb.from('documents').insert({ id, title, source_filename: file.name, source_path: storedPath, word_count: wc, uploaded_by: me.id, source_kind: S.upKind });
       if (ins.error) throw ins.error;
-      const rows = segs.map((s, i) => ({ document_id: id, position: i + 1, kind: s.kind, source_text: s.text }));
+      const rows = segs.map((s, i) => ({ document_id: id, position: i + 1, kind: s.kind, source_text: s.text, level: s.level || null }));
       for (let i = 0; i < rows.length; i += 200) {
         const r = await sb.from('segments').insert(rows.slice(i, i + 200));
         if (r.error) { await sb.from('documents').delete().eq('id', id); throw r.error; }
@@ -1444,10 +1549,10 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
       + (rows ? `<div class="ilist">${rows}</div>` : emptyCard('خبری در سبد نیست. خبرهای تازه که از منابع برسند اینجا می‌آیند.'))
       + (sent.length ? `<h2>ارسال‌شده برای بازبین <span class="chip">${fa(sent.length)}</span></h2><div class="ilist">${sent.map(d => irow(d, { meta: `${ago(d.news_edited_at)}${d.source_name ? ' · ' + esc(d.source_name) : ''}`, side: chip('content_review') })).join('')}</div>` : '');
   };
-  const KIND_FA = k => k === 'heading' ? 'تیتر' : k === 'list_item' ? 'فهرست' : 'پاراگراف';
+  const KIND_FA = k => k === 'heading' ? 'تیتر' : k === 'list_item' ? 'فهرست' : k === 'footnote' ? 'پاورقی' : 'پاراگراف';
   async function vReviewDoc() {
     const id = S.docId;
-    const [d, s] = await Promise.all([sb.from('documents').select('*').eq('id', id).single(), sb.from('segments').select('id,position,kind,source_text').eq('document_id', id).order('position')]);
+    const [d, s] = await Promise.all([sb.from('documents').select('*').eq('id', id).single(), sb.from('segments').select('id,position,kind,level,source_text').eq('document_id', id).order('position')]);
     if (d.error) { S.docId = null; throw d.error; }
     if (s.error) throw s.error;
     const doc = d.data;
@@ -1456,6 +1561,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
     const canEd = ['news_editor', 'admin'].includes(me.role);
     await loadComments(id);
     const pm = await loadPrintMin();
+    const inImgs = await inlineImgs(id);
     const rej = doc.status === 'review_rejected';
     const toW = isW((S.roles || {})[doc.uploaded_by]);
     const ro = rej && toW;                       // waiting for the writer's new version
@@ -1480,8 +1586,9 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
       const hasCm = cmUnresolved(g.id) > 0;
       return `<div class="para${sel.has(g.id) ? ' sel' : ''}${ro ? ' ro' : ''}${hasCm ? ' hascm' : ''}" data-sid="${g.id}">
         <button type="button" class="gut" aria-pressed="${sel.has(g.id)}" aria-label="انتخاب بند ${fa(i + 1)}"><span class="pc">✓</span><span class="pn">${fa(i + 1)}</span></button>
-        <div class="pbody"><div class="ptxt${g.kind === 'heading' ? ' head' : g.kind === 'list_item' ? ' li' : ''}${g.source_text.trim() ? '' : ' emp'}" dir="rtl" lang="fa" data-ptxt="${g.id}"${ro ? '' : ` data-act="pedit" data-sid="${g.id}" role="button" tabindex="0" aria-label="ویرایش بند ${fa(i + 1)}"`}>${esc(g.source_text.trim() ? g.source_text : (ro ? '' : 'بند خالی — برای نوشتن بزنید'))}</div>
-          <textarea class="t pt fa-edit${g.kind === 'heading' ? ' head' : ''}" dir="rtl" lang="fa" rows="1" data-fa="${g.id}" ${ro ? 'readonly' : ''} aria-label="متن فارسی بند ${fa(i + 1)}">${esc(g.source_text)}</textarea>
+        <div class="pbody"><div class="ptxt${kcls(g)}${g.source_text.trim() ? '' : ' emp'}" dir="rtl" lang="fa" data-ptxt="${g.id}"${ro ? '' : ` data-act="pedit" data-sid="${g.id}" role="button" tabindex="0" aria-label="ویرایش بند ${fa(i + 1)}"`}>${g.source_text.trim() ? fmt(g.source_text) : esc(ro ? '' : 'بند خالی — برای نوشتن بزنید')}</div>
+          ${ro ? '' : fbar(g, 'fa-' + g.id, true)}
+          <textarea id="fa-${g.id}" class="t pt fa-edit${g.kind === 'heading' ? ' head' : ''}" dir="rtl" lang="fa" rows="1" data-fa="${g.id}" ${ro ? 'readonly' : ''} aria-label="متن فارسی بند ${fa(i + 1)}">${esc(g.source_text)}</textarea>
           ${rw[g.id] ? `<div class="rwbox" data-rwbox="${g.id}"><div class="ah">پیشنهاد بازنویسی ماشینی</div><div class="rwt" dir="rtl" lang="fa">${esc(rw[g.id])}</div><div class="row"><button type="button" class="btn small primary" data-act="rwaccept" data-sid="${g.id}">جایگزین کن</button><button type="button" class="btn small quiet" data-act="rwreject" data-sid="${g.id}">رد</button></div></div>` : ''}
           ${cmBox(g.id)}</div>
         <div class="pact">${ro ? '' : `<button type="button" class="btn quiet small" data-act="pedit" data-sid="${g.id}">ویرایش</button>`}${cmButton(g.id)}</div></div>`;
@@ -1500,7 +1607,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
       <div class="selbar" id="selBar" role="region" aria-label="کار روی بندهای انتخاب‌شده"><b id="selN">${fa(sel.size)} بند انتخاب شده</b>
         <input type="text" id="bulkNote" placeholder="یک نظر برای همهٔ بندهای انتخاب‌شده" aria-label="نظر گروهی"><button type="button" class="btn small" data-act="bulkcm">ثبت نظر</button>
         <button type="button" class="btn small" data-act="selcopy">کپی بندها</button>${ro ? '' : '<button type="button" class="btn small danger" data-act="bulkdel">حذف بندها</button>'}<button type="button" class="btn small" data-act="selall">انتخاب همه</button><button type="button" class="btn small" data-act="selnone">لغو انتخاب</button></div></div>
-      <div class="sheet" id="sheet">${s.data.map(para).join('')}</div>
+      <div class="sheet" id="sheet">${s.data.map((g, i) => para(g, i) + imgAt(inImgs, g)).join('')}${inImgs.end || ''}</div>
       ${pmetaSlot(id, { fields: false, attach: true })}
       ${ned ? (!canEd ? '<div class="submitbar dbar"><span class="meta">این خبر در سبد ویراستار خبر است.</span></div>' : `<div class="submitbar dbar">${S.confirm === 'nsend'
         ? `<span class="row" style="flex:1 1 320px"><input type="text" id="edNote" class="plain" placeholder="یادداشت برای بازبین محتوا (اختیاری)" style="flex:1 1 220px"><button type="button" class="btn primary" data-act="nsend" data-id="${id}">ارسال برای بازبین${nextHint ? ' و بعدی' : ''}</button><button type="button" class="btn quiet" data-act="cancelc">انصراف</button></span>`
@@ -1539,7 +1646,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
   function paraSync(sid) {
     const p = document.querySelector(`.para[data-sid="${sid}"]`); if (!p) return;
     const ta = p.querySelector('textarea[data-fa]'), x = p.querySelector('.ptxt');
-    if (ta && x) { x.textContent = ta.value.trim() ? ta.value : (ta.readOnly ? '' : 'بند خالی — برای نوشتن بزنید'); x.classList.toggle('emp', !ta.value.trim()); }
+    if (ta && x) { if (ta.value.trim()) x.innerHTML = fmt(ta.value); else x.textContent = ta.readOnly ? '' : 'بند خالی — برای نوشتن بزنید'; x.classList.toggle('emp', !ta.value.trim()); }
   }
 
   async function startTranslation(id) {
@@ -1623,6 +1730,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
     const notes = Array.isArray(doc.ai_notes) ? doc.ai_notes : [];
     const gl = Array.isArray(doc.glossary) ? doc.glossary : [];
     const edited = segs.filter(g => g.current_text !== g.ai_text).length;
+    const inImgs = await inlineImgs(id);
     return `<div><button type="button" class="btn quiet" data-act="back">→ فایل‌های من</button></div>
       <section class="page-head"><h1>${esc(doc.title)}</h1><p class="sub">${fa(segs.length)} بند · ${fa(doc.word_count)} کلمه فارسی · ${chip(doc.status)}</p></section>
       ${doc.status === 'changes_requested' && doc.qa_note ? `<div class="callout"><b>یادداشت ناظر:</b> ${esc(doc.qa_note)}${supEd ? `<br><span class="meta">ناظر در ${fa(supEd)} بند مستقیم تغییر داده است (با نشان «ویرایش ناظر»). اگر موافق نیستید، در تاریخچهٔ بند می‌توانید نسخهٔ قبلی را ببینید.</span>` : ''}</div>` : ''}
@@ -1633,14 +1741,14 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
       ${aiBar(doc, segs, editable)}
       <div class="toolbar"><span id="progress" data-total="${segs.length}">${fa(edited)} از ${fa(segs.length)} بند ویرایش شده</span><span class="saved" id="saved">${editable ? 'ذخیره خودکار فعال است' : 'فقط‌خواندنی'}</span></div>
       <div class="segs">${segs.map((g, i) => `<article class="seg${g.flagged ? ' flagged' : ''}" id="seg-${g.id}">
-        <div class="seg-head"><span>بند ${fa(i + 1)} · ${g.kind === 'heading' ? 'تیتر' : g.kind === 'list_item' ? 'فهرست' : 'پاراگراف'}</span><span data-chips="${g.id}">${segChips(g)}</span></div>
-        <p class="fa${g.kind === 'heading' ? ' head' : ''}" lang="fa" dir="rtl">${esc(g.source_text)}</p>
+        <div class="seg-head"><span>بند ${fa(i + 1)} · ${KIND_FA(g.kind)}</span><span data-chips="${g.id}">${segChips(g)}</span></div>
+        <p class="fa${kcls(g)}" lang="fa" dir="rtl">${fmt(g.source_text)}</p>
         ${ogLine(g, g.current_text, editable)}
         ${notes.filter(n => n.paragraph_id === g.position).map(n => `<div class="mnote" lang="en">${esc(n.note)}</div>`).join('')}
-        <textarea id="ta-${g.id}" class="t en${g.kind === 'heading' ? ' head' : ''}" dir="ltr" lang="en" rows="2" data-sid="${g.id}" ${editable ? '' : 'readonly'} aria-label="ترجمه انگلیسی بند ${fa(i + 1)}">${esc(g.current_text || '')}</textarea>
+        ${editable ? fbar(g, 'ta-' + g.id, false) : ''}<textarea id="ta-${g.id}" class="t en${g.kind === 'heading' ? ' head' : ''}" dir="ltr" lang="en" rows="2" data-sid="${g.id}" ${editable ? '' : 'readonly'} aria-label="ترجمه انگلیسی بند ${fa(i + 1)}">${esc(g.current_text || '')}</textarea>
         <div class="seg-foot"><button type="button" class="btn quiet small" data-act="hist" data-sid="${g.id}">تاریخچه</button>${cmButton(g.id)}
           ${editable ? `<button type="button" class="btn quiet small" data-act="revert" data-sid="${g.id}">بازگردانی به ترجمه ماشینی</button><button type="button" class="btn quiet small" data-act="flag" data-sid="${g.id}">${g.flagged ? 'برداشتن پرچم' : 'پرچم‌گذاری'}</button>` : ''}</div>
-        ${aiRevBox(g)}<div data-histbox="${g.id}"></div>${cmBox(g.id)}</article>`).join('')}</div>
+        ${aiRevBox(g)}<div data-histbox="${g.id}"></div>${cmBox(g.id)}</article>${imgAt(inImgs, g)}`).join('')}${inImgs.end || ''}</div>
       ${editable ? `<div class="submitbar" id="bar">${barHtml(id)}</div>` : ''}`;
   }
   let curDoc = null;
@@ -1694,7 +1802,27 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
     box.innerHTML = '<p class="meta">در حال بارگذاری…</p>';
     const { data, error } = await sb.from('segment_revisions').select('revision_no,text,source,author_id,created_at').eq('segment_id', sid).order('revision_no');
     if (error) { box.innerHTML = `<p class="meta">${esc(errText(error))}</p>`; return; }
-    box.innerHTML = `<ul class="hist">${data.map(r => `<li><span class="by">نسخه ${fa(r.revision_no)} · ${r.source === 'ai' ? 'ترجمه ماشینی' : esc(nm(r.author_id)) + (r.source === 'supervisor' ? ' (ناظر)' : '')} · ${fmtT(r.created_at)}</span><span class="txt" lang="en">${esc(r.text)}</span></li>`).join('')}</ul>`;
+    // each revision is shown as the changes against the previous one (words added / removed), with who and when on hover
+    const who = r => r.source === 'ai' ? 'ترجمه ماشینی' : (nm(r.author_id) || 'کاربر') + (r.source === 'supervisor' ? ' (ناظر)' : '');
+    const diffRev = (prev, r) => {
+      const ops = diffOps(prev.text, r.text), tip = esc(`${who(r)} · ${fmtT(r.created_at)}`);
+      const n = ops.length, keep = new Array(n).fill(false);
+      ops.forEach((o, i) => { if (o.t !== 'eq') for (let k = Math.max(0, i - 5); k <= Math.min(n - 1, i + 5); k++) keep[k] = true; });
+      const parts = []; let gap = false;
+      ops.forEach((o, i) => {
+        if (!keep[i]) { gap = true; return; }
+        if (gap && parts.length) parts.push('<span class="gap">…</span>'); gap = false;
+        parts.push(o.t === 'eq' ? esc(o.w) : o.t === 'del' ? `<del data-tip="${tip}" tabindex="0">${esc(o.w)}</del>` : `<ins data-tip="${tip}" tabindex="0">${esc(o.w)}</ins>`);
+      });
+      return { html: parts.join(' '), changed: ops.some(o => o.t !== 'eq') };
+    };
+    const rows = [];
+    data.forEach((r, i) => {
+      if (i === 0) { rows.push(`<li><span class="hm"><b>${esc(who(r))}</b><span>${fmtT(r.created_at)}</span></span><span class="hd hd0" lang="en">${fmt(r.text)}</span></li>`); return; }
+      const d = diffRev(data[i - 1], r);
+      rows.push(`<li><span class="hm"><b>${esc(who(r))}</b><span>${fmtT(r.created_at)}</span><span>نسخهٔ ${fa(r.revision_no)}</span></span>${d.changed ? `<span class="hd" lang="en" dir="ltr">${d.html}</span>` : '<span class="meta">بدون تغییر در متن</span>'}</li>`);
+    });
+    box.innerHTML = `<ul class="hh hist">${rows.join('')}</ul>`;
   }
 
   // ===================================================================
@@ -1796,6 +1924,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
     await loadComments(id); await loadOG();
     const pm = await loadPrintMin();
     const changed = segs.filter(g => g.current_text !== g.ai_text).length;
+    const inImgs = await inlineImgs(id);
     const dist = segs.reduce((n, g) => n + wordDist(g.ai_text, g.current_text), 0);
     const fin = segs.reduce((n, g) => n + Math.max(1, words(g.current_text).length), 0);
     return `<div><button type="button" class="btn quiet" data-act="qaback">→ فهرست</button></div>
@@ -1806,9 +1935,9 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
       ${aiBar(doc, segs, true)}
       <div class="toolbar"><div class="legend"><span>راهنما:</span><del>حذف‌شده از ترجمه ماشینی</del><ins>افزوده‌شده توسط مترجم</ins></div><span class="saved" id="saved">برای اصلاح مستقیم هر بند، «ویرایش ترجمه» را بزنید. تغییرها هنگام خروج از کادر ذخیره می‌شوند.</span></div>
       <div class="segs">${segs.map((g, i) => `<article class="seg${g.flagged ? ' flagged' : ''}" id="seg-${g.id}"><div class="seg-head"><span>بند ${fa(i + 1)}</span><span data-chips="${g.id}">${qaChips(g)}</span></div>
-          <p class="fa${g.kind === 'heading' ? ' head' : ''}" lang="fa" dir="rtl">${esc(g.source_text)}</p>${ogLine(g, g.current_text, false)}<p class="diff" data-diff="${g.id}">${diffHtml(g)}</p>
-          <div data-qaedit="${g.id}" hidden><textarea id="ta-${g.id}" class="t en${g.kind === 'heading' ? ' head' : ''}" dir="ltr" lang="en" rows="2" data-sid="${g.id}" aria-label="ویرایش ترجمه بند ${fa(i + 1)}">${esc(g.current_text || '')}</textarea><p class="meta">این ویرایش با نام شما در تاریخچه ثبت می‌شود و مترجم آن را در بند می‌بیند.</p></div>
-          <div class="seg-foot"><button type="button" class="btn quiet small" data-act="qaedit" data-sid="${g.id}">ویرایش ترجمه</button><button type="button" class="btn quiet small" data-act="hist" data-sid="${g.id}">تاریخچه</button>${cmButton(g.id)}</div>${aiRevBox(g)}<div data-histbox="${g.id}"></div>${cmBox(g.id)}</article>`).join('')}</div>
+          <p class="fa${kcls(g)}" lang="fa" dir="rtl">${fmt(g.source_text)}</p>${ogLine(g, g.current_text, false)}<p class="diff" data-diff="${g.id}">${diffHtml(g)}</p>
+          <div data-qaedit="${g.id}" hidden>${fbar(g, 'ta-' + g.id, false)}<textarea id="ta-${g.id}" class="t en${g.kind === 'heading' ? ' head' : ''}" dir="ltr" lang="en" rows="2" data-sid="${g.id}" aria-label="ویرایش ترجمه بند ${fa(i + 1)}">${esc(g.current_text || '')}</textarea><p class="meta">این ویرایش با نام شما در تاریخچه ثبت می‌شود و مترجم آن را در بند می‌بیند.</p></div>
+          <div class="seg-foot"><button type="button" class="btn quiet small" data-act="qaedit" data-sid="${g.id}">ویرایش ترجمه</button><button type="button" class="btn quiet small" data-act="hist" data-sid="${g.id}">تاریخچه</button>${cmButton(g.id)}</div>${aiRevBox(g)}<div data-histbox="${g.id}"></div>${cmBox(g.id)}</article>${imgAt(inImgs, g)}`).join('')}${inImgs.end || ''}</div>
       <section class="card"><label class="f"><b style="color:var(--fg)">یادداشت برای مترجم</b> (برای بازگرداندن لازم است)<textarea class="plain" id="qaNote" rows="3" dir="rtl" placeholder="مثلاً: اصطلاح بند دوم را با واژه‌نامه سازمان یکدست کنید."></textarea></label>
         <div class="row"><button type="button" class="btn primary" data-act="qaapprove" data-id="${id}">تایید و ارسال به سبد انتشار</button><button type="button" class="btn" data-act="qareturn" data-id="${id}">بازگرداندن به مترجم با نظرها</button></div>
         <p class="meta">بازگرداندن، یادداشت بالا، نظرهای بندها و ویرایش‌های مستقیم شما را با هم برای مترجم می‌فرستد.</p></section>`;
@@ -2015,7 +2144,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
     const wpChip = d => d.wp_post_id ? `<span class="chip ${d.wp_status === 'publish' ? 'ok' : 'gold'}">وردپرس: ${d.wp_status === 'publish' ? 'منتشرشده' : d.wp_status === 'draft' ? 'پیش‌نویس' : esc(d.wp_status || '—')}</span>` : '';
     const row = d => {
       const open = !!S.pubText[d.id], isApp = d.status === 'approved';
-      const title = d.publish_title || (open && S.pubText[d.id][0] && S.pubText[d.id][0].kind === 'heading' ? S.pubText[d.id][0].current_text : '');
+      const title = d.publish_title || (open && S.pubText[d.id][0] && S.pubText[d.id][0].kind === 'heading' ? plain(S.pubText[d.id][0].current_text) : '');
       let act = '';
       if (canPub && isApp) {
         act = S.pubConfirm === d.id
@@ -2046,7 +2175,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
   const starsEditOrStatic = (d, can) => can ? starsEdit(d.id, d.priority || 0) : starsStatic(d.priority);
   async function getFinal(id) {
     if (S.pubText[id]) return S.pubText[id];
-    const { data, error } = await sb.from('segments').select('kind,current_text,position').eq('document_id', id).order('position');
+    const { data, error } = await sb.from('segments').select('kind,level,current_text,position').eq('document_id', id).order('position');
     if (error) throw error;
     return data;
   }
@@ -2463,7 +2592,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
   const AI_TASKS = [['translate', 'ترجمهٔ ماشینی (فارسی ← انگلیسی)'], ['review', 'بازبینی ماشینی ترجمه'], ['rewrite', 'بازنویسی ماشینی خبر فارسی'], ['curate', 'گلچین خبر (خالی: مثل بازنویسی)'], ['seo', 'پژوهش و ارتقای سئو (خالی: مثل بازنویسی)']];
   const AI_PROVIDERS = [['gemini', 'Google Gemini'], ['openai', 'OpenAI (ChatGPT)'], ['anthropic', 'Anthropic (Claude)'], ['openai_compat', 'سازگار با OpenAI (آدرس دلخواه)']];
   const AI_KEYS = [['GEMINI_API_KEY', 'Gemini', 'AIza...'], ['OPENAI_API_KEY', 'OpenAI', 'sk-...'], ['ANTHROPIC_API_KEY', 'Anthropic', 'sk-ant-...'], ['OPENAI_COMPAT_API_KEY', 'سرویس سازگار با OpenAI', 'کلید سرویس']];
-  const AI_DEF = {"review": "You are a senior reviewer of Persian-to-English translations of Islamic-studies and humanities texts.\n\nYou receive a JSON array. Each element has: \"id\", \"fa\" (the Persian original) and \"en\" (the current English translation of that paragraph):\n{{PARAGRAPHS_JSON}}\n\nFor every element, check the English against the Persian and fix only real problems:\n- meaning errors, omissions, additions, wrong numbers, names or dates;\n- wrong or inconsistent terminology (follow the mandatory glossary below, if any);\n- grammar, awkward or unidiomatic English, and an inappropriate register for a scholarly publication.\nKeep transliterated names and technical terms consistent. If a paragraph is already correct, return the \"en\" text unchanged and an empty note. Do not rewrite for taste.\n\nReturn ONLY one valid JSON object, no markdown fences and no other text, exactly in this shape:\n{\"items\":[{\"id\":1,\"translation\":\"the corrected English paragraph\",\"note\":\"one short sentence IN PERSIAN saying what you changed and why, or an empty string\"}]}\nReturn exactly one item for every input element, with the same \"id\" values and in the same order.", "rewrite": "You are an experienced Persian news editor.\n\nYou receive a JSON array. Each element has \"id\" and \"text\" (one paragraph or heading of a Persian news item):\n{{PARAGRAPHS_JSON}}\n\nRewrite every text in Persian according to this instruction:\n{{INSTRUCTION}}\n\nRules:\n- Keep every fact, name, number, date, title and quotation exactly as in the original. Never add information that is not in the text.\n- Write natural, correct Persian (use the half-space ZWNJ properly); keep a heading short.\n- If a text needs no change, return it unchanged.\n\nReturn ONLY one valid JSON object, no markdown fences and no other text, exactly in this shape:\n{\"items\":[{\"id\":1,\"text\":\"the rewritten Persian text\"}]}\nReturn exactly one item for every input element, with the same \"id\" values and in the same order."};
+  const AI_DEF = {"review":"You are a meticulous native-English copy editor for scholarly publications in Islamic studies and the humanities.\n\nBelow is an article as a JSON array. Each element has \"id\" (paragraph number), \"fa\" (the Persian original, only for checking the meaning) and \"en\" (the English translation you are reviewing):\n{{PARAGRAPHS_JSON}}\n\nOnly list critical language problems in this English text. Write them in chronological order (the order in which they appear in the article) and suggest one clear correction for each.\n\nWhat counts as a critical language problem:\n- ungrammatical or broken sentences, dangling or ambiguous pronouns, wrong agreement, shifts of person or gender;\n- awkward, confusing or unidiomatic phrasing, wrong collocations, double negatives, clumsy conflation of two terms;\n- wrong word choice or a meaning that no longer follows the Persian;\n- inconsistent terminology or spelling of names (follow the mandatory glossary below, if any);\n- punctuation or register that would not pass a scholarly editor.\nDo NOT report matters of taste, small stylistic preferences, or anything that is already acceptable. Do not pad the list: normally 5 to 10 problems for a full article, fewer for a short text, and an empty list if the text is clean.\n\nFor every problem give:\n- \"id\": the paragraph id where it occurs;\n- \"title\": a very short English title of the problem (3 to 7 words);\n- \"problem\": the problematic text, copied EXACTLY, character for character, from that paragraph's \"en\" (keep any ** or * or [^1] markers that are inside the quoted words), short but long enough to be unique;\n- \"explanation\": one or two short sentences IN PERSIAN saying what is wrong;\n- \"correction\": the corrected English that replaces exactly the quoted text (same markers kept), so it can be pasted in directly.\n\nReturn ONLY one valid JSON object, no markdown fences and no other text, in this shape:\n{\"issues\":[{\"id\":1,\"title\":\"Dangling pronoun\",\"problem\":\"exact quote\",\"explanation\":\"توضیح کوتاه به فارسی\",\"correction\":\"corrected text\"}]}","rewrite":"You are an experienced Persian news editor.\n\nYou receive a JSON array. Each element has \"id\" and \"text\" (one paragraph or heading of a Persian news item):\n{{PARAGRAPHS_JSON}}\n\nRewrite every text in Persian according to this instruction:\n{{INSTRUCTION}}\n\nRules:\n- Keep every fact, name, number, date, title and quotation exactly as in the original. Never add information that is not in the text.\n- Write natural, correct Persian (use the half-space ZWNJ properly); keep a heading short.\n- If a text needs no change, return it unchanged.\n- Keep inline markers exactly: **bold**, *italic*, [link text](url) and footnote references such as [^1].\n\nReturn ONLY one valid JSON object, no markdown fences and no other text, exactly in this shape:\n{\"items\":[{\"id\":1,\"text\":\"the rewritten Persian text\"}]}\nReturn exactly one item for every input element, with the same \"id\" values and in the same order."};
   const REWRITE_STYLES = {"polish": "ویرایش و روان‌سازی", "simple": "ساده‌تر", "formal": "رسمی‌تر", "concise": "خلاصه‌تر", "news": "سبک خبری استاندارد"};
   function aiConns(raw) { try { const j = JSON.parse(raw || '[]'); return Array.isArray(j) ? j.filter(x => x && /^[a-z0-9]{2,12}$/.test(x.id)) : []; } catch (_) { return []; } }
   async function saveConns(list) { const u = await sb.from('app_config').upsert({ key: 'ai_conns', value: JSON.stringify(list), updated_at: new Date().toISOString() }); if (u.error) throw u.error; }
@@ -2631,6 +2760,8 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
     pickfile() { if (!S.upKind) { toast('اول نوع محتوا را انتخاب کنید.'); const s = $('#upKind'); if (s) s.focus(); return; } const i = $('#fileIn'); if (i) i.click(); },
     nav(el) { gotoDoc(el.dataset.id); },
     fs(el) { S.fs = Math.min(3, Math.max(0, (S.fs == null ? 1 : S.fs) + Number(el.dataset.d))); try { localStorage.setItem('tl_fs', String(S.fs)); } catch (_) { /* ignore */ } const v = $('.dview'); if (v) v.dataset.fs = S.fs; growAll(); },
+    fmtb(el) { wrapSel(el.dataset.t, '**'); },
+    fmti(el) { wrapSel(el.dataset.t, '*'); },
     pedit(el) {
       const sid = el.dataset.sid; if (!sid) return;
       if (el.classList.contains('ptxt')) { const sl = window.getSelection && window.getSelection(); if (sl && !sl.isCollapsed) return; }
@@ -2866,14 +2997,14 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
     },
     async pubshow(el) { const id = el.dataset.id; if (S.pubText[id]) delete S.pubText[id]; else S.pubText[id] = await getFinal(id); render(); },
     async pubcopy(el) {
-      const text = (await getFinal(el.dataset.id)).map(g => g.current_text).join('\n\n');
+      const text = (await getFinal(el.dataset.id)).map(g => plain(g.current_text)).join('\n\n');
       try { await navigator.clipboard.writeText(text); toast('متن کپی شد.'); }
       catch (_) { S.pubText[el.dataset.id] = await getFinal(el.dataset.id); render(); toast('کپی خودکار ممکن نشد. متن را انتخاب و کپی کنید.'); }
     },
     async pubdl(el) {
       const segs = await getFinal(el.dataset.id);
       const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>' + esc(el.dataset.title) + '</title></head><body style="font-family:Times New Roman;font-size:12pt">' +
-        segs.map(g => g.kind === 'heading' ? `<h2>${esc(g.current_text)}</h2>` : `<p>${esc(g.current_text)}</p>`).join('') + '</body></html>';
+        segs.map(g => g.kind === 'heading' ? `<h${Math.min((g.level || 1) + 1, 5)}>${fmt(g.current_text)}</h${Math.min((g.level || 1) + 1, 5)}>` : g.kind === 'list_item' ? `<p style="margin-inline-start:${(g.level || 1) * 18}px">${fmt(g.current_text)}</p>` : `<p>${fmt(g.current_text)}</p>`).join('') + '</body></html>';
       const url = URL.createObjectURL(new Blob(['﻿', html], { type: 'application/msword' }));
       const a = document.createElement('a'); a.href = url; a.download = (el.dataset.title || 'translation').replace(/[\\/:*?"<>|]+/g, '_') + '.doc';
       document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
@@ -3301,6 +3432,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
     const t = e.target;
     if (t.matches && t.matches('.ptxt[data-act="pedit"]') && (e.key === 'Enter' || e.key === 'F2')) { e.preventDefault(); enterEdit(t.dataset.sid); return; }
     if (e.key === 'Escape' && t.matches && t.matches('textarea[data-fa]')) { t.blur(); return; }
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.key === 'b' || e.key === 'i') && t.matches && t.matches('textarea[data-fa],textarea[data-sid]') && t.id) { e.preventDefault(); wrapSel(t.id, e.key === 'b' ? '**' : '*'); return; }
     const typing = t.matches && t.matches('input,textarea,select,[contenteditable]');
     if (!typing && !e.ctrlKey && !e.metaKey && !e.altKey && S.docId && (e.key === 'j' || e.key === 'k')) {
       const q = S.queue || [], i = q.indexOf(S.docId), n = q[i + (e.key === 'j' ? 1 : -1)];
@@ -3348,6 +3480,11 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
       else if (t.id === 'rwStyle') { S.rwStyle = t.value; const i = $('#rwInstr'); if (i) i.placeholder = t.value === 'custom' ? 'دستور بازنویسی (لازم است)' : 'توضیح اضافه (اختیاری)'; }
       else if (t.id === 'aiRoundsSel') { S.aiRounds = Number(t.value) || 1; }
       else if (t.matches('textarea[data-fa]')) { const { error } = await sb.from('segments').update({ source_text: t.value }).eq('id', t.dataset.fa); if (error) throw error; }
+      else if (t.matches('[data-kindsel]')) {
+        const [k, l] = t.value.split(':'), patch = { kind: k, level: l ? +l : (k === 'list_item' ? 1 : null) };
+        const { error } = await sb.from('segments').update(patch).eq('id', t.dataset.kindsel); if (error) throw error;
+        await render(); toast('نوع بند ذخیره شد.');
+      }
       else if (t.matches('[data-plevel]')) { await rpc('set_translator_level', { p_user: t.dataset.plevel, p_level: t.value }); toast('رتبهٔ مترجم ذخیره شد.'); }
       else if (t.matches('[data-ptitle]')) { await rpc('set_publish_title', { p_doc: t.dataset.ptitle, p_title: t.value }); toast('عنوان ذخیره شد.'); }
       else if (t.matches('[data-prole]')) { const { error } = await sb.from('profiles').update({ role: t.value }).eq('id', t.dataset.prole); if (error) throw error; toast('نقش ذخیره شد.'); await loadNames(); }

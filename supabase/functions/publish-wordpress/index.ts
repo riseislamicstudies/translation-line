@@ -37,26 +37,45 @@ const figure = (i: Img) =>
 
 /** English segments -> WordPress HTML. Consecutive list items share one <ul>.
  *  Inline images go after the segment whose position they name, or at the end. */
-export function toHtml(segs: { kind: string; text: string; position: number }[], imgs: Img[] = []): string {
+/** inline markers -> HTML: **bold** *italic* [text](https://url) [^n] (footnote ref) \\* (literal star) */
+export function inl(t: string): string {
+  return esc(t).replace(/\\\*/g, "\u0001").replace(/\\\[\^/g, "\u0002")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_m, a, u) => `<a href="${u}">${a}</a>`)
+    .replace(/\*\*([^*]+?)\*\*/g, "<strong>$1</strong>").replace(/\*([^*\n]+?)\*/g, "<em>$1</em>")
+    .replace(/\[\^(\d+)\]/g, (_m, n) => `<sup id="fnref-${n}" class="fnref"><a href="#fn-${n}">[${n}]</a></sup>`)
+    .replace(/\u0001/g, "*").replace(/\u0002/g, "[^");
+}
+export const plainText = (t: string) =>
+  t.replace(/\\\*/g, "\u0001").replace(/\[([^\]]+)\]\(https?:\/\/[^\s)]+\)/g, "$1").replace(/\[\^\d+\]/g, "").replace(/\*\*?/g, "").replace(/\u0001/g, "*").trim();
+
+export function toHtml(segs: { kind: string; text: string; position: number; level?: number | null }[], imgs: Img[] = []): string {
   const out: string[] = [];
-  let inList = false;
+  const stack: string[] = [];            // open <ul>/<ol> tags
+  const notes: { n: string; html: string }[] = [];
   const placed = new Set<Img>();
-  const flush = () => { if (inList) { out.push("</ul>"); inList = false; } };
+  const flush = () => { while (stack.length) out.push(`</${stack.pop()}>`); };
   for (const s of segs) {
     const t = s.text.trim();
     if (t) {
-      if (s.kind === "list_item") {
-        if (!inList) { out.push("<ul>"); inList = true; }
-        out.push(`<li>${esc(t)}</li>`);
+      if (s.kind === "footnote") {
+        const m = /^\[\^(\d+)\]\s*([\s\S]*)$/.exec(t);
+        if (m) notes.push({ n: m[1], html: inl(m[2]) });
+      } else if (s.kind === "list_item") {
+        const ordered = /^\d+\.\s/.test(t), body = t.replace(/^(?:\d+\.|-)\s+/, ""), depth = Math.min(Math.max(s.level ?? 1, 1), 4);
+        while (stack.length > depth) out.push(`</${stack.pop()}>`);
+        while (stack.length < depth) { const tag = ordered ? "ol" : "ul"; stack.push(tag); out.push(`<${tag}>`); }
+        out.push(`<li>${inl(body)}</li>`);
       } else {
         flush();
-        out.push(s.kind === "heading" ? `<h2>${esc(t)}</h2>` : `<p>${esc(t).replace(/\n/g, "<br>")}</p>`);
+        if (s.kind === "heading") { const h = Math.min((s.level ?? 1) + 1, 5); out.push(`<h${h}>${inl(t)}</h${h}>`); }
+        else out.push(`<p>${inl(t).replace(/\n/g, "<br>")}</p>`);
       }
     }
     for (const i of imgs) if (!placed.has(i) && i.after === s.position) { flush(); out.push(figure(i)); placed.add(i); }
   }
   flush();
   for (const i of imgs) if (!placed.has(i)) out.push(figure(i));
+  if (notes.length) out.push(`<hr><ol class="footnotes">${notes.map((x) => `<li id="fn-${x.n}">${x.html} <a href="#fnref-${x.n}" aria-label="Back to text">&#8617;</a></li>`).join("")}</ol>`);
   return out.join("\n");
 }
 
@@ -227,15 +246,15 @@ Deno.serve(async (req) => {
 
     // send
     if (!["approved", "published"].includes(doc.status)) return json({ error: "not_ready", detail: "only approved translations can be sent" }, 409);
-    const { data: segs, error: se } = await admin.from("segments").select("kind,current_text,position").eq("document_id", id).order("position");
+    const { data: segs, error: se } = await admin.from("segments").select("kind,level,current_text,position").eq("document_id", id).order("position");
     if (se || !segs?.length) return json({ error: "no_text" }, 409);
-    let items = segs.map((s: any) => ({ kind: s.kind as string, text: (s.current_text ?? "") as string, position: s.position as number }));
+    let items = segs.map((s: any) => ({ kind: s.kind as string, text: (s.current_text ?? "") as string, position: s.position as number, level: (s.level ?? null) as number | null }));
     let title = (doc.publish_title ?? "").trim();
     if (!title) {
       const first = items[0];
-      if (first && first.kind === "heading" && first.text.trim()) { title = first.text.trim(); items = items.slice(1); }
+      if (first && first.kind === "heading" && first.text.trim()) { title = plainText(first.text); items = items.slice(1); }
       else title = doc.title;
-    } else if (items[0]?.kind === "heading" && items[0].text.trim().toLowerCase() === title.toLowerCase()) {
+    } else if (items[0]?.kind === "heading" && plainText(items[0].text).toLowerCase() === title.toLowerCase()) {
       items = items.slice(1); // the title is already the first heading: do not repeat it in the body
     }
     // images: only the ones the content reviewer approved are sent
