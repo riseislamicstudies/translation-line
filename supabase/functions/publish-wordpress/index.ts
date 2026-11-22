@@ -132,6 +132,22 @@ async function tagId(base: string, auth: string, name: string, tagKey = "tags"):
   return made.id;
 }
 
+/** For a custom post type (REST base), find its category-like and tag-like taxonomies (REST bases) when none was configured. */
+async function taxOf(base: string, auth: string, restBase: string): Promise<{ cat: string; tag: string }> {
+  const out = { cat: "", tag: "" };
+  try {
+    const t = await wp(base, auth, "/wp/v2/types?context=edit").catch(() => wp(base, auth, "/wp/v2/types"));
+    const ty = Object.values(t as Record<string, any>).find((x: any) => x?.rest_base === restBase) as any;
+    if (!ty) return out;
+    const tx = await wp(base, auth, `/wp/v2/taxonomies?type=${encodeURIComponent(ty.slug)}`);
+    const list = Object.values(tx as Record<string, any>).filter((x: any) => x?.rest_base && !/^(post_format|nav_menu|wp_)/.test(x.slug));
+    const cats = list.filter((x: any) => x.hierarchical), tags = list.filter((x: any) => !x.hierarchical);
+    out.cat = (cats.find((x: any) => /categ/i.test(x.slug)) ?? cats[0])?.rest_base ?? "";
+    out.tag = (tags.find((x: any) => /tag/i.test(x.slug)) ?? tags[0])?.rest_base ?? "";
+  } catch { /* leave empty */ }
+  return out;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
@@ -185,7 +201,9 @@ Deno.serve(async (req) => {
       return json({ ok: true, site, user, can_publish: canPublish });
     }
     if (action === "categories") {
-      const tax = /^[a-z0-9_-]+$/i.test(body?.tax ?? "") ? body.tax : "categories";
+      let tax = /^[a-z0-9_-]+$/i.test(body?.tax ?? "") ? body.tax : "";
+      if (!tax && /^[a-z0-9_-]+$/i.test(body?.type ?? "") && body.type !== "posts") tax = (await taxOf(base, auth, body.type)).cat;
+      if (!tax) tax = "categories";
       const cats = await wp(base, auth, `/wp/v2/${tax}?per_page=100&_fields=id,name`);
       return json({ ok: true, categories: cats });
     }
@@ -234,8 +252,9 @@ Deno.serve(async (req) => {
     const kindType = c[`wp_type_${doc.source_kind}`];
     const restBase = /^[a-z0-9_-]+$/i.test(kindType || "") ? kindType : restBase0;
     const isPosts = restBase === "posts";
-    const catKey = c[`wp_catkey_${doc.source_kind}`] || (isPosts ? "categories" : "");
-    const tagKey = c[`wp_tagkey_${doc.source_kind}`] || (isPosts ? "tags" : "");
+    let catKey = c[`wp_catkey_${doc.source_kind}`] || (isPosts ? "categories" : "");
+    let tagKey = c[`wp_tagkey_${doc.source_kind}`] || (isPosts ? "tags" : "");
+    if (action === "send" && !isPosts && (!catKey || !tagKey)) { const f = await taxOf(base, auth, restBase); catKey = catKey || f.cat; tagKey = tagKey || f.tag; }
 
     if (action === "draft") {
       if (!doc.wp_post_id) return json({ ok: true, skipped: true });

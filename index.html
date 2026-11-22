@@ -2001,13 +2001,13 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
   async function catTaxFor(kind) {
     if (!S.wpKinds) { const r = await sb.from('app_config').select('key,value').like('key', 'wp\\_%'); S.wpKinds = {}; (r.data || []).forEach(x => { S.wpKinds[x.key] = x.value; }); }
     const k = S.wpKinds, type = k['wp_type_' + kind] || k.wp_post_type || 'posts';
-    return k['wp_catkey_' + kind] || (type === 'posts' ? 'categories' : null);
+    return k['wp_catkey_' + kind] || (type === 'posts' ? 'categories' : 'type:' + type);   // custom post type without a configured taxonomy: the server finds it
   }
   async function pmCats(tax) {
     if (!tax) return [];
     S.wpCatList = S.wpCatList || {};
     if (S.wpCatList[tax]) return S.wpCatList[tax];
-    try { const r = await fnCall('publish-wordpress', { action: 'categories', tax }); S.wpCatList[tax] = (r.categories || []).map(x => ({ id: x.id, name: String(x.name).replace(/&amp;/g, '&') })); }
+    try { const r = await fnCall('publish-wordpress', tax.startsWith('type:') ? { action: 'categories', type: tax.slice(5) } : { action: 'categories', tax }); S.wpCatList[tax] = (r.categories || []).map(x => ({ id: x.id, name: String(x.name).replace(/&amp;/g, '&') })); }
     catch (_) { S.wpCatList[tax] = []; }
     return S.wpCatList[tax];
   }
