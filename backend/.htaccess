@@ -1,0 +1,13 @@
+# بک‌اند: هیچ فایل PHP داخل lib/، tools/، sql/ و config نباید مستقیم از وب اجرا یا دانلود شود.
+<IfModule mod_authz_core.c>
+  <FilesMatch "^(config\.php|config\.sample\.php|cron\.php)$">
+    Require all denied
+  </FilesMatch>
+</IfModule>
+<IfModule !mod_authz_core.c>
+  <FilesMatch "^(config\.php|config\.sample\.php|cron\.php)$">
+    Order allow,deny
+    Deny from all
+  </FilesMatch>
+</IfModule>
+Options -Indexes

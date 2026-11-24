@@ -599,6 +599,32 @@ try { var _t = localStorage.getItem('tl_theme'); if (_t !== 'dark' && _t !== 'li
   /* ===== v14: kinds, publish page ===== */
   .chip.kind-news { background: color-mix(in srgb, #0e7490 14%, var(--surface)); color: #0e7490; }
   .chip.kind-journal { background: color-mix(in srgb, #9333ea 13%, var(--surface)); color: #7e22ce; }
+
+  /* ===== colour tint per kind of content: Scholaria = light green, news = light blue, main article (journal) = gold ===== */
+  [data-kind="scholaria"] { --kt: #34b36b; --kt-line: #34b36b; }
+  [data-kind="news"] { --kt: #3d9be9; --kt-line: #3d9be9; }
+  [data-kind="journal"] { --kt: #d9a21b; --kt-line: #d9a21b; }
+  .card[data-kind], .irow[data-kind], .item[data-kind], .dhead[data-kind] { background: color-mix(in srgb, var(--kt) 13%, var(--surface)); border-inline-start: 4px solid var(--kt-line); }
+  .item[data-kind] { padding: 12px 14px; border-radius: 10px; margin-bottom: 8px; }
+  .irow[data-kind]:hover { background: color-mix(in srgb, var(--kt) 22%, var(--surface)); }
+  .chip.kind-scholaria { background: color-mix(in srgb, #34b36b 20%, var(--surface)); color: #17683a; }
+  .chip.kind-news { background: color-mix(in srgb, #3d9be9 20%, var(--surface)); color: #14589a; }
+  .chip.kind-journal { background: color-mix(in srgb, #d9a21b 24%, var(--surface)); color: #7a5600; }
+  :root[data-theme="dark"] .chip.kind-scholaria { color: #7fe0a7; } :root[data-theme="dark"] .chip.kind-news { color: #8cc6f5; } :root[data-theme="dark"] .chip.kind-journal { color: #f0cf7a; }
+  details.avmenu > summary.avatar { cursor: pointer; list-style: none; } details.avmenu .menu { bottom: auto; top: calc(100% + 8px); inset-inline-end: auto; inset-inline-start: 0; white-space: nowrap; }
+  details.avmenu[open] > summary.avatar { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /* Word formatting kept in the text: heading levels, quotes, footnotes */
+  .fa.head[data-lv="1"], .ptxt.head[data-lv="1"] { font-size: 1.35em; } .fa.head[data-lv="2"], .ptxt.head[data-lv="2"] { font-size: 1.2em; } .fa.head[data-lv="3"], .ptxt.head[data-lv="3"] { font-size: 1.08em; }
+  .fa.head[data-lv="4"], .fa.head[data-lv="5"], .fa.head[data-lv="6"], .ptxt.head[data-lv="4"], .ptxt.head[data-lv="5"], .ptxt.head[data-lv="6"] { font-size: 1em; font-weight: 600; }
+  .fa.qt, .ptxt.qt, .t.qt { border-inline-start: 3px solid var(--line); padding-inline-start: 12px; font-style: italic; color: var(--muted); }
+  .fa.fnote, .ptxt.fnote, .t.fnote { font-size: .9em; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 6px; }
+  .fa strong, .ptxt strong, .diff strong, .hist strong { font-weight: 800; } .fa a, .ptxt a { color: var(--accent); }
+  sup.fnref { font-size: .72em; color: var(--accent); font-weight: 700; padding-inline: 1px; }
+  .seg-img { margin: 6px 0 14px; padding: 8px; border: 1px dashed var(--line); border-radius: 10px; background: var(--sunk); text-align: center; }
+  .seg-img img { max-width: min(100%, 520px); max-height: 320px; border-radius: 6px; display: block; margin: 0 auto; }
+  .seg-img figcaption { font-size: 12.5px; color: var(--muted); margin-top: 6px; } .seg-img .tag { display: inline-block; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .hist ins, .hist del { cursor: help; } .hist ins { text-decoration: none; background: var(--ok-soft); color: var(--ok); border-radius: 3px; padding: 0 2px; } .hist del { background: var(--bad-soft); color: var(--bad); border-radius: 3px; padding: 0 2px; }
+  .hist .base { color: var(--muted); font-size: 12.5px; }
   .chk { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; cursor: pointer; }
   .chk input { width: 18px; height: 18px; }
   .fchips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -657,7 +683,7 @@ window.__loadJs = function (urls, test, ms) {
     });
   });
 };
-window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js', 'https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js'], function () { return !!window.supabase; }, 20000);
+window.__supaReady = window.__loadJs(['rise-client.js'], function () { return !!window.supabase; }, 20000);
 </script>
 <script>
 (function () {
@@ -732,6 +758,18 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
   const isW = r => r === 'writer' || r === 'journal_writer';
   const DOC_KIND = { news: 'خبر', scholaria: 'مقالهٔ اسکالریا', journal: 'مقالهٔ نشریه' };
   const kindLabel = k => DOC_KIND[k] || 'مقاله';
+  // light markup kept from Word files (**bold**, *italic*, [text](url), [^1]) -> safe HTML; same rules as the server
+  function fmtMark(t) {
+    let h = esc(String(t == null ? '' : t)).replace(/\\\*/g, '\u0001');
+    h = h.replace(/\[\^(\d{1,3})\]/g, '<sup class="fnref">$1</sup>');
+    h = h.replace(/\[([^\]\n]{1,300})\]\((https?:\/\/[^\s)]{1,500}|mailto:[^\s)]{1,200})\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    h = h.replace(/\*\*(?=\S)([\s\S]+?)(?<=\S)\*\*/g, '<strong>$1</strong>');
+    h = h.replace(/(?<![\w*])\*(?=\S)([^*\n]+?)(?<=\S)\*(?![\w*])/g, '<em>$1</em>');
+    return h.replace(/\u0001/g, '*').replace(/\n/g, '<br>');
+  }
+  const faCls = g => (g.kind === 'heading' ? ' head' : g.kind === 'quote' ? ' qt' : g.kind === 'footnote' ? ' fnote' : '');
+  const lvAttr = g => (g.kind === 'heading' && g.level ? ` data-lv="${g.level}"` : '');
+  const kindFa = g => g.kind === 'heading' ? 'تیتر' + (g.level ? ' ' + fa(g.level) : '') : g.kind === 'list_item' ? 'فهرست' : g.kind === 'quote' ? 'نقل‌قول' : g.kind === 'footnote' ? 'پاورقی' : 'پاراگراف';
   const kindChip = k => `<span class="chip kind-${esc(k || 'scholaria')}">${kindLabel(k)}</span>`;
   const chip = st => { const [t, k] = STATUS[st] || [st, '']; return `<span class="chip ${k}">${t}</span>`; };
 
@@ -815,8 +853,8 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
   const LS = 'tl_cfg_v1';
   let cfg = null;
   try { cfg = JSON.parse(localStorage.getItem(LS)); } catch (_) { cfg = null; }
-  // Built-in connection (public URL + anon key, safe by design): no per-browser setup needed.
-  if (!cfg || !cfg.url || !cfg.key) cfg = { url: 'https://tersvbytrecqzuzkthfa.supabase.co', key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlcnN2Ynl0cmVjcXp1emt0aGZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQxOTc0NDQsImV4cCI6MjEwOTc3MzQ0NH0.Qq0JEASQEt5t0Yw668GYeBlqHkVVFEQpScPVTqENNVQ' };
+  // اتصال داخلی: بک‌اند PHP در پوشهٔ backend کنار همین صفحه (بدون تنظیم در مرورگر).
+  cfg = { url: new URL('backend', location.href.replace(/[#?].*$/, '').replace(/[^/]*$/, '')).href.replace(/\/+$/, ''), key: 'rise' };
   // A secret key must never be used in a browser: refuse a JWT whose role is service_role.
   function isServiceKey(key) {
     if (/^sb_secret_/.test(key)) return true;
@@ -827,16 +865,8 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
   let INVITE = null;
   try { INVITE = sessionStorage.getItem('tl_invite') || null; } catch (_) { INVITE = null; }
   (function applyInviteLink() {
-    const m = /^#cfg=([A-Za-z0-9_-]+)(?:&invite=([0-9a-f]{20,64}))?$/.exec(location.hash || ''); if (!m) return;
-    if (m[2]) { INVITE = m[2]; try { sessionStorage.setItem('tl_invite', INVITE); } catch (_) { /* ignore */ } }
-    try {
-      const b64 = m[1].replace(/-/g, '+').replace(/_/g, '/');
-      const j = JSON.parse(atob(b64 + '==='.slice((b64.length + 3) % 4)));
-      if (/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(j.url) && /^eyJ|^sb_publishable_/.test(j.key) && !isServiceKey(j.key)) {
-        cfg = { url: j.url, key: j.key };
-        try { localStorage.setItem(LS, JSON.stringify(cfg)); } catch (_) { /* storage may be blocked */ }
-      }
-    } catch (_) { /* a damaged link is ignored; the setup form appears instead */ }
+    const m = /^#(?:cfg=[A-Za-z0-9_-]*&)?invite=([0-9a-f]{20,64})$/.exec(location.hash || ''); if (!m) return;
+    INVITE = m[1]; try { sessionStorage.setItem('tl_invite', INVITE); } catch (_) { /* ignore */ }
     try { history.replaceState(null, '', location.pathname + location.search); } catch (_) { /* ignore */ }
   })();
   let sb = null, me = null, channel = null, pollT = null, renderTok = 0;
@@ -915,17 +945,35 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
     </form></div>`;
   }
   function clearInvite() { INVITE = null; try { sessionStorage.removeItem('tl_invite'); } catch (_) { /* ignore */ } }
-  // resize to a 256px square JPEG in the browser (also strips camera metadata)
+  // profile picture: a 384px square JPEG thumbnail for the app, plus the ORIGINAL file (full quality, never shrunk)
+  // for places that need a good picture. Only a file bigger than ~6 MB (or a format the server does not keep) is re-encoded, at up to 3000px / quality 0.95.
+  const readDataUrl = f => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result)); r.onerror = () => no(new Error('invalid_avatar')); r.readAsDataURL(f); });
   async function resizeAvatar(file) {
     if (!/^image\//.test(file.type)) throw new Error('invalid_avatar');
-    if (file.size > 15 * 1024 * 1024) throw new Error('invalid_avatar');
+    if (file.size > 30 * 1024 * 1024) throw new Error('invalid_avatar');
     const url = URL.createObjectURL(file);
     try {
       const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error('invalid_avatar')); i.src = url; });
-      const side = Math.min(img.naturalWidth, img.naturalHeight), c = document.createElement('canvas'); c.width = c.height = 256;
-      c.getContext('2d').drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, 256, 256);
-      return c.toDataURL('image/jpeg', 0.86);
+      const w = img.naturalWidth, h = img.naturalHeight, side = Math.min(w, h), c = document.createElement('canvas'); c.width = c.height = 384;
+      c.getContext('2d').drawImage(img, (w - side) / 2, (h - side) / 2, side, side, 0, 0, 384, 384);
+      const thumb = c.toDataURL('image/jpeg', 0.9);
+      let original;
+      if (/^image\/(jpeg|png|webp)$/.test(file.type) && file.size <= 6 * 1024 * 1024) original = await readDataUrl(file);
+      else {
+        const k = Math.min(1, 3000 / Math.max(w, h)), o = document.createElement('canvas'); o.width = Math.round(w * k); o.height = Math.round(h * k);
+        o.getContext('2d').drawImage(img, 0, 0, o.width, o.height);
+        original = o.toDataURL('image/jpeg', 0.95);
+        if (original.length > 8_000_000) original = o.toDataURL('image/jpeg', 0.85);
+      }
+      return { avatar: thumb, original };
     } finally { URL.revokeObjectURL(url); }
+  }
+  // sends the picture; if the host refuses the big original (post size limit) it retries with the thumbnail only
+  async function saveAvatar(av, userId) {
+    const body = { avatar: av ? av.avatar : '', ...(userId ? { user_id: userId } : {}) };
+    if (av && av.original) body.original = av.original;
+    try { return await fnCall('set-avatar', body); }
+    catch (e) { if (av && av.original && !/invalid_avatar|forbidden|missing_authorization/.test(String(e && e.message))) { delete body.original; const r = await fnCall('set-avatar', body); toast('عکس ذخیره شد ولی نسخهٔ اصلی با کیفیت کامل ارسال نشد (حجم زیاد).'); return r; } throw e; }
   }
   async function doSignup() {
     const first = $('#suFirst').value.trim(), last = $('#suLast').value.trim();
@@ -933,7 +981,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
     if (!AVATAR) throw new Error('عکس پروفایل الزامی است. لطفاً یک عکس انتخاب کنید.');
     if (pass !== $('#suPass2').value) throw new Error('رمز و تکرار آن یکی نیست.');
     const email = $('#suEmail').value.trim();
-    await fnCall('writer-signup', { action: 'signup', token: INVITE, first_name: first, last_name: last, phone: $('#suPhone').value.trim(), email, password: pass, avatar: AVATAR });
+    await fnCall('writer-signup', { action: 'signup', token: INVITE, first_name: first, last_name: last, phone: $('#suPhone').value.trim(), email, password: pass, avatar: AVATAR.avatar, original: AVATAR.original });
     const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
     if (error) return viewLogin('حساب ساخته شد. با همان ایمیل و رمز وارد شوید.');
     clearInvite(); AVATAR = null;
@@ -1028,7 +1076,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
         <div class="brand">${RISE_LOGO}<b class="wm">سکوی رایز</b></div>
         <nav class="tabs" id="tabs" role="tablist">${tabs.map(([k, l]) => `<button type="button" class="tab" role="tab" data-act="tab" data-tab="${k}" aria-selected="${S.tab === k}">${svgI(k)}<span>${l}</span><span class="count" data-count="${k}" hidden></span></button>`).join('')}</nav>
         <div class="actions">${writer ? '' : `<div class="bellwrap"><button class="bell" id="bell" type="button" data-act="bell" aria-haspopup="true" aria-expanded="false" aria-label="اعلان‌ها"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="bt">اعلان‌ها</span> <span class="dot" id="bellDot" hidden></span></button><div class="panel" id="panel" hidden></div></div>`}
-        <div class="who">${themeBtn()}<span class="avatar" title="${esc(me.full_name || '')}" aria-hidden="true">${me.avatar_url ? `<img src="${esc(me.avatar_url)}" alt="">` : esc((me.full_name || '?').trim().charAt(0))}</span><span class="who-t"><b>${esc(me.full_name || '')}</b><small class="meta">${ROLE_FA[me.role]}</small></span><button class="btn quiet small" type="button" data-act="logout">خروج</button></div></div>
+        <div class="who">${themeBtn()}<details class="moremenu avmenu"><summary class="avatar" title="تغییر یا حذف عکس پروفایل" aria-label="عکس پروفایل: تغییر یا حذف">${me.avatar_url ? `<img src="${esc(me.avatar_url)}" alt="">` : esc((me.full_name || '?').trim().charAt(0))}</summary><div class="menu"><label class="btn small quiet" style="cursor:pointer">${me.avatar_url ? 'تغییر عکس' : 'افزودن عکس'}<input type="file" accept="image/*" data-myavatar hidden></label>${me.avatar_url ? `<button type="button" class="btn small quiet danger" data-act="myavatarrm">حذف عکس</button>` : ''}${me.avatar_original_url ? `<a class="btn small quiet" href="${esc(me.avatar_original_url)}" target="_blank" rel="noopener">عکس اصلی ↗</a>` : ''}</div></details><span class="who-t"><b>${esc(me.full_name || '')}</b><small class="meta">${ROLE_FA[me.role]}</small></span><button class="btn quiet small" type="button" data-act="logout">خروج</button></div></div>
       </div></header>
       <div class="wrap"><main id="main">${me.role === 'none' ? `<div class="card"><h2>حساب شما هنوز نقشی ندارد</h2><p class="sub">مدیر باید نقش «مترجم»، «بازبین محتوا» یا «ناظر» را به حساب شما بدهد. بعد از آن صفحه را تازه کنید.</p><div class="row"><button class="btn" data-act="reload">تازه‌سازی</button></div></div>` : ''}</main></div>`;
     setBell();
@@ -1192,7 +1240,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
       let path = null;
       const up = await sb.storage.from('source-files').upload(id + '/source.docx', file, { contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
       if (!up.error) path = id + '/source.docx';
-      await rpc('writer_submit', { p_id: id, p_title: title, p_filename: file.name, p_path: path, p_segments: segs.map(x => ({ kind: x.kind, text: x.text })), p_replaces: replaces || null });
+      await rpc('writer_submit', { p_id: id, p_title: title, p_filename: file.name, p_path: path, p_segments: segs.map(x => ({ kind: x.kind, text: x.text, level: x.level || null })), p_replaces: replaces || null });
       const imgs = S.wImgs || []; S.wImgs = []; let okImgs = 0;
       try { okImgs += (await importDocImages(id, segs.docImgs)).ok; } catch (_) { /* best effort */ }
       for (const f of imgs) { try { await pmUpload(id, f); okImgs++; } catch (e) { toast(`${f.name}: ${errText(e)}`); } }
@@ -1221,22 +1269,56 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
   // ===================================================================
   // DOCX parsing
   // ===================================================================
+  // Formatting that is kept from the Word file, as light markup inside the text (editable as plain text):
+  //   **bold**  *italic*  [text](url)  [^1] footnote mark; a literal * is written \*  — heading levels, quotes and footnotes become their own kinds.
+  function docInline(node, fnMap) {
+    let out = '';
+    node.childNodes.forEach(c => {
+      if (c.nodeType === 3) { out += c.nodeValue.replace(/\*/g, '\\*'); return; }
+      if (c.nodeType !== 1) return;
+      const t = c.tagName.toLowerCase();
+      if (t === 'img' || t === 'ul' || t === 'ol') return;
+      if (t === 'br') { out += ' '; return; }
+      if (t === 'a') {
+        const href = c.getAttribute('href') || '';
+        if (/^#(footnote|endnote)-ref-/.test(href)) return;              // the "back to text" arrow of a footnote
+        const m = /^#((?:footnote|endnote)-\d+)$/.exec(href);
+        if (m) { const n = fnMap[m[1]]; if (n) out += '[^' + n + ']'; return; }
+        const inner = docInline(c, fnMap).trim();
+        out += /^(https?:\/\/|mailto:)/i.test(href) && inner && !/[\]\n]/.test(inner) ? '[' + inner + '](' + href.replace(/[\s()]/g, encodeURIComponent) + ')' : inner;
+        return;
+      }
+      const inner = docInline(c, fnMap);
+      if ((t === 'strong' || t === 'b' || t === 'em' || t === 'i') && inner.trim()) {
+        const mk = (t === 'strong' || t === 'b') ? '**' : '*', lead = inner.match(/^\s*/)[0], trail = inner.match(/\s*$/)[0];
+        out += lead + mk + inner.trim() + mk + trail;
+      } else out += inner;
+    });
+    return out;
+  }
   async function parseDocx(file) {
     const buf = await file.arrayBuffer();
     if (!(await window.__loadJs(['mammoth.browser.min.js', 'https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js', 'https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js'], () => !!window.mammoth, 20000))) throw new Error('کتابخانهٔ خواندن Word بارگذاری نشد. اینترنت/VPN را بررسی و دوباره تلاش کنید.');
-    const res = await mammoth.convertToHtml({ arrayBuffer: buf });
+    const res = await mammoth.convertToHtml({ arrayBuffer: buf }, { styleMap: ["p[style-name='Quote'] => blockquote > p:fresh", "p[style-name='Intense Quote'] => blockquote > p:fresh", "p[style-name='Block Text'] => blockquote > p:fresh"] });
     const doc = new DOMParser().parseFromString(res.value, 'text/html');
     const segs = [], found = [];
-    const add = (kind, text) => { text = String(text).replace(/\s+/g, ' ').trim(); if (text) segs.push({ kind, text }); };
+    const tidy = t => String(t).replace(/\s+/g, ' ').replace(/\*\*\s*\*\*/g, ' ').trim();
+    const add = (kind, text, level) => { text = tidy(text); if (text) { const o = { kind, text }; if (level) o.level = level; segs.push(o); } };
+    // footnotes / endnotes: numbered in the order they are listed
+    const fnMap = {}, notes = [];
+    doc.querySelectorAll('li[id^="footnote-"], li[id^="endnote-"]').forEach(li => { const n = notes.length + 1; fnMap[li.id] = n; notes.push({ n, li }); });
+    const noteLists = new Set(notes.map(x => x.li.parentElement));
     doc.body.childNodes.forEach(n => {
-      if (n.nodeType !== 1) return;
+      if (n.nodeType !== 1 || noteLists.has(n)) return;
       const tag = n.tagName.toLowerCase();
       n.querySelectorAll('img').forEach(im => found.push({ src: im.getAttribute('src') || '', alt: im.getAttribute('alt') || '', after: segs.length + (String(n.textContent).trim() ? 1 : 0) }));
-      if (/^h[1-6]$/.test(tag)) add('heading', n.textContent);
-      else if (tag === 'ul' || tag === 'ol') [...n.querySelectorAll('li')].forEach((li, i) => add('list_item', (tag === 'ol' ? (i + 1) + '. ' : '- ') + li.textContent));
-      else if (tag === 'table') [...n.querySelectorAll('tr')].forEach(tr => add('paragraph', [...tr.children].map(c => c.textContent.trim()).join(' | ')));
-      else add('paragraph', n.textContent);
+      if (/^h[1-6]$/.test(tag)) add('heading', docInline(n, fnMap), +tag[1]);
+      else if (tag === 'ul' || tag === 'ol') [...n.querySelectorAll('li')].forEach((li, i) => add('list_item', (tag === 'ol' ? (i + 1) + '. ' : '- ') + docInline(li, fnMap)));
+      else if (tag === 'blockquote') [...n.querySelectorAll('p')].forEach(p => add('quote', docInline(p, fnMap)));
+      else if (tag === 'table') [...n.querySelectorAll('tr')].forEach(tr => add('paragraph', [...tr.children].map(c => docInline(c, fnMap).trim()).join(' | ')));
+      else add('paragraph', docInline(n, fnMap));
     });
+    notes.forEach(x => add('footnote', '[^' + x.n + '] ' + docInline(x.li, fnMap)));
     segs.docImgs = found;
     return segs;
   }
@@ -1261,7 +1343,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
     const wc = segs.reduce((n, s) => n + words(s.text).length, 0);
     const ins = await sb.from('documents').insert({ id, title, source_filename: filename, source_path: path ? path(id) : null, word_count: wc, uploaded_by: me.id });
     if (ins.error) throw ins.error;
-    const rows = segs.map((s, i) => ({ document_id: id, position: i + 1, kind: s.kind, source_text: s.text }));
+    const rows = segs.map((s, i) => ({ document_id: id, position: i + 1, kind: s.kind, level: s.level || null, source_text: s.text }));
     for (let i = 0; i < rows.length; i += 200) {
       const r = await sb.from('segments').insert(rows.slice(i, i + 200));
       if (r.error) { await sb.from('documents').delete().eq('id', id); throw r.error; }
@@ -1286,7 +1368,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
       const wc = segs.reduce((n, s) => n + words(s.text).length, 0);
       const ins = await sb.from('documents').insert({ id, title, source_filename: file.name, source_path: storedPath, word_count: wc, uploaded_by: me.id, source_kind: S.upKind });
       if (ins.error) throw ins.error;
-      const rows = segs.map((s, i) => ({ document_id: id, position: i + 1, kind: s.kind, source_text: s.text }));
+      const rows = segs.map((s, i) => ({ document_id: id, position: i + 1, kind: s.kind, level: s.level || null, source_text: s.text }));
       for (let i = 0; i < rows.length; i += 200) {
         const r = await sb.from('segments').insert(rows.slice(i, i + 200));
         if (r.error) { await sb.from('documents').delete().eq('id', id); throw r.error; }
@@ -1319,7 +1401,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
   }
   function irow(d, o) {
     const body = `<span class="irow-t">${esc(d.title)}</span>${o.ex ? `<span class="irow-x" dir="rtl">${esc(o.ex)}</span>` : ''}<span class="irow-m">${o.meta || ''}</span>`;
-    return `<article class="irow" data-q="${esc(normFa([d.title, o.ex, d.source_name].join(' ')))}">${o.open ? `<button type="button" class="irow-main" data-act="opendoc" data-id="${d.id}">${body}</button>` : `<div class="irow-main">${body}</div>`}<div class="irow-side">${o.side || ''}</div>${o.info ? `<div class="irow-info">${o.info}</div>` : ''}${o.callout || ''}</article>`;
+    return `<article class="irow" data-kind="${esc(d.source_kind || '')}" data-q="${esc(normFa([d.title, o.ex, d.source_name].join(' ')))}">${o.open ? `<button type="button" class="irow-main" data-act="opendoc" data-id="${d.id}">${body}</button>` : `<div class="irow-main">${body}</div>`}<div class="irow-side">${o.side || ''}</div>${o.info ? `<div class="irow-info">${o.info}</div>` : ''}${o.callout || ''}</article>`;
   }
   const inboxTools = n => n > 6 ? `<div class="inbox-tools"><input type="search" class="plain" id="qFilter" value="${esc(S.qf || '')}" placeholder="جستجو در عنوان، متن و منبع…" aria-label="جستجو در فهرست"></div>` : '';
   function applyQf() {
@@ -1393,7 +1475,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
   }
   VIEWS.newsed = async function () {
     if (S.docId) return vReviewDoc();
-    const sel = 'id,title,status,word_count,review_note,created_at,source_name,source_url,editor_note,news_edited_by,news_edited_at,news_score,news_score_reason,news_curated_at';
+    const sel = 'id,title,status,word_count,review_note,created_at,source_kind,source_name,source_url,editor_note,news_edited_by,news_edited_at,news_score,news_score_reason,news_curated_at';
     const cur = await curCfg();
     const [a, b] = await Promise.all([
       sb.from('documents').select(sel).eq('status', 'news_edit').eq('source_kind', 'news').order('created_at', { ascending: false }),
@@ -1456,8 +1538,8 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
       const hasCm = cmUnresolved(g.id) > 0;
       return `<div class="para${sel.has(g.id) ? ' sel' : ''}${ro ? ' ro' : ''}${hasCm ? ' hascm' : ''}" data-sid="${g.id}">
         <button type="button" class="gut" aria-pressed="${sel.has(g.id)}" aria-label="انتخاب بند ${fa(i + 1)}"><span class="pc">✓</span><span class="pn">${fa(i + 1)}</span></button>
-        <div class="pbody"><div class="ptxt${g.kind === 'heading' ? ' head' : g.kind === 'list_item' ? ' li' : ''}${g.source_text.trim() ? '' : ' emp'}" dir="rtl" lang="fa" data-ptxt="${g.id}"${ro ? '' : ` data-act="pedit" data-sid="${g.id}" role="button" tabindex="0" aria-label="ویرایش بند ${fa(i + 1)}"`}>${esc(g.source_text.trim() ? g.source_text : (ro ? '' : 'بند خالی — برای نوشتن بزنید'))}</div>
-          <textarea class="t pt fa-edit${g.kind === 'heading' ? ' head' : ''}" dir="rtl" lang="fa" rows="1" data-fa="${g.id}" ${ro ? 'readonly' : ''} aria-label="متن فارسی بند ${fa(i + 1)}">${esc(g.source_text)}</textarea>
+        <div class="pbody"><div class="ptxt${g.kind === 'heading' ? ' head' : g.kind === 'list_item' ? ' li' : g.kind === 'quote' ? ' qt' : g.kind === 'footnote' ? ' fnote' : ''}${g.source_text.trim() ? '' : ' emp'}"${lvAttr(g)} dir="rtl" lang="fa" data-ptxt="${g.id}"${ro ? '' : ` data-act="pedit" data-sid="${g.id}" role="button" tabindex="0" aria-label="ویرایش بند ${fa(i + 1)}"`}>${g.source_text.trim() ? fmtMark(g.source_text) : esc(ro ? '' : 'بند خالی — برای نوشتن بزنید')}</div>
+          <textarea class="t pt fa-edit${faCls(g)}" dir="rtl" lang="fa" rows="1" data-fa="${g.id}" ${ro ? 'readonly' : ''} aria-label="متن فارسی بند ${fa(i + 1)}">${esc(g.source_text)}</textarea>
           ${rw[g.id] ? `<div class="rwbox" data-rwbox="${g.id}"><div class="ah">پیشنهاد بازنویسی ماشینی</div><div class="rwt" dir="rtl" lang="fa">${esc(rw[g.id])}</div><div class="row"><button type="button" class="btn small primary" data-act="rwaccept" data-sid="${g.id}">جایگزین کن</button><button type="button" class="btn small quiet" data-act="rwreject" data-sid="${g.id}">رد</button></div></div>` : ''}
           ${cmBox(g.id)}</div>
         <div class="pact">${ro ? '' : `<button type="button" class="btn quiet small" data-act="pedit" data-sid="${g.id}">ویرایش</button>`}${cmButton(g.id)}</div></div>`;
@@ -1466,7 +1548,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
     return `<div class="dview" data-fs="${S.fs}">
       <div class="dtop"><button type="button" class="btn quiet small" data-act="back">→ فهرست</button>${nav}<span class="sp"></span>
         <span class="fsz" aria-label="اندازهٔ متن"><button type="button" class="btn quiet small" data-act="fs" data-d="-1" aria-label="کوچک‌تر">A−</button><button type="button" class="btn quiet small" data-act="fs" data-d="1" aria-label="بزرگ‌تر">A+</button></span></div>
-      <section class="dhead"><h1>${esc(doc.title)}</h1><div class="dmeta"><span>${chip(doc.status)}</span><span>${kindChip(doc.source_kind)}</span><span>${fa(s.data.length)} بند · ${fa(doc.word_count)} کلمه</span>${doc.uploaded_by ? `<span>فرستنده: ${whoH(doc.uploaded_by)}</span>` : ''}${isNews && doc.source_name ? `<span>منبع: ${esc(doc.source_name)}</span>` : ''}${isNews && doc.source_url ? `<a href="${esc(doc.source_url)}" target="_blank" rel="noopener">خبر اصلی ↗</a>` : ''}</div></section>
+      <section class="dhead" data-kind="${esc(doc.source_kind || '')}"><h1>${esc(doc.title)}</h1><div class="dmeta"><span>${chip(doc.status)}</span><span>${kindChip(doc.source_kind)}</span><span>${fa(s.data.length)} بند · ${fa(doc.word_count)} کلمه</span>${doc.uploaded_by ? `<span>فرستنده: ${whoH(doc.uploaded_by)}</span>` : ''}${isNews && doc.source_name ? `<span>منبع: ${esc(doc.source_name)}</span>` : ''}${isNews && doc.source_url ? `<a href="${esc(doc.source_url)}" target="_blank" rel="noopener">خبر اصلی ↗</a>` : ''}</div></section>
       ${ned && doc.review_note ? `<div class="callout"><b>بازبین این خبر را برگرداند:</b> ${esc(doc.review_note)}</div>` : ''}
       ${!ned && isNews && doc.editor_note ? `<div class="callout"><b>یادداشت ویراستار خبر:</b> ${esc(doc.editor_note)}</div>` : ''}
       ${rej && doc.review_note ? `<div class="callout"><b>دلیل بازگشت:</b> ${esc(doc.review_note)}</div>` : ''}
@@ -1530,14 +1612,14 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
     if (S.docId) return vEdit();
     const [pool, mine] = await Promise.all([
       sb.from('documents').select('id,title,word_count,created_at,source_kind,senior_only').eq('status', 'in_pool').order('created_at'),
-      sb.from('documents').select('id,title,status,word_count,qa_note,claim_expires_at').eq('claimed_by', me.id).in('status', ['in_progress', 'changes_requested', 'awaiting_qa', 'approved', 'published']).order('created_at', { ascending: false })
+      sb.from('documents').select('id,title,status,word_count,qa_note,claim_expires_at,source_kind').eq('claimed_by', me.id).in('status', ['in_progress', 'changes_requested', 'awaiting_qa', 'approved', 'published']).order('created_at', { ascending: false })
     ]);
     if (pool.error) throw pool.error; if (mine.error) throw mine.error;
     return head('کار مترجم', 'فایل آماده را از سبد ترجمه بردارید. هر فایل فقط برای یک نفر رزرو می‌شود و تا ۲۴ ساعت مهلت دارید.') + `
       <section class="card"><div class="pool"><div><div class="pool-n num">${fa(pool.data.length)}</div><div class="meta">فایل آماده در سبد ترجمه</div></div></div>
-        ${pool.data.length ? `<div class="list">${pool.data.map(d => `<div class="item"><div class="item-main"><div class="item-title">${esc(d.title)}</div><div class="meta">${kindChip(d.source_kind)}${d.senior_only ? ' <span class="chip gold">ارشد</span>' : ''} ${fa(d.word_count)} کلمه · ترجمه ماشینی آماده</div></div><button type="button" class="btn primary" data-act="claim" data-id="${d.id}">برداشتن فایل</button></div>`).join('')}</div>`
+        ${pool.data.length ? `<div class="list">${pool.data.map(d => `<div class="item" data-kind="${esc(d.source_kind || '')}"><div class="item-main"><div class="item-title">${esc(d.title)}</div><div class="meta">${kindChip(d.source_kind)}${d.senior_only ? ' <span class="chip gold">ارشد</span>' : ''} ${fa(d.word_count)} کلمه · ترجمه ماشینی آماده</div></div><button type="button" class="btn primary" data-act="claim" data-id="${d.id}">برداشتن فایل</button></div>`).join('')}</div>`
           : '<p class="meta">سبد ترجمه خالی است. وقتی فایلی آماده شود اعلان می‌گیرید.</p>'}</section>
-      <section class="list"><h2>فایل‌های من</h2>${mine.data.length ? mine.data.map(d => `<article class="card"><div class="item"><div class="item-main"><div class="item-title">${esc(d.title)}</div><div class="meta">${fa(d.word_count)} کلمه${d.status === 'in_progress' && d.claim_expires_at ? ' · مهلت تا ' + fmtT(d.claim_expires_at) : ''}</div></div>${chip(d.status)}
+      <section class="list"><h2>فایل‌های من</h2>${mine.data.length ? mine.data.map(d => `<article class="card" data-kind="${esc(d.source_kind || '')}"><div class="item"><div class="item-main"><div class="item-title">${esc(d.title)}</div><div class="meta">${fa(d.word_count)} کلمه${d.status === 'in_progress' && d.claim_expires_at ? ' · مهلت تا ' + fmtT(d.claim_expires_at) : ''}</div></div>${chip(d.status)}
         ${['in_progress', 'changes_requested'].includes(d.status) ? `<button type="button" class="btn primary" data-act="opendoc" data-id="${d.id}">${d.status === 'changes_requested' ? 'اصلاح' : 'ادامه ترجمه'}</button>` : `<button type="button" class="btn" data-act="opendoc" data-id="${d.id}">مشاهده</button>`}</div>
         ${d.status === 'changes_requested' && d.qa_note ? `<div class="callout"><b>یادداشت ناظر:</b> ${esc(d.qa_note)}</div>` : ''}</article>`).join('') : emptyCard('فایلی برنداشته‌اید.')}</section>`;
   };
@@ -1585,6 +1667,30 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
     const bar = $('#aiBar'); if (bar) { const n = Object.values(segMap).filter(x => x.ai_review_text && document.getElementById('seg-' + x.id)).length; if (!n) { const ab = bar.querySelector('[data-act="aiacceptall"]'); if (ab) ab.remove(); const rb = bar.querySelector('[data-act="airejectall"]'); if (rb) rb.remove(); const m = bar.querySelector('.grow1'); if (m) m.innerHTML = '<span class="meta">همهٔ پیشنهادها بررسی شد.</span>'; } }
   }
 
+  // pictures of the Word file, shown between the paragraphs (where they sit in the original) so the editor sees the layout
+  let SEGIMG = { by: {}, end: [], feat: null };
+  async function loadSegImages(docId) {
+    SEGIMG = { by: {}, end: [], feat: null };
+    try {
+      const r = await sb.from('document_images').select('id,kind,path,alt_text,caption,after_position,approved').eq('document_id', docId).order('created_at');
+      const rows = (r.data || []).filter(x => x.approved);
+      if (r.error || !rows.length) return;
+      const sg = await sb.storage.from('doc-images').createSignedUrls(rows.map(x => x.path), 3600);
+      const url = {}; (sg.data || []).forEach(x => { if (x && x.signedUrl) url[x.path] = x.signedUrl; });
+      rows.forEach(x => {
+        const it = { src: url[x.path], alt: x.alt_text || '', cap: x.caption || '', kind: x.kind };
+        if (!it.src) return;
+        if (x.kind === 'featured') SEGIMG.feat = it;
+        else if (x.after_position) (SEGIMG.by[x.after_position] = SEGIMG.by[x.after_position] || []).push(it);
+        else SEGIMG.end.push(it);
+      });
+    } catch (_) { /* pictures are only a help for the editor */ }
+  }
+  const imgFig = (it, tag) => `<figure class="seg-img"><span class="tag">${tag}</span><img src="${esc(it.src)}" alt="${esc(it.alt)}" loading="lazy">${it.cap ? `<figcaption lang="fa">${esc(it.cap)}</figcaption>` : ''}</figure>`;
+  const segImg = pos => (SEGIMG.by[pos] || []).map(it => imgFig(it, 'تصویر در این جای متن')).join('');
+  const segImgTop = () => SEGIMG.feat ? imgFig(SEGIMG.feat, 'تصویر شاخص مقاله') : '';
+  const segImgEnd = () => SEGIMG.end.map(it => imgFig(it, 'تصویر (انتهای متن)')).join('');
+
   async function vEdit() {
     const id = S.docId;
     const [d, s] = await Promise.all([sb.from('documents').select('*').eq('id', id).single(), sb.from('segments').select('*').eq('document_id', id).order('position')]);
@@ -1593,7 +1699,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
     const doc = d.data, segs = s.data;
     curDoc = doc;
     segs.forEach(g => { segMap[g.id] = g; });
-    await loadComments(id); await loadOG();
+    await loadComments(id); await loadOG(); await loadSegImages(id);
     const supEd = segs.filter(g => doc.supervisor_id && g.last_edited_by === doc.supervisor_id && doc.supervisor_id !== doc.claimed_by).length;
     const editable = ['in_progress', 'changes_requested'].includes(doc.status) && doc.claimed_by === me.id;
     const notes = Array.isArray(doc.ai_notes) ? doc.ai_notes : [];
@@ -1608,15 +1714,15 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
       ${ogPanel(segs, g => g.current_text)}
       ${aiBar(doc, segs, editable)}
       <div class="toolbar"><span id="progress" data-total="${segs.length}">${fa(edited)} از ${fa(segs.length)} بند ویرایش شده</span><span class="saved" id="saved">${editable ? 'ذخیره خودکار فعال است' : 'فقط‌خواندنی'}</span></div>
-      <div class="segs">${segs.map((g, i) => `<article class="seg${g.flagged ? ' flagged' : ''}" id="seg-${g.id}">
-        <div class="seg-head"><span>بند ${fa(i + 1)} · ${g.kind === 'heading' ? 'تیتر' : g.kind === 'list_item' ? 'فهرست' : 'پاراگراف'}</span><span data-chips="${g.id}">${segChips(g)}</span></div>
-        <p class="fa${g.kind === 'heading' ? ' head' : ''}" lang="fa" dir="rtl">${esc(g.source_text)}</p>
+      <div class="segs">${segImgTop()}${segs.map((g, i) => `<article class="seg${g.flagged ? ' flagged' : ''}" id="seg-${g.id}">
+        <div class="seg-head"><span>بند ${fa(i + 1)} · ${kindFa(g)}</span><span data-chips="${g.id}">${segChips(g)}</span></div>
+        <p class="fa${faCls(g)}"${lvAttr(g)} lang="fa" dir="rtl">${fmtMark(g.source_text)}</p>
         ${ogLine(g, g.current_text, editable)}
         ${notes.filter(n => n.paragraph_id === g.position).map(n => `<div class="mnote" lang="en">${esc(n.note)}</div>`).join('')}
-        <textarea id="ta-${g.id}" class="t en${g.kind === 'heading' ? ' head' : ''}" dir="ltr" lang="en" rows="2" data-sid="${g.id}" ${editable ? '' : 'readonly'} aria-label="ترجمه انگلیسی بند ${fa(i + 1)}">${esc(g.current_text || '')}</textarea>
+        <textarea id="ta-${g.id}" class="t en${faCls(g)}" dir="ltr" lang="en" rows="2" data-sid="${g.id}" ${editable ? '' : 'readonly'} aria-label="ترجمه انگلیسی بند ${fa(i + 1)}">${esc(g.current_text || '')}</textarea>
         <div class="seg-foot"><button type="button" class="btn quiet small" data-act="hist" data-sid="${g.id}">تاریخچه</button>${cmButton(g.id)}
           ${editable ? `<button type="button" class="btn quiet small" data-act="revert" data-sid="${g.id}">بازگردانی به ترجمه ماشینی</button><button type="button" class="btn quiet small" data-act="flag" data-sid="${g.id}">${g.flagged ? 'برداشتن پرچم' : 'پرچم‌گذاری'}</button>` : ''}</div>
-        ${aiRevBox(g)}<div data-histbox="${g.id}"></div>${cmBox(g.id)}</article>`).join('')}</div>
+        ${aiRevBox(g)}<div data-histbox="${g.id}"></div>${cmBox(g.id)}</article>${segImg(g.position)}`).join('')}${segImgEnd()}</div>
       ${editable ? `<div class="submitbar" id="bar">${barHtml(id)}</div>` : ''}`;
   }
   let curDoc = null;
@@ -1670,7 +1776,16 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
     box.innerHTML = '<p class="meta">در حال بارگذاری…</p>';
     const { data, error } = await sb.from('segment_revisions').select('revision_no,text,source,author_id,created_at').eq('segment_id', sid).order('revision_no');
     if (error) { box.innerHTML = `<p class="meta">${esc(errText(error))}</p>`; return; }
-    box.innerHTML = `<ul class="hist">${data.map(r => `<li><span class="by">نسخه ${fa(r.revision_no)} · ${r.source === 'ai' ? 'ترجمه ماشینی' : esc(nm(r.author_id)) + (r.source === 'supervisor' ? ' (ناظر)' : '')} · ${fmtT(r.created_at)}</span><span class="txt" lang="en">${esc(r.text)}</span></li>`).join('')}</ul>`;
+    const tt = r => (r.source === 'ai' ? 'ترجمه ماشینی' : nm(r.author_id) + (r.source === 'supervisor' ? ' (ناظر)' : '')) + ' · ' + new Date(r.created_at).toLocaleString('fa-IR', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const rows = [];
+    data.forEach((r, i) => {
+      if (i === 0) { rows.push(`<li><span class="base">${r.source === 'ai' ? 'ترجمه ماشینی (نقطهٔ شروع)' : 'نسخهٔ اول'} · ${fmtT(r.created_at)}</span></li>`); return; }
+      const ops = diffOps(data[i - 1].text, r.text), ti = esc(tt(r));
+      if (!ops.some(o => o.t !== 'eq')) return;   // nothing changed in this save
+      const html = ops.map(o => o.t === 'eq' ? esc(o.w) : o.t === 'del' ? `<del title="${ti}">${esc(o.w)}</del>` : `<ins title="${ti}">${esc(o.w)}</ins>`).join(' ');
+      rows.push(`<li><span class="by">${esc(r.source === 'ai' ? 'ترجمه ماشینی' : nm(r.author_id) + (r.source === 'supervisor' ? ' (ناظر)' : ''))} · ${fmtT(r.created_at)}</span><span class="txt" lang="en">${html}</span></li>`);
+    });
+    box.innerHTML = rows.length > 1 ? `<ul class="hist">${rows.join('')}</ul><p class="meta">سبز: افزوده شد · قرمز: حذف شد. نشانگر ماوس را روی هر تغییر ببرید تا نام و زمان دقیق آن را ببینید.</p>` : '<p class="meta">هنوز تغییری نسبت به ترجمه ماشینی ثبت نشده است.</p>';
   }
 
   // ===================================================================
@@ -1747,7 +1862,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
   // ===================================================================
   VIEWS.qa = async function () {
     if (S.qa) return vQA();
-    const { data, error } = await sb.from('documents').select('id,title,claimed_by,word_count,updated_at').eq('status', 'awaiting_qa').order('updated_at');
+    const { data, error } = await sb.from('documents').select('id,title,claimed_by,word_count,updated_at,source_kind').eq('status', 'awaiting_qa').order('updated_at');
     if (error) throw error;
     let q = {};
     if (data.length) {
@@ -1755,7 +1870,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
       (r.data || []).forEach(x => { q[x.document_id] = x; });
     }
     return head('بازبینی ناظر', 'تفاوت ترجمه ماشینی و ترجمه مترجم را ببینید، سپس تایید کنید یا با یادداشت برگردانید.') +
-      (data.length ? `<div class="list">${data.map(d => { const x = q[d.id]; return `<article class="card"><div class="item"><div class="item-main"><div class="item-title">${esc(d.title)}</div>
+      (data.length ? `<div class="list">${data.map(d => { const x = q[d.id]; return `<article class="card" data-kind="${esc(d.source_kind || '')}"><div class="item"><div class="item-main"><div class="item-title">${esc(d.title)}</div>
         <div class="meta">مترجم: ${esc(nm(d.claimed_by))} · ${fa(d.word_count)} کلمه${x ? ` · بدون تغییر ${fa(x.unchanged_pct)}٪ · TER ${pct(Number(x.ter))}` : ''}</div></div>
         <button type="button" class="btn primary" data-act="qaopen" data-id="${d.id}">بررسی</button></div></article>`; }).join('')}</div>` : emptyCard('فایلی در انتظار ناظر نیست.'));
   };
@@ -1769,7 +1884,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
     if (d.data.status !== 'awaiting_qa') { S.qa = null; return VIEWS.qa(); }
     const doc = d.data, segs = s.data;
     segs.forEach(g => { segMap[g.id] = g; });
-    await loadComments(id); await loadOG();
+    await loadComments(id); await loadOG(); await loadSegImages(id);
     const pm = await loadPrintMin();
     const changed = segs.filter(g => g.current_text !== g.ai_text).length;
     const dist = segs.reduce((n, g) => n + wordDist(g.ai_text, g.current_text), 0);
@@ -1781,10 +1896,10 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
       ${ogPanel(segs, g => g.current_text)}
       ${aiBar(doc, segs, true)}
       <div class="toolbar"><div class="legend"><span>راهنما:</span><del>حذف‌شده از ترجمه ماشینی</del><ins>افزوده‌شده توسط مترجم</ins></div><span class="saved" id="saved">برای اصلاح مستقیم هر بند، «ویرایش ترجمه» را بزنید. تغییرها هنگام خروج از کادر ذخیره می‌شوند.</span></div>
-      <div class="segs">${segs.map((g, i) => `<article class="seg${g.flagged ? ' flagged' : ''}" id="seg-${g.id}"><div class="seg-head"><span>بند ${fa(i + 1)}</span><span data-chips="${g.id}">${qaChips(g)}</span></div>
-          <p class="fa${g.kind === 'heading' ? ' head' : ''}" lang="fa" dir="rtl">${esc(g.source_text)}</p>${ogLine(g, g.current_text, false)}<p class="diff" data-diff="${g.id}">${diffHtml(g)}</p>
-          <div data-qaedit="${g.id}" hidden><textarea id="ta-${g.id}" class="t en${g.kind === 'heading' ? ' head' : ''}" dir="ltr" lang="en" rows="2" data-sid="${g.id}" aria-label="ویرایش ترجمه بند ${fa(i + 1)}">${esc(g.current_text || '')}</textarea><p class="meta">این ویرایش با نام شما در تاریخچه ثبت می‌شود و مترجم آن را در بند می‌بیند.</p></div>
-          <div class="seg-foot"><button type="button" class="btn quiet small" data-act="qaedit" data-sid="${g.id}">ویرایش ترجمه</button><button type="button" class="btn quiet small" data-act="hist" data-sid="${g.id}">تاریخچه</button>${cmButton(g.id)}</div>${aiRevBox(g)}<div data-histbox="${g.id}"></div>${cmBox(g.id)}</article>`).join('')}</div>
+      <div class="segs">${segImgTop()}${segs.map((g, i) => `<article class="seg${g.flagged ? ' flagged' : ''}" id="seg-${g.id}"><div class="seg-head"><span>بند ${fa(i + 1)} · ${kindFa(g)}</span><span data-chips="${g.id}">${qaChips(g)}</span></div>
+          <p class="fa${faCls(g)}"${lvAttr(g)} lang="fa" dir="rtl">${fmtMark(g.source_text)}</p>${ogLine(g, g.current_text, false)}<p class="diff" data-diff="${g.id}">${diffHtml(g)}</p>
+          <div data-qaedit="${g.id}" hidden><textarea id="ta-${g.id}" class="t en${faCls(g)}" dir="ltr" lang="en" rows="2" data-sid="${g.id}" aria-label="ویرایش ترجمه بند ${fa(i + 1)}">${esc(g.current_text || '')}</textarea><p class="meta">این ویرایش با نام شما در تاریخچه ثبت می‌شود و مترجم آن را در بند می‌بیند.</p></div>
+          <div class="seg-foot"><button type="button" class="btn quiet small" data-act="qaedit" data-sid="${g.id}">ویرایش ترجمه</button><button type="button" class="btn quiet small" data-act="hist" data-sid="${g.id}">تاریخچه</button>${cmButton(g.id)}</div>${aiRevBox(g)}<div data-histbox="${g.id}"></div>${cmBox(g.id)}</article>${segImg(g.position)}`).join('')}${segImgEnd()}</div>
       <section class="card"><label class="f"><b style="color:var(--fg)">یادداشت برای مترجم</b> (برای بازگرداندن لازم است)<textarea class="plain" id="qaNote" rows="3" dir="rtl" placeholder="مثلاً: اصطلاح بند دوم را با واژه‌نامه سازمان یکدست کنید."></textarea></label>
         <div class="row"><button type="button" class="btn primary" data-act="qaapprove" data-id="${id}">تایید و ارسال به سبد انتشار</button><button type="button" class="btn" data-act="qareturn" data-id="${id}">بازگرداندن به مترجم با نظرها</button></div>
         <p class="meta">بازگرداندن، یادداشت بالا، نظرهای بندها و ویرایش‌های مستقیم شما را با هم برای مترجم می‌فرستد.</p></section>`;
@@ -1831,25 +1946,21 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
     catch (e) { await sb.storage.from('doc-images').remove([path]); throw e; }
   }
   // the category taxonomy of a kind of content: wp_catkey_<kind>, or "categories" when it is published as ordinary posts, otherwise none
-  async function catTaxFor(kind) {
-    if (!S.wpKinds) { const r = await sb.from('app_config').select('key,value').like('key', 'wp\\_%'); S.wpKinds = {}; (r.data || []).forEach(x => { S.wpKinds[x.key] = x.value; }); }
-    const k = S.wpKinds, type = k['wp_type_' + kind] || k.wp_post_type || 'posts';
-    return k['wp_catkey_' + kind] || (type === 'posts' ? 'categories' : null);
-  }
-  async function pmCats(tax) {
-    if (!tax) return [];
+  // categories of a kind of content: the server finds the right taxonomy (also for a custom post type such as Scholaria)
+  async function pmCats(kind) {
+    kind = kind || 'scholaria';
     S.wpCatList = S.wpCatList || {};
-    if (S.wpCatList[tax]) return S.wpCatList[tax];
-    try { const r = await fnCall('publish-wordpress', { action: 'categories', tax }); S.wpCatList[tax] = (r.categories || []).map(x => ({ id: x.id, name: String(x.name).replace(/&amp;/g, '&') })); }
-    catch (_) { S.wpCatList[tax] = []; }
-    return S.wpCatList[tax];
+    if (S.wpCatList[kind]) return S.wpCatList[kind];
+    try { const r = await fnCall('publish-wordpress', { action: 'categories', kind }); S.wpCatList[kind] = (r.categories || []).map(x => ({ id: x.id, name: String(x.name).replace(/&amp;/g, '&') })); }
+    catch (_) { return []; }
+    return S.wpCatList[kind];
   }
   const toLocalInput = iso => { if (!iso) return ''; const d = new Date(iso), z = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`; };
   async function pmLoad(box) {
     const id = box.dataset.pmeta, withFields = box.dataset.fields === '1', canAtt = box.dataset.attach === '1', isWriter = box.dataset.writer === '1';
     const canReview = ['reviewer', 'admin'].includes(me.role);
     const jobs = [sb.from('document_images').select('*').eq('document_id', id).order('created_at')];
-    if (withFields) { const dmP = Promise.resolve(sb.from('documents').select('source_kind,pub_slug,pub_excerpt,pub_tags,pub_category,pub_seo_title,pub_seo_desc,pub_seo_focus,pub_at,pub_author,pub_author_id').eq('id', id).single()); jobs.push(dmP, dmP.then(async d => pmCats(await catTaxFor(d.data && d.data.source_kind)))); }
+    if (withFields) { const dmP = Promise.resolve(sb.from('documents').select('source_kind,pub_slug,pub_excerpt,pub_tags,pub_category,pub_seo_title,pub_seo_desc,pub_seo_focus,pub_at,pub_author,pub_author_id').eq('id', id).single()); jobs.push(dmP, dmP.then(async d => pmCats(d.data && d.data.source_kind))); }
     const [im, dm, cats] = await Promise.all(jobs);
     if (im.error) throw im.error;
     const imgs = im.data || [], urls = {};
@@ -2005,7 +2116,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
       const panel = open ? `<div class="pubpanel">${canPub && isApp ? `<label class="f">عنوان انگلیسی برای انتشار<input type="text" class="plain ltr" data-ptitle="${d.id}" value="${esc(title)}" placeholder="خالی: اولین تیتر ترجمه"></label>` : ''}${pmetaSlot(d.id, { fields: canPub && isApp, attach: canPub && isApp })}<div class="final-text" lang="en" dir="ltr">${esc(S.pubText[d.id].map(g => g.current_text).join('\n\n'))}</div></div>` : '';
       const err = d.wp_error ? `<div class="callout"><b>خطای وردپرس:</b> <span class="num" dir="ltr">${esc(d.wp_error)}</span></div>` : '';
       const wl = d.wp_url ? `<a class="btn small quiet" href="${esc(d.wp_url)}" target="_blank" rel="noopener">دیدن در سایت ↗</a>` : '';
-      return irow({ id: d.id, title: d.title, source_name: '' }, { meta, side: wl + side, callout: unp + err + panel });
+      return irow({ id: d.id, title: d.title, source_name: '', source_kind: d.source_kind }, { meta, side: wl + side, callout: unp + err + panel });
     };
     const section = (title, sub, list) => list.length ? `<section class="list"><h2>${title} <span class="chip">${fa(list.length)}</span></h2><p class="meta">${sub}</p><div class="ilist">${list.map(row).join('')}</div></section>` : '';
     const kc = k => approvedAll.filter(d => !k || d.source_kind === k).length;
@@ -2229,7 +2340,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
       ${items.length ? `<div class="table-wrap"><table><thead><tr><th>عنوان</th><th>منبع</th><th>وضعیت</th><th>زمان</th></tr></thead><tbody>${items.map(i => { const st = NEWS_STATUS[i.status] || [i.status, '']; return `<tr><td><a href="${esc(i.url)}" target="_blank" rel="noopener">${esc(i.title || i.url)}</a></td><td>${i.source_id && byId[i.source_id] ? esc(byId[i.source_id].name) : '—'}</td><td><span class="chip ${st[1]}">${st[0]}</span> <span class="meta">${esc(i.reason || '')}</span></td><td class="meta">${fmtT(i.fetched_at)}</td></tr>`; }).join('')}</tbody></table></div>` : '<p class="meta">هنوز خبری دیده نشده است.</p>'}</div>
       <details class="gl"><summary>راهنمای اتصال ابزار بیرونی (n8n)</summary>
         <p class="sub">برای ورودی بیرونی، یک درخواست POST با این مشخصات بفرستید:</p>
-        <div class="ltr" dir="ltr"><code>POST ${esc(cfg.url)}/functions/v1/news-ingest</code><br><code>x-ingest-key: (کلید INGEST_KEY که خودتان تعیین کرده‌اید)</code></div>
+        <div class="ltr" dir="ltr"><code>POST ${esc(cfg.url)}/api/ingest.php</code><br><code>x-ingest-key: (کلید INGEST_KEY که خودتان تعیین کرده‌اید)</code></div>
         <pre class="ltr" dir="ltr">{"action":"push","source_name":"نام منبع","items":[{"url":"https://...","title":"...","text":"متن کامل خبر"}]}</pre>
         <p class="sub">کلید در این صفحه نمایش داده نمی‌شود و فقط در تنظیمات Supabase نگه‌داری می‌شود.</p></details>`;
   }
@@ -2263,8 +2374,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
       `<div class="sub-tabs" role="tablist">${tabs.map(([k, l]) => `<button type="button" role="tab" data-act="admintab" data-tab="${k}" aria-selected="${S.adminTab === k}">${l}</button>`).join('')}</div>${body}`;
   };
   function inviteLink(base, token) {
-    const raw = JSON.stringify({ url: cfg.url, key: cfg.key });
-    return base.replace(/#.*$/, '') + '#cfg=' + btoa(raw).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') + (token ? '&invite=' + token : '');
+    return base.replace(/#.*$/, '') + (token ? '#invite=' + token : '');
   }
   async function adminInvite() {
     const base = location.href.replace(/#.*$/, '');
@@ -2845,8 +2955,11 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
     async wpsend(el) {
       const id = el.dataset.id; toast('در حال ارسال به وردپرس…');
       const r = await fnCall('publish-wordpress', { action: 'send', document_id: id });
-      if (r && r.wp_status === 'publish') { await rpc('mark_published', { p_doc: id }); toast('در وردپرس منتشر شد و ثبت شد.'); }
-      else toast('به‌صورت پیش‌نویس در وردپرس ساخته شد. بعد از انتشار در سایت، «علامت منتشر شد» را بزنید.');
+      const warn = [];
+      if (r && r.author_warning) warn.push('نویسنده ثبت نشد: نوع محتوای اسکالریا در وردپرس فیلد نویسنده را قبول نمی‌کند (در تعریف نوع محتوا باید supports شامل author باشد) و به نام حساب اتصال ثبت شد.');
+      if (r && r.category_warning) warn.push(r.category_warning === 'category_taxonomy_not_found' ? 'دسته اعمال نشد: طبقه‌بندی این نوع محتوا پیدا نشد؛ کلید آن را در تنظیمات وردپرس (ستون «کلید دسته») بنویسید.' : 'دسته در وردپرس اعمال نشد؛ کلید دستهٔ این نوع محتوا را در تنظیمات بررسی کنید.');
+      if (r && r.wp_status === 'publish') { await rpc('mark_published', { p_doc: id }); toast('در وردپرس منتشر شد و ثبت شد.' + (warn.length ? ' ⚠️ ' + warn.join(' ') : '')); }
+      else toast('به‌صورت پیش‌نویس در وردپرس ساخته شد. بعد از انتشار در سایت، «علامت منتشر شد» را بزنید.' + (warn.length ? ' ⚠️ ' + warn.join(' ') : ''));
       render();
     },
     glask(el) { S.glDel = el.dataset.id; render(); },
@@ -2919,7 +3032,8 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
     },
     async disableuser(el) { await fnCall('manage-users', { action: 'disable', user_id: el.dataset.id }); toast('حساب غیرفعال شد و دیگر نمی‌تواند وارد شود.'); render(); },
     async enableuser(el) { await fnCall('manage-users', { action: 'enable', user_id: el.dataset.id }); toast('ورود دوباره مجاز شد. نقش را در ستون «نقش» تعیین کنید.'); render(); },
-    async rmavatar(el) { await fnCall('manage-users', { action: 'set_avatar', user_id: el.dataset.id, avatar: '' }); toast('عکس پروفایل حذف شد.'); render(); },
+    async rmavatar(el) { await saveAvatar(null, el.dataset.id); toast('عکس پروفایل حذف شد.'); await loadNames(); if (me && me.id === el.dataset.id) { me.avatar_url = null; me.avatar_original_url = null; } render(); },
+    async myavatarrm() { if (!confirm('عکس پروفایل شما حذف شود؟')) return; await saveAvatar(null); me.avatar_url = null; me.avatar_original_url = null; toast('عکس پروفایل حذف شد.'); render(); },
     authretry() { S.wpAuthMsg = ''; loadAuthors(true); },
     askdeluser(el) { S.userDel = el.dataset.id; render(); },
     canceluser() { S.userDel = null; render(); },
@@ -3257,9 +3371,15 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
   document.addEventListener('change', async e => {
     const t = e.target;
     try {
+      if (t.matches && t.matches('[data-myavatar]')) {
+        const f = (t.files || [])[0]; if (!f) return; t.value = '';
+        try { toast('در حال ارسال عکس…'); const av = await resizeAvatar(f); const r = await saveAvatar(av); me.avatar_url = r.avatar_url; me.avatar_original_url = r.avatar_original_url || null; toast('عکس پروفایل تغییر کرد.'); await loadNames(); render(); }
+        catch (e) { toast(errText(e)); }
+        return;
+      }
       if (t.matches && t.matches('[data-pavatar]')) {
         const f = (t.files || [])[0]; if (!f) return; const id = t.dataset.pavatar; t.value = '';
-        try { const av = await resizeAvatar(f); await fnCall('manage-users', { action: 'set_avatar', user_id: id, avatar: av }); toast('عکس پروفایل تغییر کرد.'); await loadNames(); if (me && me.id === id) { const r = await sb.from('profiles').select('avatar_url').eq('id', id).single(); if (r.data) me.avatar_url = r.data.avatar_url; } render(); }
+        try { const av = await resizeAvatar(f); await saveAvatar(av, id); toast('عکس پروفایل تغییر کرد.'); await loadNames(); if (me && me.id === id) { const r = await sb.from('profiles').select('avatar_url').eq('id', id).single(); if (r.data) me.avatar_url = r.data.avatar_url; } render(); }
         catch (e) { toast(errText(e)); }
         return;
       }
@@ -3281,7 +3401,7 @@ window.__supaReady = window.__loadJs(['supabase.min.js', 'https://cdn.jsdelivr.n
       else if (t.id === 'suAvatar') {
         const f = t.files && t.files[0]; t.value = ''; if (!f) return;
         AVATAR = await resizeAvatar(f);
-        const pv = $('#suPrev'); pv.style.backgroundImage = `url(${AVATAR})`; pv.classList.add('has'); pv.innerHTML = '';
+        const pv = $('#suPrev'); pv.style.backgroundImage = `url(${AVATAR.avatar})`; pv.classList.add('has'); pv.innerHTML = '';
       }
       else if (t.id === 'rwStyle') { S.rwStyle = t.value; const i = $('#rwInstr'); if (i) i.placeholder = t.value === 'custom' ? 'دستور بازنویسی (لازم است)' : 'توضیح اضافه (اختیاری)'; }
       else if (t.id === 'aiRoundsSel') { S.aiRounds = Number(t.value) || 1; }

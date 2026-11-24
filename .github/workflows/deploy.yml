@@ -2,15 +2,18 @@ name: Deploy to host (FTP)
 on:
   push:
     branches: [main]
-    paths: [index.html]
+    paths: [index.html, rise-client.js, 'backend/**']
   workflow_dispatch:
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Prepare upload folder (only index.html)
-        run: mkdir dist && cp index.html dist/index.html
+      - name: Prepare upload folder (frontend + backend code; config.php lives only on the host)
+        run: |
+          mkdir dist
+          cp index.html rise-client.js dist/
+          rsync -a --exclude 'config.php' --exclude 'private/' --exclude 'DEPLOY.md' backend/ dist/backend/
       - name: Upload via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:

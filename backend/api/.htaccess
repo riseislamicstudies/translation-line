@@ -1,0 +1,6 @@
+Options -Indexes
+# بعضی هاست‌ها هدر Authorization را حذف می‌کنند؛ فرانت علاوه بر آن X-Rise-Token می‌فرستد.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>
